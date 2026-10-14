@@ -2,6 +2,8 @@
 module Api
   module V1
     class AttendancesController < BaseController
+      requires_module :attendance
+
       def index
         attendances = current_company.attendances
                                      .includes(:employee)

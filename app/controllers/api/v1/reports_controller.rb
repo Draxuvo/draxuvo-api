@@ -1,6 +1,7 @@
 module Api
   module V1
     class ReportsController < BaseController
+      requires_module :reports
       before_action :require_admin!
 
       # GET /api/v1/reports/summary?period=weekly|monthly|annual&date=2026-04-01

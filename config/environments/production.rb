@@ -61,7 +61,7 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "www.grupobothi.com" }
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "www.grupobothi.com") }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -83,10 +83,10 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
+  # ALLOWED_HOSTS: comma separated list. Defaults to the current live domain.
   config.hosts = [
-    "grupobothi.com",
-    "www.grupobothi.com",
-    /.*\.onrender\.com/,
+    *ENV.fetch("ALLOWED_HOSTS", "grupobothi.com,www.grupobothi.com").split(",").map(&:strip).reject(&:empty?),
+    /.*\.onrender\.com/
   ]
 
   # Skip DNS rebinding protection for the default health check endpoint.

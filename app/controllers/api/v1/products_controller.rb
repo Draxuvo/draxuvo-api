@@ -2,7 +2,8 @@
 module Api
   module V1
     class ProductsController < BaseController
-      before_action :set_product, only: [:show, :update, :destroy]
+      requires_module :inventory
+      before_action :set_product, only: [ :show, :update, :destroy ]
 
       def index
         products = current_company.products.search(params[:search])

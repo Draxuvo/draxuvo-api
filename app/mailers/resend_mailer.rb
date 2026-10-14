@@ -1,5 +1,6 @@
 class ResendMailer
-  DEFAULT_SUBJECT = "Configura tu contraseña en Grupo Bothi"
+  DEFAULT_SUBJECT = "Configura tu contraseña en Draxuvo"
+  WELCOME_SUBJECT = "Bienvenido a Draxuvo"
 
   class << self
     def set_password(user:, set_password_url:, company_name: nil)
@@ -9,7 +10,7 @@ class ResendMailer
       params = {
         from:    sender_email(company_name),
         to:      user.email,
-        subject: "Bienvenido a #{company_name || "Grupo Bothi"} – Configura tu contraseña",
+        subject: "Bienvenido a #{company_name || "Draxuvo"} – Configura tu contraseña",
         html:    ApplicationController.render(
                    template: "resend_mailer/set_password",
                    layout:   false,
@@ -36,6 +37,29 @@ class ResendMailer
       false
     end
 
+    def welcome(user:, company_name:, trial_ends_at:)
+      log(:warn, "#welcome START user_id=#{user&.id} email=#{user&.email} company=#{company_name.inspect}")
+      raise ArgumentError, "User parameter is required" unless user.present?
+      raise ArgumentError, "User email is required" unless user.email.present?
+
+      params = {
+        from:    sender_email,
+        to:      user.email,
+        subject: WELCOME_SUBJECT,
+        html:    ApplicationController.render(
+                   template: "resend_mailer/welcome",
+                   layout:   false,
+                   locals:   { user: user, company_name: company_name, trial_ends_at: trial_ends_at }
+                 )
+      }
+
+      log(:warn, "#welcome params built from=#{params[:from].inspect} to=#{params[:to].inspect}")
+      send_email(params)
+    rescue => e
+      handle_email_error(user, e)
+      false
+    end
+
     private
 
     def validate_parameters(user, reset_url)
@@ -49,7 +73,7 @@ class ResendMailer
         from:    sender_email(company_name),
         to:      user.email,
         subject: DEFAULT_SUBJECT,
-        html:    password_reset_html(user, reset_url, company_name),
+        html:    password_reset_html(user, reset_url, company_name)
       }
     end
 
@@ -84,7 +108,7 @@ class ResendMailer
         message: error.message,
         user_id: user&.id,
         email:   user&.email,
-        time:    Time.current.iso8601,
+        time:    Time.current.iso8601
       }
       log(:error, "handle_email_error #{error_details.to_json}")
       log(:error, "backtrace:\n#{error.backtrace&.first(5)&.join("\n")}")

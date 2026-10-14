@@ -2,7 +2,10 @@
 module Api
   module V1
     class EmployeesController < BaseController
-      before_action :set_employee, only: [:show, :update, :destroy, :checkin, :checkout, :active]
+      # checkin/checkout registran asistencia: dependen de :attendance, no de :employees.
+      requires_module :employees, except: %i[checkin checkout]
+      requires_module :attendance, only: %i[checkin checkout]
+      before_action :set_employee, only: [ :show, :update, :destroy, :checkin, :checkout, :active ]
 
       def index
         employees = current_company.employees.includes(:user).search(params[:search])

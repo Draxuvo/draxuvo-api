@@ -22,3 +22,7 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: APP_HOST
+        sync: false        # Host público (mailer y default_url_options); por defecto www.grupobothi.com
+      - key: ALLOWED_HOSTS
+        sync: false        # Hosts permitidos separados por comas; por defecto grupobothi.com,www.grupobothi.com

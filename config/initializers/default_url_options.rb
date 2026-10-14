@@ -1,6 +1,6 @@
 host_options =
   if Rails.env.production?
-    { host: "www.grupobothi.com", protocol: "https" }
+    { host: ENV.fetch("APP_HOST", "www.grupobothi.com"), protocol: "https" }
   else
     { host: "localhost", port: 3000 }
   end

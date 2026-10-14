@@ -13,8 +13,8 @@ module ApiErrors
         error: {
           status:  Rack::Utils.status_code(status),
           message: message,
-          details: details,
-        },
+          details: details
+        }
       }
     end
   end

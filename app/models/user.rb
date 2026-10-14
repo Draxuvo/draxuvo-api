@@ -4,7 +4,7 @@ class User < ApplicationRecord
   has_many :user_companies, dependent: :destroy
   has_many :companies, through: :user_companies
   has_secure_password
-  has_many :created_work_orders, class_name: 'WorkOrder', as: :created_by
+  has_many :created_work_orders, class_name: "WorkOrder", as: :created_by
   has_one :employee, dependent: :nullify
   has_one_attached :avatar
   normalizes :email, with: ->(e) { e.strip.downcase }
@@ -39,7 +39,7 @@ class User < ApplicationRecord
   validates :password, presence: true, length: { minimum: 6 }, if: :password_required?
 
   def full_name
-    [first_name, middle_name, last_name, second_last_name].compact.join(" ")
+    [ first_name, middle_name, last_name, second_last_name ].compact.join(" ")
   end
 
   def locked?

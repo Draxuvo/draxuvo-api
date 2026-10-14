@@ -1,4 +1,4 @@
-# Ideas de Valor para Grupo Bothi API
+# Ideas de Valor para Draxuvo API
 
 ## Estado actual del producto (abril 2026)
 

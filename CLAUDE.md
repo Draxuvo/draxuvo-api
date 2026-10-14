@@ -32,7 +32,8 @@ Every request must include `X-Company-Id` header. `BaseController#current_compan
 All endpoints live under `/api/v1/`. The base controller (`app/controllers/api/v1/base_controller.rb`) handles:
 - JWT authentication via `Authorization: Bearer <token>` — decoded with `SECRET_KEY_BASE` (HS256, 24h expiry)
 - Company scoping (multi-tenant context)
-- Subscription gate via `check_subscription!` — auto-starts a 30-day trial if none exists; blocks if expired/cancelled
+- Subscription gate via `check_subscription!` — auto-starts a 30-day Pro trial if none exists; blocks if expired/cancelled
+- Module gate via the `ModuleGate` concern: `requires_module :inventory` in a controller returns 403 `module_not_in_plan` when the company's plan doesn't include it
 - Standardized error handling via `rescue_from` with `ApiErrors` module in `app/errors/api_errors.rb`
 - Sorting via `apply_sort(scope, allowed: %i[...])` — only allowlisted columns accepted
 - Pagination via Pagy (`limit` param, max 100); use `paginate_response(@pagy, serialized)` in controllers
@@ -52,9 +53,10 @@ The `Authenticable` and `Authorizable` concerns live in `app/controllers/concern
 | Entity | Notes |
 |---|---|
 | `User` | Roles: `staff`, `manager`, `admin`, `owner`, `super_admin`; uses `has_secure_password` |
-| `Company` | Tenant container; plans: `starter`, `business`, `enterprise`; holds `stripe_id` |
+| `Company` | Tenant container; holds `stripe_id` and `disabled_modules`; `active_modules` = its plan's modules minus the disabled ones. No plan column: the plan lives in `Subscription` |
 | `Employee` | Company staff; optional `user` association; `parsed_name_parts` splits `name` for User creation |
-| `Subscription` | Belongs to Company; statuses: `trialing/active/past_due/cancelled/expired`; `active_access?` returns true for trialing (within trial), active, or past_due |
+| `Plan` | PORO catalog (`app/models/plan.rb`): `basic`, `pro`, `enterprise` with their modules and monthly/annual prices (cents MXN, without IVA) |
+| `Subscription` | One per Company (unique); plan `basic/pro/enterprise`, `billing_cycle`, `cancel_at_period_end`; statuses: `trialing/active/past_due/cancelled/expired`; `active_access?` returns true for trialing (within trial), active, or past_due |
 | `WorkOrder` | Core work entity; statuses: `pending → in_progress → in_review → completed → cancelled`; priorities: `low/medium/high/urgent` |
 | `WorkOrderItem` | Checklist items on a work order; ordered by `position`; `subtotal = unit_price * quantity` |
 | `Ticket` | Auto-generated via `after_commit` when a WorkOrder transitions to `completed` and has no ticket yet; folio format `T-000001`; statuses: `pending/paid`; `mark_as_paid` endpoint |
@@ -85,7 +87,7 @@ The `Authenticable` and `Authorizable` concerns live in `app/controllers/concern
 - `app/services/email/` — `SetPasswordService`, `PasswordResetService` (wrap `ResendMailer`)
 - `app/services/users/` — user-related logic
 - `app/services/products/` — `ImportService` for Excel import (roo); template download uses caxlsx
-- `app/services/subscriptions/` — `CreateCheckoutService` (Stripe Checkout), `CancelService`, `HandleWebhookService`
+- `app/services/subscriptions/` — `CreateCheckoutService`, `PriceLookupService`, `SyncService`, `PortalService`, `CancelService`, `HandleWebhookService`
 
 **Error classes** (`app/errors/api_errors.rb`): `ApiErrors::BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `NotFoundError`, `UnprocessableEntityError` — all inherit `BaseError` and render `{ error: { status, message, details } }`.
 
@@ -97,7 +99,7 @@ When a `WorkOrder` status changes to `completed`, an `after_commit` callback cal
 
 ### Subscription & Stripe
 
-Paid plans (`business`, `enterprise`) go through a Stripe Checkout Session created by `Subscriptions::CreateCheckoutService`. Stripe sends webhook events to `POST /api/v1/stripe/webhooks` (unauthenticated), handled by `Subscriptions::HandleWebhookService`. Pricing and Stripe price IDs are configured via env vars.
+Any plan and cycle goes through a Stripe Checkout Session (`Subscriptions::CreateCheckoutService`); prices are resolved by `lookup_key` `draxuvo_<plan>_<cycle>`. Stripe sends webhooks to `POST /api/v1/stripe/webhooks` (no JWT, signature always required): `HandleWebhookService` records each event in `StripeEvent` (idempotent) and `SyncService` re-reads the subscription from Stripe. Plan changes, card, invoices and cancel happen in the Stripe Customer Portal (`POST /subscription/portal`). Setup: `docs/stripe.md`.
 
 ### Background Jobs & Caching
 
@@ -120,7 +122,6 @@ Dockerized with Kamal for orchestration. Also has `render.yaml` for Render.com d
 | `SECRET_KEY_BASE` | JWT signing key |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Transactional email |
 | `FRONTEND_URL` | CORS allowed origin (default: `http://localhost:4200`) |
-| `STRIPE_BUSINESS_MONTHLY_PRICE_ID` | Stripe price ID for business monthly plan |
-| `STRIPE_ENTERPRISE_ANNUAL_PRICE_ID` | Stripe price ID for enterprise annual plan |
-| `ENTERPRISE_AMOUNT_CENTS` | Enterprise plan price in MXN cents (default: 756000) |
+| `STRIPE_API_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe secret key and webhook signing secret |
+| `APP_HOST` / `ALLOWED_HOSTS` | Public host for links and extra allowed hosts in production |
 | Cloud storage keys | Cloudinary or S3-compatible credentials |

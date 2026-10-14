@@ -8,14 +8,25 @@ module Api
           work_orders: work_orders_stats,
           tickets:     tickets_stats,
           inventory:   inventory_stats,
-          attendance:  attendance_stats
+          attendance:  attendance_stats,
+          active_modules: active_modules
         }
       end
 
       private
 
+      # Las secciones de módulos inactivos conservan su forma pero se calculan sobre un scope vacío,
+      # así la UI no cambia y no se exponen datos de un módulo bloqueado (R13, FR-024).
+      def active_modules
+        @active_modules ||= current_company.active_modules
+      end
+
+      def module_scope(module_key, relation)
+        active_modules.include?(module_key) ? relation : relation.none
+      end
+
       def employees_stats
-        employees = current_company.employees
+        employees = module_scope(:employees, current_company.employees)
         counts    = employees.group(:status).count
 
         {
@@ -42,7 +53,7 @@ module Api
       end
 
       def work_orders_stats
-        orders         = current_company.work_orders
+        orders         = module_scope(:work_orders, current_company.work_orders)
         status_counts  = orders.group(:status).count
         priority_counts = orders.group(:priority).count
 
@@ -65,7 +76,7 @@ module Api
       end
 
       def tickets_stats
-        tickets       = current_company.tickets
+        tickets       = module_scope(:tickets, current_company.tickets)
         status_counts = tickets.group(:status).count
 
         pending_count = status_counts["pending"].to_i
@@ -84,7 +95,7 @@ module Api
       end
 
       def inventory_stats
-        products    = current_company.products
+        products    = module_scope(:inventory, current_company.products)
         avail_counts = products.group(:available).count
 
         low_stock_threshold = 5
@@ -103,7 +114,8 @@ module Api
         today_range = today.beginning_of_day..today.end_of_day
         month_range = today.beginning_of_month..today.end_of_month
 
-        today_records = current_company.attendances.where(checkin_at: today_range)
+        attendances   = module_scope(:attendance, current_company.attendances)
+        today_records = attendances.where(checkin_at: today_range)
         type_counts   = today_records.group(:attendance_type).count
 
         {
@@ -113,7 +125,7 @@ module Api
             late:   type_counts["late"].to_i,
             absent: type_counts["absent"].to_i
           },
-          this_month: current_company.attendances.where(checkin_at: month_range).count
+          this_month: attendances.where(checkin_at: month_range).count
         }
       end
     end
