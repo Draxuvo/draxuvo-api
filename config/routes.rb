@@ -27,16 +27,26 @@ Rails.application.routes.draw do
       end
 
       # Uploads
-      resources :uploads, only: [:index, :show, :create, :destroy]
+      resources :uploads, only: [ :index, :show, :create, :destroy ]
 
       # Company (usuario actual) + Companies (super_admin: CRUD global)
-      resource  :company,   only: [:show, :update]
-      resources :companies, only: [:index, :show, :create, :update, :destroy]
+      resource  :company,   only: [ :show, :update ]
+      resources :companies, only: [ :index, :show, :create, :update, :destroy ]
+
+      # Módulos activos de la empresa actual: PATCH /api/v1/company/modules
+      resource :company, only: [] do
+        patch :modules, to: "company_modules#update"
+      end
+
+      # Catálogo público de planes y alta pública de empresas
+      resources :plans,         only: :index
+      resources :registrations, only: :create
 
       # Suscripción de la empresa actual
-      resource :subscription, only: [:show, :destroy] do
+      resource :subscription, only: [ :show, :update, :destroy ] do
         collection do
           post :checkout
+          post :portal
         end
       end
 
@@ -53,7 +63,7 @@ Rails.application.routes.draw do
       end
 
       # Asistencias (con filtros por employee, from, to)
-      resources :attendances, only: [:index]
+      resources :attendances, only: [ :index ]
 
       # Inventario / Menú
       resources :products do
@@ -62,12 +72,12 @@ Rails.application.routes.draw do
           post :import
           get  :template
         end
-        resources :stock_movements, only: [:index, :create]
+        resources :stock_movements, only: [ :index, :create ]
       end
 
-      resources :units, only: [:index]
+      resources :units, only: [ :index ]
 
-      resources :tickets, only: [:index, :show] do
+      resources :tickets, only: [ :index, :show ] do
         member do
           patch :mark_as_paid
           get   :download
@@ -90,13 +100,12 @@ Rails.application.routes.draw do
       resources :work_orders do
         member do
           patch :update_status
-          post   'items',                  to: 'work_orders#create_item',  as: :create_item
-          patch  'items/:item_id',         to: 'work_orders#update_item',  as: :update_item
-          delete 'items/:item_id',         to: 'work_orders#destroy_item', as: :destroy_item
-          patch  'items/:item_id/toggle',  to: 'work_orders#toggle_item',  as: :toggle_item
+          post   "items",                  to: "work_orders#create_item",  as: :create_item
+          patch  "items/:item_id",         to: "work_orders#update_item",  as: :update_item
+          delete "items/:item_id",         to: "work_orders#destroy_item", as: :destroy_item
+          patch  "items/:item_id/toggle",  to: "work_orders#toggle_item",  as: :toggle_item
         end
       end
-      
     end
   end
 end
