@@ -40,3 +40,4 @@ units_data.each do |data|
   end
 end
 puts "  [ok] #{units_data.size} units"
+load Rails.root.join("db/seeds/demo.rb") if Rails.env.development?
