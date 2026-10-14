@@ -44,6 +44,7 @@ en:
       price_not_found: "The plan price was not found in Stripe."
       webhook_secret_missing: "The Stripe webhook secret is not configured."
       invalid_signature: "Invalid webhook signature."
+      billing_managed_by_parent: "Billing for this company is managed by its main company."
     module_not_in_plan: "The %{module} module is not included in your plan."
     registration:
       email_taken: "Email address is already registered"
@@ -107,6 +108,15 @@ en:
   users:
     not_found: "User not found"
     deleted:   "User deleted"
+
+  company_members:
+    already_member: "This person is already a member of this company."
+    last_owner: "The company must keep at least one owner."
+    removed: "Person removed from the company"
+
+  branches:
+    company_limit_reached: "You reached the limit of 3 companies per account."
+    not_a_main_company: "Only the main company can add branches."
 
   companies:
     not_found: "Company not found"

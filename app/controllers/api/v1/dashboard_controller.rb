@@ -37,8 +37,8 @@ module Api
       end
 
       def users_stats
-        users      = current_company.users
-        role_counts = users.group(:role).count
+        users       = current_company.users
+        role_counts = current_company.user_companies.group(:role).count
 
         {
           total:   users.count,
@@ -47,7 +47,7 @@ module Api
             manager:     role_counts["manager"].to_i,
             admin:       role_counts["admin"].to_i,
             owner:       role_counts["owner"].to_i,
-            super_admin: role_counts["super_admin"].to_i
+            super_admin: 0
           }
         }
       end

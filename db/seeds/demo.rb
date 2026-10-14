@@ -3,6 +3,8 @@
 # Para regenerarlos (por ejemplo, para que la asistencia de "hoy" sea de hoy): bin/rails db:reset
 #
 # Contraseña de todos los usuarios de demo: Demo12345*
+# El rol es por empresa (user_companies.role). multi@demo.demo es owner de Volta y staff de Sazón,
+# y Sazón (plan Empresa) tiene la sucursal "Restaurante Sazón Centro".
 
 DEMO_PASSWORD = "Demo12345*".freeze
 
@@ -63,12 +65,15 @@ WORK_ORDERS = [
 
 def demo_user(email:, first_name:, last_name:, role:, company:)
   user = User.find_or_initialize_by(email: email)
-  user.assign_attributes(first_name: first_name, last_name: last_name, phone: "5512345678",
-                         role: role, active: true)
+  user.assign_attributes(first_name: first_name, last_name: last_name, phone: "5512345678", active: true)
   user.password = DEMO_PASSWORD if user.new_record?
   user.save!
-  UserCompany.find_or_create_by!(user: user, company: company)
+  demo_membership(user, company, role)
   user
+end
+
+def demo_membership(user, company, role)
+  UserCompany.find_or_initialize_by(user: user, company: company).update!(role: role)
 end
 
 DEMO_COMPANIES.each do |cfg|
@@ -155,5 +160,27 @@ DEMO_COMPANIES.each do |cfg|
 
   puts "  [ok] #{company.name} (#{cfg[:plan]}, #{cfg[:status]})"
 end
+
+# Sucursal de Sazón: usa la suscripción y los módulos de la principal (sin prueba propia).
+sazon = Company.find_by!(slug: "restaurante-sazon")
+centro = Company.find_or_create_by!(slug: "restaurante-sazon-centro") do |c|
+  c.name = "Restaurante Sazón Centro"
+  c.parent = sazon
+end
+demo_membership(User.find_by!(email: "dueno@sazon.demo"), centro, :owner)
+demo_user(email: "admin@centro.sazon.demo", first_name: "Admin", last_name: centro.name, role: :admin, company: centro)
+unless centro.employees.exists?
+  PEOPLE.first(2).each_with_index do |(first, last, position, department), i|
+    Employee.create!(company: centro, name: "#{first} #{last}", position: position, department: department,
+                     salary: 9_500 + (i * 1_000), status: :active, phone: "55200000#{i}#{centro.id % 10}")
+  end
+end
+puts "  [ok] #{centro.name} (sucursal de #{sazon.name})"
+
+# Una persona con roles distintos en dos empresas.
+multi = demo_user(email: "multi@demo.demo", first_name: "Paula", last_name: "Multiempresa",
+                  role: :owner, company: Company.find_by!(slug: "electricidad-volta"))
+demo_membership(multi, sazon, :staff)
+puts "  [ok] multi@demo.demo: owner de Electricidad Volta y staff de Restaurante Sazón"
 
 puts "  Usuarios de demo: dueno@, admin@, manager@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"

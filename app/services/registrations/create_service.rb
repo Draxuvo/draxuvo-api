@@ -1,5 +1,5 @@
 # Registro público (US3, contracts/api.md "POST /registrations"): crea en una transacción la empresa,
-# su dueño activo, el vínculo UserCompany y la prueba gratuita del plan elegido.
+# su dueño activo, el vínculo UserCompany (rol owner en esa empresa) y la prueba gratuita del plan elegido.
 module Registrations
   class CreateService
     Result = Data.define(:user, :company, :subscription)
@@ -13,14 +13,14 @@ module Registrations
     def call
       plan = valid_plan!
       cycle = valid_billing_cycle!
-      user = User.new(@params.slice(*USER_FIELDS).merge(role: :owner, active: true))
+      user = User.new(@params.slice(*USER_FIELDS).merge(active: true))
       company = Company.new(name: @params[:company_name], slug: available_slug)
       validate!(user, company)
 
       ActiveRecord::Base.transaction do
         company.save!
         user.save!
-        UserCompany.create!(user: user, company: company)
+        UserCompany.create!(user: user, company: company, role: :owner)
         # Company crea la prueba Pro en su after_create; aquí queda en el plan elegido.
         company.subscription.update!(plan: plan, billing_cycle: cycle)
       end

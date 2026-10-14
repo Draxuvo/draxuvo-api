@@ -5,11 +5,11 @@ class EmployeeSerializer < ActiveModel::Serializer
 
   attribute :user do
     next nil unless object.user
-    
+
     {
       id:     object.user.id,
       email:  object.user.email,
-      role:   object.user.role,
+      role:   object.user.role_in(object.company),
       active: object.user.active
     }
   end
