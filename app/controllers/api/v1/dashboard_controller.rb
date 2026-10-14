@@ -98,21 +98,21 @@ module Api
         products    = module_scope(:inventory, current_company.products)
         avail_counts = products.group(:available).count
 
-        low_stock_threshold = 5
-
         {
           total:       products.count,
           available:   avail_counts[true].to_i,
           unavailable: avail_counts[false].to_i,
-          low_stock:   products.where("stock > 0 AND stock <= ?", low_stock_threshold).count,
+          # Misma regla que GET /products?low_stock=true y ProductSerializer#low_stock.
+          low_stock:   products.where("stock <= min_stock").count,
           out_of_stock: products.where(stock: 0).count
         }
       end
 
       def attendance_stats
-        today      = Date.today
-        today_range = today.beginning_of_day..today.end_of_day
-        month_range = today.beginning_of_month..today.end_of_month
+        # Rangos de tiempo (no de Date) en Time.zone, así el último día del mes cuenta completo.
+        now         = Time.zone.now
+        today_range = now.all_day
+        month_range = now.all_month
 
         attendances   = module_scope(:attendance, current_company.attendances)
         today_records = attendances.where(checkin_at: today_range)

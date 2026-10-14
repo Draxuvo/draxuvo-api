@@ -9,7 +9,8 @@ module Api
         tickets = current_company.tickets
                                  .includes(work_order: :work_order_items)
 
-        tickets = tickets.where(status: params[:status]) if params[:status].present?
+        tickets = tickets.where(status: params[:status]) if Ticket.statuses.key?(params[:status])
+        tickets = search_tickets(tickets, params[:search])  if params[:search].present?
         tickets = apply_sort(tickets,
                     allowed: %i[folio status total created_at paid_at],
                     default: :created_at, default_dir: :desc)
@@ -51,6 +52,12 @@ module Api
       end
 
       private
+
+      def search_tickets(tickets, query)
+        term = "%#{Ticket.sanitize_sql_like(query)}%"
+        tickets.joins(:work_order)
+               .where("tickets.folio ILIKE :term OR work_orders.title ILIKE :term", term: term)
+      end
 
       def find_ticket
         current_company.tickets.includes(work_order: :work_order_items).find(params[:id])

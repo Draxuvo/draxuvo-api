@@ -1,5 +1,6 @@
 # Datos de demo para navegar el panel en desarrollo. Idempotente: una empresa que ya tiene
 # empleados no se vuelve a llenar. Se carga desde db/seeds.rb solo en development.
+# Para regenerarlos (por ejemplo, para que la asistencia de "hoy" sea de hoy): bin/rails db:reset
 #
 # Contraseña de todos los usuarios de demo: Demo12345*
 
@@ -34,7 +35,19 @@ PRODUCTS = [
   [ "LLA-01", "Llave de paso 1/2\"", "Plomería", 95.0, 160.0, 3, 5 ],
   [ "CAF-01", "Café de grano 1 kg", "Insumos", 210.0, 320.0, 12, 4 ],
   [ "LEC-01", "Leche entera 1 L", "Insumos", 24.0, 30.0, 2, 6 ],
-  [ "REF-60", "Refresco 600 ml", "Abarrotes", 11.0, 18.0, 120, 24 ]
+  [ "REF-60", "Refresco 600 ml", "Abarrotes", 11.0, 18.0, 120, 24 ],
+  [ "FOC-09", "Foco LED 9 W", "Material eléctrico", 32.0, 55.0, 0, 10 ],
+  [ "HIE-05", "Hielo bolsa 5 kg", "Insumos", 25.0, 40.0, 0, 5 ]
+].freeze
+
+# Asistencia de hoy por empleado (mismo orden que PEOPLE): [tipo, hora, minuto].
+# Las faltas también llevan checkin_at porque el dashboard cuenta por checkin_at de hoy.
+TODAY_ATTENDANCE = [
+  [ :normal, 8, 50 ],
+  [ :late, 9, 20 ],
+  [ :normal, 8, 55 ],
+  [ :absent, 9, 0 ],
+  [ :late, 9, 40 ]
 ].freeze
 
 WORK_ORDERS = [
@@ -79,6 +92,8 @@ DEMO_COMPANIES.each do |cfg|
                     role: :owner, company: company)
   demo_user(email: "admin@#{cfg[:domain]}", first_name: "Admin", last_name: company.name,
             role: :admin, company: company)
+  demo_user(email: "manager@#{cfg[:domain]}", first_name: "Gerente", last_name: company.name,
+            role: :manager, company: company)
   staff = demo_user(email: "staff@#{cfg[:domain]}", first_name: "Ana", last_name: "López",
                     role: :staff, company: company)
 
@@ -100,6 +115,13 @@ DEMO_COMPANIES.each do |cfg|
       Attendance.create!(employee: employee, company: company, checkin_at: checkin,
                          checkout_at: checkin + 9.hours, attendance_type: late ? :late : :normal)
     end
+  end
+
+  # Asistencia de hoy, con retardos y faltas, sin salida registrada.
+  today = Time.zone.today
+  employees.zip(TODAY_ATTENDANCE).each do |employee, (type, hour, min)|
+    Attendance.create!(employee: employee, company: company, attendance_type: type,
+                       checkin_at: today.in_time_zone.change(hour: hour, min: min))
   end
 
   products = PRODUCTS.map do |sku, name, category, cost, price, stock, min_stock|
@@ -134,4 +156,4 @@ DEMO_COMPANIES.each do |cfg|
   puts "  [ok] #{company.name} (#{cfg[:plan]}, #{cfg[:status]})"
 end
 
-puts "  Usuarios de demo: dueno@, admin@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"
+puts "  Usuarios de demo: dueno@, admin@, manager@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"
