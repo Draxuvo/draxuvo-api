@@ -11,6 +11,10 @@ class User < ApplicationRecord
   # users.role solo distingue a super_admin (global). El rol de empresa vive en user_companies.role (R16).
   enum :role, { staff: 0, manager: 1, admin: 2, owner: 3, super_admin: 4 }, default: :staff
 
+  # Apariencia del panel (spec 006). Las mismas claves viven en draxuvo-ui/src/lib/appearance.ts.
+  THEMES = %w[anaquel mercado talavera rosa_mexicano grafito].freeze
+  COLOR_MODES = %w[light dark system].freeze
+
   # Scopes para filtros
   scope :by_email, ->(email) { where("email LIKE ?", "%#{email}%") if email.present? }
   scope :by_role, ->(role) { where(role: role) if role.present? }
@@ -37,6 +41,8 @@ class User < ApplicationRecord
                     uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :phone, presence: true
+  validates :theme, inclusion: { in: THEMES }
+  validates :color_mode, inclusion: { in: COLOR_MODES }
   validates :password, presence: true, length: { minimum: 6 }, if: :password_required?
 
   def full_name

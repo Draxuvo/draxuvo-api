@@ -4,6 +4,9 @@ module Api
       ALLOWED_AVATAR_TYPES = %w[image/jpeg image/png image/gif image/webp].freeze
       MAX_AVATAR_SIZE      = 5.megabytes
 
+      # Perfil y apariencia son de la persona: una empresa vencida no debe impedir guardarlos.
+      skip_before_action :check_subscription!, only: %i[show update]
+
       # GET /api/v1/profile
       def show
         render json: UserSerializer.new(current_user).as_json
@@ -43,7 +46,7 @@ module Api
       private
 
       def profile_params
-        params.require(:profile).permit(:first_name, :last_name, :phone, :description)
+        params.require(:profile).permit(:first_name, :last_name, :phone, :description, :theme, :color_mode)
       end
 
       def validate_avatar!(file)

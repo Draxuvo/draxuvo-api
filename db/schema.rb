@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_15_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_15_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -195,6 +195,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_000002) do
     t.boolean "active", default: false
     t.integer "role"
     t.text "description"
+    t.string "theme", default: "anaquel", null: false
+    t.string "color_mode", default: "system", null: false
   end
 
   create_table "work_order_attachments", force: :cascade do |t|
