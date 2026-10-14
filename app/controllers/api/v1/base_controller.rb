@@ -4,6 +4,7 @@ module Api
     class BaseController < ApplicationController
       include Authenticable
       include Authorizable
+      include ModuleGate
 
       rescue_from ApiErrors::BaseError,          with: :handle_api_error
       rescue_from ActiveRecord::RecordNotFound,  with: :handle_not_found
@@ -47,7 +48,7 @@ module Api
         return if current_user.super_admin?
 
         subscription = current_company.subscription
-        subscription = Subscription.start_trial!(current_company) if subscription.nil?
+        subscription = Subscription.start_trial!(current_company, plan: :pro) if subscription.nil?
 
         return if subscription.active_access?
 

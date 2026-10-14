@@ -2,8 +2,8 @@
 module Api
   module V1
     class CompaniesController < BaseController
-      before_action :require_super_admin!, only: [:index, :create, :destroy]
-      before_action :set_company, only: [:show, :update, :destroy]
+      before_action :require_super_admin!, only: [ :index, :create, :destroy ]
+      before_action :set_company, only: [ :show, :update, :destroy ]
 
       # GET /api/v1/companies — super_admin: lista todas las empresas
       def index
@@ -19,7 +19,7 @@ module Api
         render json: @company
       end
 
-      # POST /api/v1/companies — super_admin: crea empresa
+      # POST /api/v1/companies — super_admin: crea empresa (after_create abre la prueba Pro)
       def create
         company = Company.new(company_params)
         if company.save
@@ -37,7 +37,12 @@ module Api
       end
 
       # DELETE /api/v1/companies/:id — super_admin
+      # Con suscripción en Stripe, la cancela allá de inmediato antes de borrar (FR-022).
       def destroy
+        subscription = @company.subscription
+        if subscription&.stripe_subscription_id.present?
+          Subscriptions::CancelService.new(subscription, immediate: true).call
+        end
         @company.destroy
         head :no_content
       end
@@ -56,7 +61,7 @@ module Api
       end
 
       def company_params
-        params.require(:company).permit(:name, :plan)
+        params.require(:company).permit(:name)
       end
     end
   end
