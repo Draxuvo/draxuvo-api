@@ -8,6 +8,7 @@ class User < ApplicationRecord
   has_one :employee, dependent: :nullify
   has_one_attached :avatar
   normalizes :email, with: ->(e) { e.strip.downcase }
+  # users.role solo distingue a super_admin (global). El rol de empresa vive en user_companies.role (R16).
   enum :role, { staff: 0, manager: 1, admin: 2, owner: 3, super_admin: 4 }, default: :staff
 
   # Scopes para filtros
@@ -44,6 +45,30 @@ class User < ApplicationRecord
 
   def locked?
     !active?
+  end
+
+  def membership_for(company)
+    return nil unless company
+
+    user_companies.find_by(company_id: company.id)
+  end
+
+  # Rol con el que actúa en `company`: super_admin es global; si no, el rol de su membresía (o nil).
+  def role_in(company)
+    return "super_admin" if super_admin?
+
+    membership_for(company)&.role
+  end
+
+  # Membresías en orden de alta; la primera define el rol "por compatibilidad" de las respuestas.
+  def ordered_memberships
+    user_companies.includes(:company).order(:id)
+  end
+
+  def compat_role
+    return "super_admin" if super_admin?
+
+    ordered_memberships.first&.role || role
   end
 
   # Method to update password with confirmation

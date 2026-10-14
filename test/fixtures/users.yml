@@ -1,4 +1,4 @@
-# role: 0 staff, 1 manager, 2 admin, 3 owner, 4 super_admin. Contraseña de todos: password123
+# role global: solo distingue a super_admin (4); el rol de empresa está en user_companies. Contraseña de todos: password123
 <% %w[one two basic_co pro_co enterprise_co expired_co past_due_co].each do |co| %>
 <%= co %>_owner:
   first_name: Dueño

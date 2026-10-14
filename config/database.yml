@@ -24,9 +24,10 @@ default: &default
 development:
   <<: *default
   database: draxuvo_development
-  username: bothi
-  password: Bothi12345*
-  host: localhost
+  # Credenciales locales por variables de entorno (.env, ver .env.example); nunca en este archivo.
+  username: <%= ENV["DATABASE_USERNAME"] %>
+  password: <%= ENV["DATABASE_PASSWORD"] %>
+  host: <%= ENV.fetch("DATABASE_HOST", "localhost") %>
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.

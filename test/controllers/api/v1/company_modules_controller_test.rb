@@ -71,7 +71,7 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
 
   test "an admin can change modules" do
     admin = users(:pro_staff)
-    admin.update!(role: :admin)
+    admin.user_companies.find_by!(company: companies(:pro_co)).update!(role: :admin)
 
     patch PATH, params: { disabled_modules: [ "tickets" ] },
                 headers: auth_headers(admin, companies(:pro_co)), as: :json

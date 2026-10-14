@@ -1,7 +1,10 @@
 # Datos de demo para navegar el panel en desarrollo. Idempotente: una empresa que ya tiene
 # empleados no se vuelve a llenar. Se carga desde db/seeds.rb solo en development.
+# Para regenerarlos (por ejemplo, para que la asistencia de "hoy" sea de hoy): bin/rails db:reset
 #
 # Contraseña de todos los usuarios de demo: Demo12345*
+# El rol es por empresa (user_companies.role). multi@demo.demo es owner de Volta y staff de Sazón,
+# y Sazón (plan Empresa) tiene la sucursal "Restaurante Sazón Centro".
 
 DEMO_PASSWORD = "Demo12345*".freeze
 
@@ -34,7 +37,19 @@ PRODUCTS = [
   [ "LLA-01", "Llave de paso 1/2\"", "Plomería", 95.0, 160.0, 3, 5 ],
   [ "CAF-01", "Café de grano 1 kg", "Insumos", 210.0, 320.0, 12, 4 ],
   [ "LEC-01", "Leche entera 1 L", "Insumos", 24.0, 30.0, 2, 6 ],
-  [ "REF-60", "Refresco 600 ml", "Abarrotes", 11.0, 18.0, 120, 24 ]
+  [ "REF-60", "Refresco 600 ml", "Abarrotes", 11.0, 18.0, 120, 24 ],
+  [ "FOC-09", "Foco LED 9 W", "Material eléctrico", 32.0, 55.0, 0, 10 ],
+  [ "HIE-05", "Hielo bolsa 5 kg", "Insumos", 25.0, 40.0, 0, 5 ]
+].freeze
+
+# Asistencia de hoy por empleado (mismo orden que PEOPLE): [tipo, hora, minuto].
+# Las faltas también llevan checkin_at porque el dashboard cuenta por checkin_at de hoy.
+TODAY_ATTENDANCE = [
+  [ :normal, 8, 50 ],
+  [ :late, 9, 20 ],
+  [ :normal, 8, 55 ],
+  [ :absent, 9, 0 ],
+  [ :late, 9, 40 ]
 ].freeze
 
 WORK_ORDERS = [
@@ -50,12 +65,15 @@ WORK_ORDERS = [
 
 def demo_user(email:, first_name:, last_name:, role:, company:)
   user = User.find_or_initialize_by(email: email)
-  user.assign_attributes(first_name: first_name, last_name: last_name, phone: "5512345678",
-                         role: role, active: true)
+  user.assign_attributes(first_name: first_name, last_name: last_name, phone: "5512345678", active: true)
   user.password = DEMO_PASSWORD if user.new_record?
   user.save!
-  UserCompany.find_or_create_by!(user: user, company: company)
+  demo_membership(user, company, role)
   user
+end
+
+def demo_membership(user, company, role)
+  UserCompany.find_or_initialize_by(user: user, company: company).update!(role: role)
 end
 
 DEMO_COMPANIES.each do |cfg|
@@ -79,6 +97,8 @@ DEMO_COMPANIES.each do |cfg|
                     role: :owner, company: company)
   demo_user(email: "admin@#{cfg[:domain]}", first_name: "Admin", last_name: company.name,
             role: :admin, company: company)
+  demo_user(email: "manager@#{cfg[:domain]}", first_name: "Gerente", last_name: company.name,
+            role: :manager, company: company)
   staff = demo_user(email: "staff@#{cfg[:domain]}", first_name: "Ana", last_name: "López",
                     role: :staff, company: company)
 
@@ -100,6 +120,13 @@ DEMO_COMPANIES.each do |cfg|
       Attendance.create!(employee: employee, company: company, checkin_at: checkin,
                          checkout_at: checkin + 9.hours, attendance_type: late ? :late : :normal)
     end
+  end
+
+  # Asistencia de hoy, con retardos y faltas, sin salida registrada.
+  today = Time.zone.today
+  employees.zip(TODAY_ATTENDANCE).each do |employee, (type, hour, min)|
+    Attendance.create!(employee: employee, company: company, attendance_type: type,
+                       checkin_at: today.in_time_zone.change(hour: hour, min: min))
   end
 
   products = PRODUCTS.map do |sku, name, category, cost, price, stock, min_stock|
@@ -134,4 +161,26 @@ DEMO_COMPANIES.each do |cfg|
   puts "  [ok] #{company.name} (#{cfg[:plan]}, #{cfg[:status]})"
 end
 
-puts "  Usuarios de demo: dueno@, admin@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"
+# Sucursal de Sazón: usa la suscripción y los módulos de la principal (sin prueba propia).
+sazon = Company.find_by!(slug: "restaurante-sazon")
+centro = Company.find_or_create_by!(slug: "restaurante-sazon-centro") do |c|
+  c.name = "Restaurante Sazón Centro"
+  c.parent = sazon
+end
+demo_membership(User.find_by!(email: "dueno@sazon.demo"), centro, :owner)
+demo_user(email: "admin@centro.sazon.demo", first_name: "Admin", last_name: centro.name, role: :admin, company: centro)
+unless centro.employees.exists?
+  PEOPLE.first(2).each_with_index do |(first, last, position, department), i|
+    Employee.create!(company: centro, name: "#{first} #{last}", position: position, department: department,
+                     salary: 9_500 + (i * 1_000), status: :active, phone: "55200000#{i}#{centro.id % 10}")
+  end
+end
+puts "  [ok] #{centro.name} (sucursal de #{sazon.name})"
+
+# Una persona con roles distintos en dos empresas.
+multi = demo_user(email: "multi@demo.demo", first_name: "Paula", last_name: "Multiempresa",
+                  role: :owner, company: Company.find_by!(slug: "electricidad-volta"))
+demo_membership(multi, sazon, :staff)
+puts "  [ok] multi@demo.demo: owner de Electricidad Volta y staff de Restaurante Sazón"
+
+puts "  Usuarios de demo: dueno@, admin@, manager@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"

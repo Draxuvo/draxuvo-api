@@ -1,7 +1,11 @@
-# Contrato: specs/002-rebrand-suscripciones/contracts/api.md (GET /subscription).
+# Contrato: specs/002-rebrand-suscripciones/contracts/api.md (GET /subscription) y
+# specs/004-refactor-web-panel/contracts/api.md (managed_by_parent en sucursales).
+# `company` es la empresa activa: en una sucursal, la suscripción es de la principal pero los
+# módulos activos son los de la sucursal (cada empresa conserva sus disabled_modules).
 class SubscriptionSerializer
-  def initialize(subscription)
+  def initialize(subscription, company: nil)
     @s = subscription
+    @company = company || subscription&.company
   end
 
   def as_json(*)
@@ -18,8 +22,9 @@ class SubscriptionSerializer
       total_cents: @s.total_cents,
       trial_ends_at: @s.trial_ends_at,
       current_period_end: @s.current_period_end,
-      active_modules: @s.company.active_modules.map(&:to_s),
-      available_modules: @s.company.available_modules.map(&:to_s),
+      active_modules: @company.active_modules.map(&:to_s),
+      available_modules: @company.available_modules.map(&:to_s),
+      managed_by_parent: @company.branch?,
       amount: @s.amount,
       iva_amount: @s.iva_amount,
       total_with_iva: @s.total_with_iva,

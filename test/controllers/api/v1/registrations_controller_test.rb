@@ -49,7 +49,7 @@ class Api::V1::RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
     user = User.find(body["user"]["id"])
     assert_equal "ana@ejemplo.com", user.email
-    assert user.owner?
+    assert_equal "owner", user.user_companies.sole.role
     assert user.active?
     assert_equal "owner", body["user"]["role"]
     assert_equal [ "Café Ana" ], body["user"]["companies"].map { |c| c["name"] }

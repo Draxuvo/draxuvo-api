@@ -1,11 +1,14 @@
 # Contrato: specs/002-rebrand-suscripciones/contracts/api.md (/subscription).
 # Sin check_subscription!: una empresa con la prueba vencida debe poder ver y pagar su plan.
+# Una sucursal (spec 004, R17) ve la suscripción de su principal con managed_by_parent y no cobra:
+# checkout, portal, PATCH y DELETE responden 422 billing_managed_by_parent.
 module Api
   module V1
     class SubscriptionsController < BaseController
       skip_before_action :check_subscription!
 
-      before_action :require_admin_or_owner!
+      before_action :require_admin!
+      before_action :reject_branch_billing!, except: :show
 
       # GET /api/v1/subscription
       def show
@@ -64,18 +67,21 @@ module Api
 
       private
 
-      def require_admin_or_owner!
-        return if current_user.admin? || current_user.owner? || current_user.super_admin?
+      def reject_branch_billing!
+        return unless current_company.branch?
 
-        raise ApiErrors::ForbiddenError
+        raise ApiErrors::UnprocessableEntityError.new(
+          message: I18n.t("errors.subscription.billing_managed_by_parent"),
+          details: { code: "billing_managed_by_parent" }
+        )
       end
 
       def subscription!
-        current_company.subscription || raise(ApiErrors::NotFoundError)
+        current_company.billing_subscription || raise(ApiErrors::NotFoundError)
       end
 
       def serialize(subscription)
-        SubscriptionSerializer.new(subscription).as_json
+        SubscriptionSerializer.new(subscription, company: current_company).as_json
       end
 
       def required_param!(key)

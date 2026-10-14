@@ -11,6 +11,7 @@ bin/rails test test/models/user_test.rb          # Run a single model test
 bin/rails test test/controllers/api/v1/users_controller_test.rb  # Run a controller test
 bin/rails db:migrate          # Run pending migrations
 bin/rails db:seed             # Seed the database
+bin/rails db:reset            # Drop, recreate and reseed (regenerates demo data, development only)
 bin/rails routes              # Show all API routes
 bin/rails console             # Interactive console
 bin/rubocop                   # Lint (Rails Omakase style)

@@ -44,6 +44,7 @@ es:
       price_not_found: "No se encontró el precio del plan en Stripe."
       webhook_secret_missing: "El secreto del webhook de Stripe no está configurado."
       invalid_signature: "Firma del webhook inválida."
+      billing_managed_by_parent: "La facturación de esta empresa se administra en la empresa principal."
     module_not_in_plan: "El módulo %{module} no está incluido en tu plan."
     registration:
       email_taken: "El correo electrónico ya está registrado"
@@ -107,6 +108,15 @@ es:
   users:
     not_found: "Usuario no encontrado"
     deleted:   "Usuario eliminado"
+
+  company_members:
+    already_member: "La persona ya es miembro de esta empresa."
+    last_owner: "La empresa debe conservar al menos un owner."
+    removed: "Persona quitada de la empresa"
+
+  branches:
+    company_limit_reached: "Llegaste al límite de 3 empresas por cuenta."
+    not_a_main_company: "Solo la empresa principal puede agregar sucursales."
 
   companies:
     not_found: "Empresa no encontrada"

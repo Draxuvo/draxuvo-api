@@ -1,6 +1,9 @@
+# Administrador global de usuarios: solo super admin (spec 004, R14, FR-019). Cada empresa
+# administra a su gente en /company/members (CompanyMembersController).
 module Api::V1
   class UsersController < BaseController
-    before_action :set_user, only: [:show, :update, :destroy, :update_active, :active]
+    before_action :require_super_admin!
+    before_action :set_user, only: [ :show, :update, :destroy, :update_active, :active ]
 
     # GET /api/v1/users
     def index
@@ -75,18 +78,28 @@ module Api::V1
       render json: error.as_json, status: error.status
     end
 
+    # Solo llega aquí un super admin (require_super_admin!). El rol global y las empresas se toman
+    # aparte y validados, en vez de abrir `role` y `company_ids` al mass assignment.
     def user_create_params
-      permitted = %i[first_name middle_name last_name second_last_name email phone]
-      permitted += [:role, :password, :active, company_ids: []] if current_user.role.in?(%w[admin owner super_admin])
-      params.require(:user).permit(*permitted)
-    rescue ActionController::ParameterMissing => e
-      raise ApiErrors::BadRequestError.new(message: e.message)
+      user_params(%i[first_name middle_name last_name second_last_name email phone password active])
     end
 
     def user_update_params
-      permitted = %i[first_name middle_name last_name second_last_name phone password]
-      permitted += [:role, :active, company_ids: []] if current_user.role.in?(%w[admin owner super_admin])
-      params.require(:user).permit(*permitted)
+      user_params(%i[first_name middle_name last_name second_last_name phone password active])
+    end
+
+    def user_params(fields)
+      attrs = params.require(:user).permit(*fields)
+      user = params[:user]
+
+      if user.key?(:role)
+        role = user[:role].to_s
+        raise ApiErrors::BadRequestError.new(details: { role: role }) unless User.roles.key?(role)
+
+        attrs[:role] = role
+      end
+      attrs[:company_ids] = Company.where(id: Array(user[:company_ids])).ids if user.key?(:company_ids)
+      attrs
     rescue ActionController::ParameterMissing => e
       raise ApiErrors::BadRequestError.new(message: e.message)
     end

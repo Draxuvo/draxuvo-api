@@ -35,6 +35,11 @@ module Api
         end
       end
 
+      # Rol con el que actúa el usuario en la empresa activa (R16): super_admin o el de su membresía.
+      def current_role
+        @current_role ||= current_user.role_in(current_company)
+      end
+
       def handle_api_error(error)
         render json: error.as_json, status: error.status
       end
@@ -44,17 +49,23 @@ module Api
                status: :not_found
       end
 
+      # El acceso lo da la suscripción de billing_company (R17). Una sucursal además exige que la
+      # principal tenga multi_company en su plan; si no, queda bloqueada sin borrar datos (FR-029).
       def check_subscription!
         return if current_user.super_admin?
 
-        subscription = current_company.subscription
-        subscription = Subscription.start_trial!(current_company, plan: :pro) if subscription.nil?
+        billing = current_company.billing_company
+        subscription = billing&.subscription
+        subscription = Subscription.start_trial!(current_company, plan: :pro) if subscription.nil? && !current_company.branch?
 
-        return if subscription.active_access?
+        unless subscription&.active_access?
+          raise ApiErrors::ForbiddenError.new(details: I18n.t("errors.subscription.inactive"))
+        end
 
-        raise ApiErrors::ForbiddenError.new(
-          details: I18n.t("errors.subscription.inactive")
-        )
+        return unless current_company.branch?
+        return if billing.available_modules.include?(:multi_company)
+
+        raise_module_not_in_plan!(:multi_company)
       end
 
       def handle_invalid(e)

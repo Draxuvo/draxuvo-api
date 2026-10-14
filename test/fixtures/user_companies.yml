@@ -1,17 +1,22 @@
+# role (por empresa): 0 staff, 1 manager, 2 admin, 3 owner. super_admin es global (users.role).
 <% %w[one two basic_co pro_co enterprise_co expired_co past_due_co].each do |co| %>
 <%= co %>_owner:
   user: <%= co %>_owner
   company: <%= co %>
+  role: 3
 <% end %>
 
 pro_staff:
   user: pro_staff
   company: pro_co
+  role: 0
 
 pro_manager:
   user: pro_manager
   company: pro_co
+  role: 1
 
 expired_staff:
   user: expired_staff
   company: expired_co
+  role: 0

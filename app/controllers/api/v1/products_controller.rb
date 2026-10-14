@@ -8,6 +8,7 @@ module Api
       def index
         products = current_company.products.search(params[:search])
         products = products.where("stock <= min_stock")  if params[:low_stock]  == "true"
+        products = products.where(stock: 0)              if params[:out_of_stock] == "true"
         products = products.where(available: true)       if params[:available]  == "true"
         products = products.by_category(params[:category]) if params[:category].present?
         products = apply_sort(products, allowed: %i[name sku stock min_stock unit_cost category created_at], default: :name)
