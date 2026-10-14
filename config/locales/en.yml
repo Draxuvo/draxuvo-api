@@ -1,4 +1,23 @@
 en:
+  brand:
+    name: "Draxuvo"
+    tagline: "Technology and automation"
+
+  plans:
+    basic:      "Basic"
+    pro:        "Pro"
+    enterprise: "Enterprise"
+
+  modules:
+    employees:     "Employees"
+    attendance:    "Attendance"
+    inventory:     "Inventory"
+    work_orders:   "Work orders"
+    tickets:       "Tickets"
+    reports:       "Reports"
+    whatsapp:      "WhatsApp"
+    multi_company: "Multi-company"
+
   errors:
     default: "Something went wrong"
     internal: "Internal server error"
@@ -14,6 +33,22 @@ en:
       greater_than_or_equal_to: "must be greater than or equal to %{count}"
       less_than_or_equal_to: "must be less than or equal to %{count}"
       blank: "can't be blank"
+    subscription:
+      inactive: "Your subscription has expired or was cancelled. Update your plan to continue."
+      invalid_plan: "Invalid plan. Must be 'basic', 'pro' or 'enterprise'."
+      stripe_not_configured: "Stripe is not configured. Contact support."
+      invalid_billing_cycle: "Invalid billing cycle. Must be 'monthly' or 'annual'."
+      not_trialing: "You can only change plans this way during the free trial."
+      subscription_already_active: "The company already has an active subscription. Manage your plan from the billing portal."
+      no_billing_account: "The company does not have a billing account yet."
+      price_not_found: "The plan price was not found in Stripe."
+      webhook_secret_missing: "The Stripe webhook secret is not configured."
+      invalid_signature: "Invalid webhook signature."
+    module_not_in_plan: "The %{module} module is not included in your plan."
+    registration:
+      email_taken: "Email address is already registered"
+      rate_limited: "Too many sign-up attempts. Please try again later."
+    too_many_requests: "Too many requests. Please try again later."
 
   auth:
     header_missing: "Authorization header is missing"
@@ -75,6 +110,23 @@ en:
 
   companies:
     not_found: "Company not found"
+
+  subscription:
+    trial_started: "Trial period started (30 days)"
+    cancelled: "Subscription cancelled"
+    status:
+      trialing:  "Free trial"
+      active:    "Active"
+      past_due:  "Payment pending"
+      cancelled: "Cancelled"
+      expired:   "Expired"
+    plan:
+      basic:      "Basic"
+      pro:        "Pro"
+      enterprise: "Enterprise"
+    billing_cycle:
+      monthly: "Monthly"
+      annual:  "Annual"
 
   ticket:
     status:

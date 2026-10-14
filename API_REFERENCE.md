@@ -1,4 +1,4 @@
-# Grupo Bothi — API Reference
+# Draxuvo — API Reference
 
 Base URL: `https://<tu-dominio>/api/v1`  
 Protocolo: `HTTPS`  

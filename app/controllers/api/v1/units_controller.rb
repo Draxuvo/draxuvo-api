@@ -2,6 +2,8 @@
 module Api
   module V1
     class UnitsController < BaseController
+      requires_module :inventory
+
       def index
         units = Unit.ordered
         units = units.where(group: params[:group]) if params[:group].present?

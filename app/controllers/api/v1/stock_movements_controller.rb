@@ -2,6 +2,8 @@
 module Api
   module V1
     class StockMovementsController < BaseController
+      requires_module :inventory
+
       def index
         movements = current_company.stock_movements
                                    .includes(:product)

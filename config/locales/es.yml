@@ -1,4 +1,23 @@
 es:
+  brand:
+    name: "Draxuvo"
+    tagline: "Tecnología y automatización"
+
+  plans:
+    basic:      "Básico"
+    pro:        "Pro"
+    enterprise: "Empresa"
+
+  modules:
+    employees:     "Empleados"
+    attendance:    "Asistencia"
+    inventory:     "Inventario"
+    work_orders:   "Órdenes de trabajo"
+    tickets:       "Tickets"
+    reports:       "Reportes"
+    whatsapp:      "WhatsApp"
+    multi_company: "Multiempresa"
+
   errors:
     default: "Algo salió mal"
     internal: "Error interno del servidor"
@@ -16,8 +35,20 @@ es:
       blank: "no puede estar vacío"
     subscription:
       inactive: "Tu suscripción ha expirado o fue cancelada. Actualiza tu plan para continuar."
-      invalid_plan: "Plan inválido. Debe ser 'business' o 'enterprise'."
+      invalid_plan: "Plan inválido. Debe ser 'basic', 'pro' o 'enterprise'."
       stripe_not_configured: "Stripe no está configurado. Contacta al soporte."
+      invalid_billing_cycle: "Ciclo de facturación inválido. Debe ser 'monthly' o 'annual'."
+      not_trialing: "Solo puedes cambiar de plan así durante la prueba gratuita."
+      subscription_already_active: "La empresa ya tiene una suscripción activa. Administra tu plan desde el portal de facturación."
+      no_billing_account: "La empresa no tiene una cuenta de facturación todavía."
+      price_not_found: "No se encontró el precio del plan en Stripe."
+      webhook_secret_missing: "El secreto del webhook de Stripe no está configurado."
+      invalid_signature: "Firma del webhook inválida."
+    module_not_in_plan: "El módulo %{module} no está incluido en tu plan."
+    registration:
+      email_taken: "El correo electrónico ya está registrado"
+      rate_limited: "Demasiados intentos de registro. Intenta de nuevo más tarde."
+    too_many_requests: "Demasiadas solicitudes. Intenta de nuevo más tarde."
 
   auth:
     header_missing: "Encabezado de autorización faltante"
@@ -90,9 +121,9 @@ es:
       cancelled: "Cancelada"
       expired:   "Expirada"
     plan:
-      starter:    "Starter"
-      business:   "Business"
-      enterprise: "Enterprise"
+      basic:      "Básico"
+      pro:        "Pro"
+      enterprise: "Empresa"
     billing_cycle:
       monthly: "Mensual"
       annual:  "Anual"

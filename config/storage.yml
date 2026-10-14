@@ -18,7 +18,7 @@ local:
 #   cloud_name: <%= ENV["CLOUDINARY_CLOUD_NAME"] %>
 #   api_key: <%= ENV["CLOUDINARY_API_KEY"] %>
 #   api_secret: <%= ENV["CLOUDINARY_API_SECRET"] %>
-#   folder: <%= "grupo-bothi/#{Rails.env}" %>
+#   folder: <%= "draxuvo/#{Rails.env}" %>
 
 # ─── OPCIÓN 2: Backblaze B2 (S3-compatible) ────────────────────────────────────
 # Free tier: 10 GB storage + 1 GB/día egress gratis

@@ -13,8 +13,8 @@ module ApiErrors
         error: {
           status:  Rack::Utils.status_code(status),
           message: message,
-          details: details,
-        },
+          details: details
+        }
       }
     end
   end
@@ -46,6 +46,12 @@ module ApiErrors
   class UnprocessableEntityError < BaseError
     def initialize(message: I18n.t("errors.unprocessable"), details: nil)
       super(status: :unprocessable_entity, message: message, details: details)
+    end
+  end
+
+  class TooManyRequestsError < BaseError
+    def initialize(message: I18n.t("errors.too_many_requests", default: "Demasiadas solicitudes"), details: nil)
+      super(status: :too_many_requests, message: message, details: details)
     end
   end
 end

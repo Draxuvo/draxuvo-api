@@ -1,0 +1,174 @@
+<%
+  months = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre]
+  trial_date = trial_ends_at&.to_date
+  trial_label = trial_date ? "#{trial_date.day} de #{months[trial_date.month - 1]} de #{trial_date.year}" : nil
+  login_url = "#{ENV.fetch("FRONTEND_URL", "http://localhost:4200").chomp("/")}/es/login"
+%>
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <title>Bienvenido a Draxuvo</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .content-padding { padding: 24px 20px !important; }
+      .btn-cta { padding: 14px 28px !important; font-size: 15px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f0f2f5; font-family:'Helvetica Neue',Arial,sans-serif; -webkit-font-smoothing:antialiased;">
+
+  <%# Outer wrapper %>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f2f5;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+
+        <%# Card container %>
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:600px; width:100%; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+
+          <%# ── Header ── %>
+          <tr>
+            <td style="background: linear-gradient(135deg, #1e2a4a 0%, #2d4080 100%); padding: 40px 48px 36px; text-align:center;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <div style="display:inline-block; width:56px; height:56px; border-radius:50%;
+                                background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.3);
+                                line-height:56px; text-align:center; font-size:26px; font-weight:800;
+                                color:#ffffff; margin-bottom:14px;">
+                      D
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <p style="margin:0; font-size:22px; font-weight:800; color:#ffffff; letter-spacing:0.5px;">
+                      Draxuvo
+                    </p>
+                    <p style="margin:6px 0 0; font-size:12px; color:rgba(255,255,255,0.55); letter-spacing:1px; text-transform:uppercase;">
+                      Tecnología y automatización
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <%# ── Banda de acento ── %>
+          <tr>
+            <td style="height:4px; background: linear-gradient(90deg, #4f8ef7 0%, #7c5cfc 100%);"></td>
+          </tr>
+
+          <%# ── Cuerpo ── %>
+          <tr>
+            <td class="content-padding" style="padding: 44px 48px 36px;">
+
+              <p style="margin:0 0 8px; font-size:26px; font-weight:700; color:#1a202c;">
+                ¡Bienvenido, <%= user.first_name %>!
+              </p>
+              <p style="margin:0 0 24px; font-size:15px; color:#718096;">
+                Tu cuenta en Draxuvo está lista.
+              </p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="height:1px; background-color:#e8ecf0;"></td></tr>
+              </table>
+              <div style="height:24px;"></div>
+
+              <p style="margin:0 0 16px; font-size:15px; color:#4a5568; line-height:1.7;">
+                Creaste la empresa <strong style="color:#1a202c;"><%= company_name %></strong> y ya eres su dueño.
+                Tu prueba gratuita está activa: usa el ERP sin costo y sin tarjeta.
+              </p>
+
+              <%# Caja de la prueba %>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f7faff; border:1px solid #d0e0ff; border-radius:10px; margin: 20px 0;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0; font-size:12px; color:#7a8da8; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">
+                      Tu prueba gratuita termina el
+                    </p>
+                    <p style="margin:6px 0 0; font-size:16px; font-weight:700; color:#2d4080;">
+                      <%= trial_label %>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 20px 16px;">
+                    <p style="margin:0; font-size:12px; color:#7a8da8; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">
+                      Tu correo de acceso
+                    </p>
+                    <p style="margin:6px 0 0; font-size:16px; font-weight:700; color:#2d4080;">
+                      <%= user.email %>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 28px; font-size:15px; color:#4a5568; line-height:1.7;">
+                Antes de esa fecha puedes elegir tu plan y pagar desde la sección Suscripción para no perder el acceso.
+              </p>
+
+              <%# Botón CTA %>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 8px 0 32px;">
+                    <a href="<%= login_url %>"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="btn-cta"
+                       style="display:inline-block; padding:16px 40px; border-radius:50px;
+                              background: linear-gradient(135deg, #4f8ef7 0%, #7c5cfc 100%);
+                              color:#ffffff; font-size:16px; font-weight:700; text-decoration:none;
+                              letter-spacing:0.3px; box-shadow:0 6px 20px rgba(79,142,247,0.4);">
+                      Entrar a Draxuvo &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <%# ── Divider ── %>
+          <tr>
+            <td style="padding: 0 48px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="height:1px; background-color:#e8ecf0;"></td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <%# ── Aviso ── %>
+          <tr>
+            <td style="padding: 20px 48px;">
+              <p style="margin:0; font-size:12px; color:#a0aec0; line-height:1.6; text-align:center;">
+                Si no creaste esta cuenta, puedes ignorar este correo.
+              </p>
+            </td>
+          </tr>
+
+          <%# ── Footer ── %>
+          <tr>
+            <td style="background-color:#f7f8fa; border-top:1px solid #e8ecf0; padding:24px 48px; text-align:center; border-radius:0 0 16px 16px;">
+              <p style="margin:0 0 4px; font-size:13px; color:#a0aec0; font-weight:600;">
+                Draxuvo
+              </p>
+              <p style="margin:0; font-size:12px; color:#c0ccda;">
+                &copy; <%= Time.now.year %> Todos los derechos reservados.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

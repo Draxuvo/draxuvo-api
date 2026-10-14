@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_23_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_14_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -59,10 +59,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_23_000001) do
   create_table "companies", force: :cascade do |t|
     t.string "name"
     t.string "slug"
-    t.integer "plan"
     t.string "stripe_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "disabled_modules", default: [], null: false, array: true
   end
 
   create_table "employees", force: :cascade do |t|
@@ -112,6 +112,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_23_000001) do
     t.index ["product_id"], name: "index_stock_movements_on_product_id"
   end
 
+  create_table "stripe_events", force: :cascade do |t|
+    t.string "stripe_event_id", null: false
+    t.string "event_type", null: false
+    t.datetime "processed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stripe_event_id"], name: "index_stripe_events_on_stripe_event_id", unique: true
+  end
+
   create_table "subscriptions", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.integer "plan", default: 0, null: false
@@ -125,7 +134,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_23_000001) do
     t.datetime "cancelled_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["company_id"], name: "index_subscriptions_on_company_id"
+    t.boolean "cancel_at_period_end", default: false, null: false
+    t.string "stripe_price_lookup_key"
+    t.index ["company_id"], name: "index_subscriptions_on_company_id", unique: true
     t.index ["status"], name: "index_subscriptions_on_status"
     t.index ["stripe_subscription_id"], name: "index_subscriptions_on_stripe_subscription_id", unique: true, where: "(stripe_subscription_id IS NOT NULL)"
     t.index ["trial_ends_at"], name: "index_subscriptions_on_trial_ends_at"

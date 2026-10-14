@@ -1,11 +1,47 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# role: 0 staff, 1 manager, 2 admin, 3 owner, 4 super_admin. Contraseña de todos: password123
+<% %w[one two basic_co pro_co enterprise_co expired_co past_due_co].each do |co| %>
+<%= co %>_owner:
+  first_name: Dueño
+  last_name: <%= co.camelize %>
+  email: owner@<%= co.dasherize %>.test
+  phone: "5512345678"
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  active: true
+  role: 3
+<% end %>
 
-one:
-  name: MyString
-  email: MyString
-  password_digest: MyString
+pro_staff:
+  first_name: Empleado
+  last_name: Pro
+  email: staff@pro-co.test
+  phone: "5512345679"
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  active: true
+  role: 0
 
-two:
-  name: MyString
-  email: MyString
-  password_digest: MyString
+pro_manager:
+  first_name: Gerente
+  last_name: Pro
+  email: manager@pro-co.test
+  phone: "5512345670"
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  active: true
+  role: 1
+
+expired_staff:
+  first_name: Empleado
+  last_name: Vencido
+  email: staff@expired-co.test
+  phone: "5512345671"
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  active: true
+  role: 0
+
+super_admin:
+  first_name: Super
+  last_name: Admin
+  email: superadmin@draxuvo.test
+  phone: "5512345672"
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  active: true
+  role: 4

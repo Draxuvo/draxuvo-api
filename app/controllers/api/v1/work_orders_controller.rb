@@ -2,8 +2,9 @@
 module Api
   module V1
     class WorkOrdersController < BaseController
+      requires_module :work_orders
 
-      before_action :require_admin!, only: [:destroy]
+      before_action :require_admin!, only: [ :destroy ]
 
       def index
         orders = base_scope.includes(:employee, :work_order_items)
@@ -58,7 +59,7 @@ module Api
       def destroy
         order = base_scope.find(params[:id])
         order.destroy!
-        render json: { message: 'Orden eliminada' }
+        render json: { message: "Orden eliminada" }
       end
 
       # PATCH /api/v1/work_orders/:id/status

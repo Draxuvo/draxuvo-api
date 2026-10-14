@@ -1,24 +1,29 @@
 module Api
   module V1
+    # POST /api/v1/stripe/webhooks (research R11, contracts/api.md). Público: Stripe no manda
+    # Authorization, así que la firma es la única prueba de origen y se exige siempre.
     class StripeWebhooksController < ApplicationController
-      WEBHOOK_SECRET = ENV.fetch("STRIPE_WEBHOOK_SECRET", nil)
+      skip_before_action :authenticate_request
 
       def create
-        payload    = request.body.read
-        sig_header = request.env["HTTP_STRIPE_SIGNATURE"]
-
-        event = if WEBHOOK_SECRET.present?
-          Stripe::Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
-        else
-          Stripe::Event.construct_from(JSON.parse(payload))
-        end
-
+        event = construct_event
         Subscriptions::HandleWebhookService.new(event).call
         render json: { received: true }
-      rescue JSON::ParserError
-        render json: { error: "Invalid payload" }, status: :bad_request
-      rescue Stripe::SignatureVerificationError
-        render json: { error: "Invalid signature" }, status: :bad_request
+      end
+
+      private
+
+      # El secreto se lee en cada request para que una rotación no requiera reiniciar.
+      def construct_event
+        secret = ENV["STRIPE_WEBHOOK_SECRET"]
+        if secret.blank?
+          Rails.logger.error("[stripe] STRIPE_WEBHOOK_SECRET no está configurado; webhook rechazado")
+          raise ApiErrors::BadRequestError.new(details: I18n.t("errors.subscription.webhook_secret_missing"))
+        end
+
+        Stripe::Webhook.construct_event(request.body.read, request.headers["Stripe-Signature"].to_s, secret)
+      rescue JSON::ParserError, Stripe::SignatureVerificationError
+        raise ApiErrors::BadRequestError.new(details: I18n.t("errors.subscription.invalid_signature"))
       end
     end
   end

@@ -2,6 +2,9 @@
 module Api
   module V1
     class TicketsController < BaseController
+      requires_module :tickets
+      requires_module :whatsapp, only: :send_whatsapp
+
       def index
         tickets = current_company.tickets
                                  .includes(work_order: :work_order_items)

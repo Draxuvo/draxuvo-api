@@ -1,0 +1,28 @@
+# Una empresa por plan y estado de suscripción. `one` y `two` las usan los fixtures heredados.
+one:
+  name: Empresa Uno
+  slug: empresa-uno
+
+two:
+  name: Empresa Dos
+  slug: empresa-dos
+
+basic_co:
+  name: Taller Básico
+  slug: taller-basico
+
+pro_co:
+  name: Servicios Pro
+  slug: servicios-pro
+
+enterprise_co:
+  name: Corporativo Empresa
+  slug: corporativo-empresa
+
+expired_co:
+  name: Prueba Vencida
+  slug: prueba-vencida
+
+past_due_co:
+  name: Pago Pendiente
+  slug: pago-pendiente
