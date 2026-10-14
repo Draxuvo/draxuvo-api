@@ -5,7 +5,7 @@ class UserSerializer < ActiveModel::Serializer
 
   attributes :id, :first_name, :middle_name, :last_name, :second_last_name,
              :email, :phone, :role, :active, :description, :avatar_url,
-             :created_at, :updated_at, :companies
+             :created_at, :updated_at, :companies, :preferences
 
   def role
     object.compat_role
@@ -17,6 +17,14 @@ class UserSerializer < ActiveModel::Serializer
       { id: company.id, name: company.name, slug: company.slug, role: membership.role,
         parent_company_id: company.parent_company_id }
     end
+  end
+
+  # Un tema que ya no existe se muestra como anaquel sin tocar la fila (FR-010).
+  def preferences
+    {
+      theme: User::THEMES.include?(object.theme) ? object.theme : "anaquel",
+      color_mode: User::COLOR_MODES.include?(object.color_mode) ? object.color_mode : "system"
+    }
   end
 
   def avatar_url
