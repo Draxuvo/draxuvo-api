@@ -1,0 +1,17 @@
+<% %w[one two basic_co pro_co enterprise_co expired_co past_due_co].each do |co| %>
+<%= co %>_owner:
+  user: <%= co %>_owner
+  company: <%= co %>
+<% end %>
+
+pro_staff:
+  user: pro_staff
+  company: pro_co
+
+pro_manager:
+  user: pro_manager
+  company: pro_co
+
+expired_staff:
+  user: expired_staff
+  company: expired_co

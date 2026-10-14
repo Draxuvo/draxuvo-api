@@ -48,4 +48,10 @@ module ApiErrors
       super(status: :unprocessable_entity, message: message, details: details)
     end
   end
+
+  class TooManyRequestsError < BaseError
+    def initialize(message: I18n.t("errors.too_many_requests", default: "Demasiadas solicitudes"), details: nil)
+      super(status: :too_many_requests, message: message, details: details)
+    end
+  end
 end

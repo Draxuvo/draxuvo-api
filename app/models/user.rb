@@ -7,13 +7,14 @@ class User < ApplicationRecord
   has_many :created_work_orders, class_name: 'WorkOrder', as: :created_by
   has_one :employee, dependent: :nullify
   has_one_attached :avatar
+  normalizes :email, with: ->(e) { e.strip.downcase }
   enum :role, { staff: 0, manager: 1, admin: 2, owner: 3, super_admin: 4 }, default: :staff
 
   # Scopes para filtros
   scope :by_email, ->(email) { where("email LIKE ?", "%#{email}%") if email.present? }
   scope :by_role, ->(role) { where(role: role) if role.present? }
   scope :sorted, -> { order(created_at: :desc) }
-  scope :excluding_system_emails, -> { where.not(email: ["grupobothi@mailinator.com"]) }
+  scope :excluding_system_emails, -> { where.not(email: [ "draxuvo@mailinator.com" ]) }
   scope :non_employees, -> { left_joins(:employee).where(employees: { id: nil }) }
   scope :by_text, ->(text) {
           return unless text
@@ -30,9 +31,9 @@ class User < ApplicationRecord
   # Validaciones
   validates :first_name, presence: true, length: { maximum: 50 }
   validates :last_name, presence: true, length: { maximum: 50 }
-  validates :second_last_name, presence: true, length: { maximum: 50 }
+  validates :second_last_name, length: { maximum: 50 }, allow_blank: true
   validates :email, presence: true,
-                    uniqueness: true,
+                    uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :phone, presence: true
   validates :password, presence: true, length: { minimum: 6 }, if: :password_required?

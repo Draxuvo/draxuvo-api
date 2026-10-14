@@ -1,6 +1,7 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require "minitest/mock"
 
 module ActiveSupport
   class TestCase
@@ -10,6 +11,12 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
-    # Add more helper methods to be used by all tests here...
+    # Headers de una request autenticada: JWT del usuario y la empresa activa.
+    def auth_headers(user, company = user.companies.first)
+      token = JwtHelper.jwt_encode(user_id: user.id, email: user.email, full_name: user.full_name)
+      headers = { "Authorization" => "Bearer #{token}" }
+      headers["X-Company-Id"] = company.id.to_s if company
+      headers
+    end
   end
 end
