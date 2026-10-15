@@ -6,8 +6,7 @@ module Api
       requires_module :whatsapp, only: :send_whatsapp
 
       def index
-        tickets = current_company.tickets
-                                 .includes(work_order: :work_order_items)
+        tickets = base_scope.includes(work_order: :work_order_items)
 
         tickets = tickets.where(status: params[:status]) if Ticket.statuses.key?(params[:status])
         tickets = search_tickets(tickets, params[:search])  if params[:search].present?
@@ -24,14 +23,6 @@ module Api
         render json: TicketSerializer.new(ticket, detailed: true).as_json
       end
 
-      def mark_as_paid
-        ticket = find_ticket
-        raise ApiErrors::BadRequestError.new(details: I18n.t("ticket.already_paid")) if ticket.paid?
-
-        ticket.update!(status: :paid, paid_at: Time.current)
-        render json: TicketSerializer.new(ticket).as_json
-      end
-
       def download
         ticket = find_ticket
         pdf    = Pdf::TicketPdfService.new(ticket).generate
@@ -43,12 +34,11 @@ module Api
 
       def send_whatsapp
         ticket = find_ticket
-        phone  = params.require(:phone)
+        phone  = params[:phone].presence || ticket.work_order.customer_phone.presence
+        raise ApiErrors::BadRequestError.new(details: I18n.t("ticket.phone_required")) if phone.blank?
 
         Whatsapp::TicketService.new(ticket, phone: phone).call
         render json: { message: I18n.t("ticket.whatsapp_sent") }
-      rescue ActionController::ParameterMissing
-        raise ApiErrors::BadRequestError.new(details: "El parámetro 'phone' es requerido")
       end
 
       private
@@ -56,11 +46,21 @@ module Api
       def search_tickets(tickets, query)
         term = "%#{Ticket.sanitize_sql_like(query)}%"
         tickets.joins(:work_order)
-               .where("tickets.folio ILIKE :term OR work_orders.title ILIKE :term", term: term)
+               .where("tickets.folio ILIKE :term OR work_orders.title ILIKE :term OR work_orders.customer_name ILIKE :term", term: term)
       end
 
       def find_ticket
-        current_company.tickets.includes(work_order: :work_order_items).find(params[:id])
+        base_scope.includes(work_order: :work_order_items).find(params[:id])
+      end
+
+      # Staff solo ve los tickets de sus órdenes; sin empleado ligado, ninguno.
+      def base_scope
+        scope = current_company.tickets
+        return scope unless current_role == "staff"
+
+        return scope.none unless current_employee
+
+        scope.joins(:work_order).where(work_orders: { employee_id: current_employee.id })
       end
     end
   end

@@ -94,6 +94,28 @@ class Api::V1::DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, body.dig("inventory", "out_of_stock")
   end
 
+  test "work_orders to_charge counts done orders and tickets exclude voided from revenue" do
+    get "/api/v1/dashboard", headers: auth_headers(@owner, @company)
+    base = response.parsed_body["work_orders"]
+    wo = ->(status, total) { @company.work_orders.create!(title: "Orden #{status}", employee: @employee, created_by: @owner, status: status, total: total) }
+    wo.call(:done, 100)
+    wo.call(:done, 50)
+    paid_order = wo.call(:paid, 70)
+    wo.call(:open, 10)
+
+    get "/api/v1/dashboard", headers: auth_headers(@owner, @company)
+
+    assert_response :ok
+    orders = response.parsed_body["work_orders"]
+    assert_equal base["to_charge"] + 2, orders["to_charge"]
+    assert_equal base["to_charge_total"] + 150.0, orders["to_charge_total"]
+    assert_equal base["by_status"]["done"] + 2, orders["by_status"]["done"]
+    assert_equal base["by_status"]["paid"] + 1, orders["by_status"]["paid"]
+    assert_equal %w[open in_progress done paid cancelled], orders["by_status"].keys
+    assert_equal 0, response.parsed_body.dig("tickets", "voided")
+    assert paid_order
+  end
+
   private
 
   def create_product(sku, stock:, min_stock:)

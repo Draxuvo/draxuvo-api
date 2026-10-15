@@ -1,19 +1,48 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# Conceptos cobrables (spec 007). pro_open: 600 = 2 x 200 + 200. pro_done: 850.
+pro_open_labor:
+  work_order: pro_open
+  description: Mano de obra
+  quantity: 1
+  unit: servicio
+  unit_price: 200.00
+  position: 0
 
-one:
-  work_order: one
-  description: MyString
-  quantity: 9.99
-  unit: MyString
-  status: 1
+pro_open_outlet:
+  work_order: pro_open
+  product: one
+  description: Contacto doble
+  quantity: 2
+  unit: pieza
+  unit_price: 200.00
   position: 1
-  completed_at: 2026-04-14 21:40:03
 
-two:
-  work_order: two
-  description: MyString
-  quantity: 9.99
-  unit: MyString
-  status: 1
-  position: 1
-  completed_at: 2026-04-14 21:40:03
+pro_started_panel:
+  work_order: pro_started
+  description: Centro de carga
+  quantity: 1
+  unit: pieza
+  unit_price: 1200.00
+  position: 0
+
+pro_done_labor:
+  work_order: pro_done
+  description: Revisión
+  quantity: 1
+  unit: servicio
+  unit_price: 850.00
+  position: 0
+
+pro_paid_lamps:
+  work_order: pro_paid
+  description: Lámparas
+  quantity: 1
+  unit: servicio
+  unit_price: 500.00
+  position: 0
+
+one_order_item:
+  work_order: one_order
+  description: Concepto
+  quantity: 1
+  unit_price: 100.00
+  position: 0

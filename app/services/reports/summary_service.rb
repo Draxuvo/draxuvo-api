@@ -38,10 +38,10 @@ module Reports
         total:        orders.count,
         total_billed: orders.sum(:total).to_f,
         by_status:    {
-          pending:     status_counts["pending"].to_i,
+          open:        status_counts["open"].to_i,
           in_progress: status_counts["in_progress"].to_i,
-          in_review:   status_counts["in_review"].to_i,
-          completed:   status_counts["completed"].to_i,
+          done:        status_counts["done"].to_i,
+          paid:        status_counts["paid"].to_i,
           cancelled:   status_counts["cancelled"].to_i
         }
       }

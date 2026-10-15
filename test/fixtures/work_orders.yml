@@ -1,27 +1,71 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# Órdenes de Servicios Pro en cada estado (spec 007). status: 0 open, 1 in_progress, 2 done, 3 paid, 4 cancelled.
+# pro_open y pro_started son del empleado staff; pro_done es del otro técnico.
+pro_open:
+  company: pro_co
+  employee: pro_staff_employee
+  created_by: pro_co_owner (User)
+  title: Instalar contactos
+  description: Dos contactos en la cocina
+  priority: 2
+  status: 0
+  customer_name: Café La Plaza
+  customer_phone: "5598765432"
+  customer_address: Calle 5 de Mayo 10
+  total: 600.00
 
-one:
+pro_started:
+  company: pro_co
+  employee: pro_staff_employee
+  created_by: pro_co_owner (User)
+  title: Cambiar centro de carga
+  priority: 1
+  status: 1
+  started_at: <%= 2.hours.ago.to_fs(:db) %>
+  total: 1200.00
+
+pro_done:
+  company: pro_co
+  employee: pro_other_employee
+  created_by: pro_co_owner (User)
+  title: Revisión de cableado
+  priority: 1
+  status: 2
+  started_at: <%= 3.hours.ago.to_fs(:db) %>
+  completed_at: <%= 1.hour.ago.to_fs(:db) %>
+  total: 850.00
+
+pro_paid:
+  company: pro_co
+  employee: pro_other_employee
+  created_by: pro_co_owner (User)
+  title: Lámparas de sala
+  priority: 1
+  status: 3
+  completed_at: <%= 1.day.ago.to_fs(:db) %>
+  total: 500.00
+
+pro_cancelled:
+  company: pro_co
+  employee: pro_other_employee
+  created_by: pro_co_owner (User)
+  title: Cotización cancelada
+  priority: 0
+  status: 4
+  cancel_reason: El cliente ya no lo necesita
+  total: 0
+
+pro_unassigned:
+  company: pro_co
+  created_by: pro_co_owner (User)
+  title: Sin responsable
+  priority: 1
+  status: 0
+  total: 0
+
+one_order:
   company: one
-  employee: one
-  created_by: one
-  created_by_type: Created by
-  title: MyString
-  description: MyText
+  created_by: one_owner (User)
+  title: Orden de otra empresa
   priority: 1
-  status: 1
-  due_date: 2026-04-14 21:39:56
-  completed_at: 2026-04-14 21:39:56
-  notes: MyText
-
-two:
-  company: two
-  employee: two
-  created_by: two
-  created_by_type: Created by
-  title: MyString
-  description: MyText
-  priority: 1
-  status: 1
-  due_date: 2026-04-14 21:39:56
-  completed_at: 2026-04-14 21:39:56
-  notes: MyText
+  status: 0
+  total: 100.00

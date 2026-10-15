@@ -103,4 +103,14 @@ class CompanyTest < ActiveSupport::TestCase
   test "Company ya no tiene columna plan; la fuente es la suscripción" do
     assert_not Company.column_names.include?("plan")
   end
+
+  test "order_mode es service por defecto y una sucursal nueva hereda el de su principal" do
+    main = Company.create!(name: "Principal Modo", order_mode: :order)
+    assert Company.new(name: "x").order_mode_service?
+    branch = Company.create!(name: "Sucursal Modo", parent: main)
+    assert branch.order_mode_order?
+    branch.update!(order_mode: :service)
+    assert branch.reload.order_mode_service?
+    assert main.reload.order_mode_order?
+  end
 end

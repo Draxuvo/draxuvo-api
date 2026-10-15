@@ -5,20 +5,21 @@
 # Contraseña de todos los usuarios de demo: Demo12345*
 # El rol es por empresa (user_companies.role). multi@demo.demo es owner de Volta y staff de Sazón,
 # y Sazón (plan Empresa) tiene la sucursal "Restaurante Sazón Centro".
+# Sazón (con su sucursal) y Aroma trabajan en modo "order" (pedidos de mesa); Volta, Don Chuy y Plomería en "service".
 
 DEMO_PASSWORD = "Demo12345*".freeze
 
 DEMO_COMPANIES = [
   { name: "Abarrotes Don Chuy", slug: "abarrotes-don-chuy", domain: "donchuy.demo",
-    plan: :basic, status: :active, billing_cycle: :monthly },
+    plan: :basic, status: :active, billing_cycle: :monthly, order_mode: :service },
   { name: "Electricidad Volta", slug: "electricidad-volta", domain: "volta.demo",
-    plan: :pro, status: :active, billing_cycle: :monthly },
+    plan: :pro, status: :active, billing_cycle: :monthly, order_mode: :service },
   { name: "Restaurante Sazón", slug: "restaurante-sazon", domain: "sazon.demo",
-    plan: :enterprise, status: :active, billing_cycle: :annual },
+    plan: :enterprise, status: :active, billing_cycle: :annual, order_mode: :order },
   { name: "Café Aroma", slug: "cafe-aroma", domain: "aroma.demo",
-    plan: :pro, status: :trialing, trial_days_left: 10 },
+    plan: :pro, status: :trialing, trial_days_left: 10, order_mode: :order },
   { name: "Plomería Rápida", slug: "plomeria-rapida", domain: "plomeria.demo",
-    plan: :pro, status: :expired, trial_days_left: -3 }
+    plan: :pro, status: :expired, trial_days_left: -3, order_mode: :service }
 ].freeze
 
 PEOPLE = [
@@ -52,16 +53,114 @@ TODAY_ATTENDANCE = [
   [ :late, 9, 40 ]
 ].freeze
 
-WORK_ORDERS = [
-  [ "Instalación de contactos en cocina", :completed, :high, true ],
-  [ "Revisión de tablero principal", :completed, :medium, false ],
-  [ "Cambio de luminarias en bodega", :in_review, :medium, false ],
-  [ "Reparación de fuga en baño", :in_progress, :urgent, false ],
-  [ "Cableado de oficina nueva", :in_progress, :high, false ],
-  [ "Mantenimiento preventivo mensual", :pending, :low, false ],
-  [ "Cotización de remodelación", :pending, :medium, false ],
-  [ "Cambio de llave de paso", :cancelled, :low, false ]
+# Órdenes en modo "service" (con cliente, pasos y conceptos). Cada acción es [acción, parámetros, quién]:
+# quién es :staff (el empleado asignado, que es el staff@ de la empresa) o :boss (el dueño).
+# employee: 0 es el staff@; 1 es otro técnico; nil queda sin asignar.
+SERVICE_ORDERS = [
+  { title: "Instalación de contactos en cocina", priority: :high, employee: 0, due: 1,
+    customer: [ "Café La Plaza", "5598765432", "Calle 5 de Mayo 10" ],
+    steps: [ "Medir el cableado", "Instalar los contactos", "Probar el circuito" ], steps_done: 0, actions: [] },
+  { title: "Cambio de centro de carga", priority: :urgent, employee: 0, due: 0,
+    customer: [ "Laura Méndez", "5512345678", "Av. Juárez 120" ],
+    steps: [ "Cortar la luz", "Desmontar el tablero", "Instalar el centro de carga" ], steps_done: 1,
+    actions: [ [ :start, {}, :staff ] ], note: "El cliente pide terminar antes de las 5.", photo: true,
+    items: [ [ "CON-02", 2 ] ] },
+  { title: "Revisión de tablero principal", priority: :medium, employee: 0, due: -1,
+    customer: [ "Dr. Ramón Ortiz", "5587654321", "Calle Hidalgo 45" ],
+    steps: [ "Revisar interruptores", "Apretar conexiones" ], steps_done: 2, items: [ [ "APA-01", 3 ] ], labor: 450,
+    actions: [ [ :start, {}, :staff ], [ :finish, {}, :staff ] ] },
+  { title: "Cableado de oficina nueva", priority: :high, employee: 1, due: 3,
+    customer: [ "Despacho Ríos", "5544332211", "Insurgentes 300, piso 2" ],
+    steps: [ "Tender cable", "Colocar canaletas" ], steps_done: 1, items: [ [ "CAB-12", 40 ] ], labor: 900,
+    actions: [ [ :start, {}, :boss ] ] },
+  { title: "Cambio de luminarias en bodega", priority: :medium, employee: 0, due: -3,
+    customer: [ "Bodega San José", "5533221100", "Parque Industrial, nave 4" ],
+    steps: [ "Retirar las lámparas viejas", "Instalar los focos LED" ], steps_done: 2, items: [ [ "FOC-09", 8 ] ], labor: 600,
+    actions: [ [ :start, {}, :staff ], [ :finish, {}, :staff ], [ :charge, { payment_method: "cash", amount_received: 2000 }, :staff ] ],
+    note: "Se dejó la bodega limpia.", photo: true },
+  { title: "Mantenimiento preventivo mensual", priority: :low, employee: 1, due: -5,
+    customer: [ "Ferretería El Clavo", "5566778899", "Calle Morelos 8" ],
+    steps: [ "Revisar tableros" ], steps_done: 1, labor: 700,
+    actions: [ [ :start, {}, :boss ], [ :finish, {}, :boss ],
+               [ :charge, { payment_method: "card" }, :boss ],
+               [ :void_charge, { reason: "El cliente pidió factura" }, :boss ] ] },
+  { title: "Cotización de remodelación", priority: :medium, employee: nil, due: 7,
+    customer: [ "Familia Torres", "5599887766", "Privada Los Pinos 3" ], steps: [ "Visitar el sitio" ],
+    steps_done: 0, actions: [] },
+  { title: "Cambio de llave de paso", priority: :low, employee: 1, due: -2,
+    customer: [ "Sra. Elena Cruz", "5511223344", "Calle Pino 12" ], steps: [], steps_done: 0,
+    actions: [ [ :cancel, { reason: "El cliente lo resolvió por su cuenta" }, :boss ] ] }
 ].freeze
+
+# Órdenes en modo "order": pedidos de mesa con conceptos del menú, sin pasos ni cliente.
+TABLE_ORDERS = [
+  { title: "Mesa 4", employee: 0, items: [ [ "CAF-01", 2 ], [ "REF-60", 2 ] ], actions: [] },
+  { title: "Mesa 7", employee: 0, items: [ [ "LEC-01", 3 ], [ "HIE-05", 1 ] ],
+    actions: [ [ :start, {}, :staff ] ] },
+  { title: "Barra - Pedido para llevar", employee: 0, items: [ [ "CAF-01", 1 ], [ "REF-60", 3 ] ],
+    actions: [ [ :start, {}, :staff ], [ :finish, {}, :staff ] ] },
+  { title: "Mesa 2", employee: 0, items: [ [ "CAF-01", 1 ], [ "LEC-01", 2 ] ],
+    actions: [ [ :start, {}, :staff ], [ :finish, {}, :staff ],
+               [ :charge, { payment_method: "cash", amount_received: 1000 }, :staff ] ] },
+  { title: "Mesa 5", employee: 1, items: [ [ "REF-60", 4 ] ],
+    actions: [ [ :finish, {}, :boss ], [ :charge, { payment_method: "card" }, :boss ] ] },
+  { title: "Mesa 9", employee: 1, items: [ [ "CAF-01", 2 ] ],
+    actions: [ [ :finish, {}, :boss ], [ :charge, { payment_method: "transfer" }, :boss ],
+               [ :void_charge, { reason: "Cobro duplicado" }, :boss ] ] },
+  { title: "Mesa 1", employee: nil, items: [ [ "REF-60", 2 ] ], actions: [] },
+  { title: "Mesa 3", employee: 1, items: [ [ "LEC-01", 1 ] ],
+    actions: [ [ :cancel, { reason: "Los clientes se fueron" }, :boss ] ] }
+].freeze
+
+# PNG de 1x1 para la foto de demo.
+DEMO_PHOTO = Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==").freeze
+
+# Crea una orden de demo y la lleva a su estado con WorkOrders::Transition, así queda con su historia.
+def demo_order(company:, owner:, staff:, employees:, products:, spec:, index:, service:)
+  employee = spec[:employee] && employees[spec[:employee]]
+  order = WorkOrder.create!(
+    company: company, created_by: owner, employee: employee, title: spec[:title],
+    priority: spec[:priority] || :medium, due_date: spec[:due] && spec[:due].days.from_now,
+    description: service ? "Orden de demo para #{company.name}." : nil,
+    customer_name: spec.dig(:customer, 0), customer_phone: spec.dig(:customer, 1),
+    customer_address: spec.dig(:customer, 2)
+  )
+  order.work_order_events.create!(kind: :created, actor: owner)
+
+  position = 0
+  Array(spec[:items]).each do |sku, quantity|
+    product = products.find { |pr| pr.sku == sku }
+    WorkOrderItem.create!(work_order: order, product: product, quantity: quantity, unit: "pza",
+                          position: position)
+    position += 1
+  end
+  if spec[:labor]
+    WorkOrderItem.create!(work_order: order, description: "Mano de obra", quantity: 1, unit: "serv",
+                          unit_price: spec[:labor], position: position)
+  end
+
+  Array(spec[:steps]).each_with_index do |description, i|
+    step = WorkOrderStep.create!(work_order: order, description: description, position: i)
+    step.mark_done!(owner) if i < spec[:steps_done].to_i
+  end
+
+  if spec[:note]
+    order.work_order_events.create!(kind: :note, actor: owner, data: { "text" => spec[:note] })
+  end
+  if spec[:photo]
+    photo = order.work_order_attachments.new(uploaded_by: owner, description: "Trabajo terminado")
+    photo.file.attach(io: StringIO.new(DEMO_PHOTO), filename: "foto-demo.png", content_type: "image/png")
+    photo.save!
+    order.work_order_events.create!(kind: :photo, actor: owner, data: { attachment_id: photo.id })
+  end
+
+  boss_context  = WorkOrders::Transition::Context.new(user: owner, role: "owner", employee: nil)
+  staff_context = WorkOrders::Transition::Context.new(user: staff, role: "staff", employee: employees[0])
+  spec[:actions].each do |action, params, by|
+    WorkOrders::Transition.call(order, action, by == :staff ? staff_context : boss_context, params)
+  end
+  order
+end
 
 def demo_user(email:, first_name:, last_name:, role:, company:)
   user = User.find_or_initialize_by(email: email)
@@ -90,6 +189,8 @@ DEMO_COMPANIES.each do |cfg|
     sub.update!(plan: cfg[:plan], status: cfg[:status], amount_cents: 0,
                 trial_ends_at: cfg[:trial_days_left].days.from_now)
   end
+
+  company.update!(order_mode: cfg[:order_mode])
 
   next puts("  [skip] #{company.name}: ya tiene datos") if company.employees.exists?
 
@@ -141,21 +242,10 @@ DEMO_COMPANIES.each do |cfg|
 
   next puts("  [ok] #{company.name} (#{cfg[:plan]}, sin órdenes)") unless plan.includes?(:work_orders)
 
-  WORK_ORDERS.each_with_index do |(title, status, priority, paid), i|
-    order = WorkOrder.create!(company: company, created_by: owner, employee: employees[i % 3 + 1],
-                              title: title, priority: priority, status: :pending,
-                              description: "Orden de demo para #{company.name}.",
-                              due_date: (i - 2).days.from_now)
-    done = %i[completed in_review].include?(status)
-    products.sample(2, random: Random.new(i)).each_with_index do |product, position|
-      WorkOrderItem.create!(work_order: order, product: product, quantity: position + 1,
-                            unit: "pza", position: position, status: done ? :completed : :pending)
-    end
-    WorkOrderItem.create!(work_order: order, description: "Mano de obra", quantity: 1,
-                          unit: "serv", unit_price: 450, position: 2,
-                          status: done ? :completed : :pending)
-    order.update!(status: status, completed_at: (status == :completed ? (i + 1).days.ago : nil))
-    order.reload.ticket&.update!(status: :paid, paid_at: i.days.ago) if paid
+  service = company.order_mode_service?
+  (service ? SERVICE_ORDERS : TABLE_ORDERS).each_with_index do |spec, i|
+    demo_order(company: company, owner: owner, staff: staff, employees: employees, products: products,
+               spec: spec, index: i, service: service)
   end
 
   puts "  [ok] #{company.name} (#{cfg[:plan]}, #{cfg[:status]})"
@@ -166,6 +256,7 @@ sazon = Company.find_by!(slug: "restaurante-sazon")
 centro = Company.find_or_create_by!(slug: "restaurante-sazon-centro") do |c|
   c.name = "Restaurante Sazón Centro"
   c.parent = sazon
+  c.order_mode = sazon.order_mode
 end
 demo_membership(User.find_by!(email: "dueno@sazon.demo"), centro, :owner)
 demo_user(email: "admin@centro.sazon.demo", first_name: "Admin", last_name: centro.name, role: :admin, company: centro)

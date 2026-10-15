@@ -142,6 +142,15 @@ en:
     status:
       pending: "Pending payment"
       paid:    "Paid"
+      voided:  "Voided"
+    payment_method:
+      cash:     "Cash"
+      card:     "Card"
+      transfer: "Transfer"
+    insufficient_cash:      "The cash received is less than the total"
+    invalid_payment_method: "Invalid payment method"
+    phone_required:         "WhatsApp phone number is missing"
+    not_paid:               "The ticket is not paid"
     already_paid:  "This ticket has already been marked as paid"
     not_found:     "Ticket not found"
     whatsapp_sent: "Ticket successfully sent via WhatsApp"
@@ -157,13 +166,37 @@ en:
   work_order:
     already_cancelled: "Work order is already cancelled"
     status:
-      pending:     "Pending"
+      open:        "Open"
       in_progress: "In progress"
-      in_review:   "In review"
-      completed:   "Completed"
+      done:        "Done"
+      paid:        "Paid"
       cancelled:   "Cancelled"
+    locked:               "The order is paid or cancelled and cannot be changed"
+    invalid_transition:   "The order cannot move to that status from the current one"
+    reason_required:      "A reason is required"
+    no_items:             "The order has no priced items"
+    catalog_item_required: "Pick a product from the catalog"
+    deleted:              "Work order deleted"
+    photo:
+      invalid_type:  "The file must be an image"
+      too_large:     "The photo is larger than 10 MB"
+      limit_reached: "The order already has 10 photos"
+    event:
+      created:    "Order created"
+      started:    "Order started"
+      finished:   "Order finished"
+      reopened:   "Order reopened"
+      charged:    "Order charged"
+      voided:     "Charge voided"
+      cancelled:  "Order cancelled"
+      reassigned: "Order reassigned"
+      note:       "Note"
+      photo:      "Photo"
     priority:
       low:    "Low"
       medium: "Medium"
       high:   "High"
       urgent: "Urgent"
+
+  company:
+    invalid_order_mode: "Invalid order mode"
