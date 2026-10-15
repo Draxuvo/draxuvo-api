@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_16_000006) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -83,6 +83,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000006) do
     t.index ["company_id"], name: "index_employees_on_company_id"
     t.index ["email"], name: "index_employees_on_email", unique: true, where: "(email IS NOT NULL)"
     t.index ["user_id"], name: "index_employees_on_user_id"
+  end
+
+  create_table "idempotency_keys", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "key", limit: 64, null: false
+    t.string "request_method", null: false
+    t.string "request_path", null: false
+    t.integer "response_status", null: false
+    t.text "response_body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_idempotency_keys_on_created_at"
+    t.index ["user_id", "key"], name: "index_idempotency_keys_on_user_id_and_key", unique: true
   end
 
   create_table "products", force: :cascade do |t|
@@ -292,6 +305,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000006) do
   add_foreign_key "attendances", "employees"
   add_foreign_key "employees", "companies"
   add_foreign_key "employees", "users"
+  add_foreign_key "idempotency_keys", "users"
   add_foreign_key "products", "companies"
   add_foreign_key "stock_movements", "companies"
   add_foreign_key "stock_movements", "products"

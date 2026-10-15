@@ -28,6 +28,9 @@ en:
     unprocessable: "Validation error"
     resource_not_found: "Resource not found"
     validation_failed: "Validation failed"
+    idempotency:
+      key_too_long: "The idempotency key allows up to 64 characters"
+      key_reused: "That idempotency key was already used on another request"
     messages:
       not_a_number: "is not a number"
       greater_than_or_equal_to: "must be greater than or equal to %{count}"

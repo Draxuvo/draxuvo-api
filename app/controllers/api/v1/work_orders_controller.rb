@@ -1,7 +1,10 @@
 module Api
   module V1
     class WorkOrdersController < BaseController
+      include Idempotent
+
       requires_module :work_orders
+      idempotent :create_note, :create_photo
 
       TRANSITIONS = %w[start finish reopen cancel charge void_charge].freeze
       ORDER_TIME_ZONE = "America/Mexico_City".freeze

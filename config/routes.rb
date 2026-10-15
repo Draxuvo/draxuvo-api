@@ -44,6 +44,7 @@ Rails.application.routes.draw do
 
       # Catálogo público de planes y alta pública de empresas
       resources :plans,         only: :index
+      get "app_config", to: "app_config#show"
       resources :registrations, only: :create
 
       # Suscripción de la empresa actual
