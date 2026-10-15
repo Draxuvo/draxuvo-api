@@ -66,7 +66,7 @@ class WorkOrderSerializer
   end
 
   def photo_json(photo)
-    { id: photo.id, url: photo.file.attached? ? Rails.application.routes.url_helpers.rails_blob_url(photo.file, only_path: true) : nil,
+    { id: photo.id, url: photo.file.attached? ? Rails.application.routes.url_helpers.rails_blob_url(photo.file) : nil,
       description: photo.description, uploaded_by: person(photo.uploaded_by), created_at: photo.created_at }
   end
 

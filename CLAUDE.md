@@ -58,9 +58,10 @@ The `Authenticable` and `Authorizable` concerns live in `app/controllers/concern
 | `Employee` | Company staff; optional `user` association; `parsed_name_parts` splits `name` for User creation |
 | `Plan` | PORO catalog (`app/models/plan.rb`): `basic`, `pro`, `enterprise` with their modules and monthly/annual prices (cents MXN, without IVA) |
 | `Subscription` | One per Company (unique); plan `basic/pro/enterprise`, `billing_cycle`, `cancel_at_period_end`; statuses: `trialing/active/past_due/cancelled/expired`; `active_access?` returns true for trialing (within trial), active, or past_due |
-| `WorkOrder` | Core work entity; statuses: `pending → in_progress → in_review → completed → cancelled`; priorities: `low/medium/high/urgent` |
-| `WorkOrderItem` | Checklist items on a work order; ordered by `position`; `subtotal = unit_price * quantity` |
-| `Ticket` | Auto-generated via `after_commit` when a WorkOrder transitions to `completed` and has no ticket yet; folio format `T-000001`; statuses: `pending/paid`; `mark_as_paid` endpoint |
+| `WorkOrder` | Core work entity; statuses: `open → in_progress → done → paid`, or `cancelled` (ints 0 to 4); changes only through `WorkOrders::Transition` (`start/finish/reopen/charge/cancel/void_charge`); customer fields; priorities `low/medium/high/urgent`. `paid` and `cancelled` are locked |
+| `WorkOrderItem` | Billable concept of an order (no status); `subtotal = unit_price * quantity`. The to-do checklist is `WorkOrderStep`; history is `WorkOrderEvent` (insert only); photos are `WorkOrderAttachment` |
+| `Ticket` | One per order, created or reused inside the `charge` transaction; folio `T-000001`; statuses `pending/paid/voided`; holds the payment (method, received, change, who charged, void data) |
+| `Company#order_mode` | `service` (default) or `order`; changed by the owner with `PATCH /company/order_mode` |
 | `Product` | Inventory item with `StockMovement` sub-resource; has `menu` collection route; supports Excel import/export |
 | `Attendance` | Check-in/out records; types: `normal/late/absent` |
 | `Unit` | Measurement units for products |
@@ -96,7 +97,7 @@ The `Authenticable` and `Authorizable` concerns live in `app/controllers/concern
 
 ### WorkOrder → Ticket lifecycle
 
-When a `WorkOrder` status changes to `completed`, an `after_commit` callback calls `generate_ticket!` if no ticket exists yet. The `Ticket` copies the work order `total`, reserves a temp folio UUID, then overwrites it with `T-000001` format in an `after_create` callback. `Ticket#download` renders via `Pdf::TicketPdfService`.
+`WorkOrders::Transition` (`app/services/work_orders/`) validates origin state and role, then saves the change, the event and, for `charge`, the ticket in one transaction (no `rescue`: if the ticket fails, nothing is charged). `void_charge` (owner/admin, with reason) leaves the ticket `voided` and the order `done`; charging again reuses the same ticket and folio. Staff only see and act on orders assigned to their employee **in the active company** (`current_employee`); `WorkOrderSerializer` returns `allowed_actions` per role and state, and the UI only draws those.
 
 ### Subscription & Stripe
 
@@ -108,7 +109,7 @@ Uses Rails 8 defaults: **Solid Queue** for jobs, **Solid Cache** for caching, **
 
 ### File Storage
 
-Active Storage; dev uses local disk. Production supports Cloudinary or S3-compatible (AWS, Backblaze, Supabase) via env vars. `WorkOrder` uses `has_many_attached :attachments`.
+Active Storage; dev uses local disk. Production supports Cloudinary or S3-compatible (AWS, Backblaze, Supabase) via env vars. Order photos are `WorkOrderAttachment` (`has_one_attached :file`; images only, 10 MB, 10 per order).
 
 ### Deployment
 

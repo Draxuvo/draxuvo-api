@@ -117,7 +117,7 @@ module Api
             product = current_company.products.find_by(id: params[:product_id]) if params[:product_id].present?
             raise unprocessable(I18n.t("work_order.catalog_item_required")) unless product
 
-            { product_id: product.id, description: product.name, unit: params[:unit].presence || product.unit,
+            { product_id: product.id, description: product.name, unit: params[:unit].presence,
               unit_price: product.price, quantity: params[:quantity] || 1 }
           else
             item_attributes(params, order.work_order_items.count)
@@ -293,7 +293,7 @@ module Api
         {
           description: item[:description].presence || product&.name,
           quantity:    item[:quantity] || 1,
-          unit:        item[:unit].presence || product&.unit,
+          unit:        item[:unit].presence,
           position:    item[:position] || idx,
           product_id:  product&.id,
           unit_price:  item[:unit_price].presence || product&.price
