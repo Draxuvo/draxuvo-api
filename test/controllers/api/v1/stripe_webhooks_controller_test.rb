@@ -47,34 +47,6 @@ class Api::V1::StripeWebhooksControllerTest < ActionDispatch::IntegrationTest
     post URL, params: payload, headers: headers
   end
 
-  # Suscripción de Stripe como la devuelve la API (versión acacia), con el periodo también en el item.
-  def stripe_sub_hash(id:, status:, lookup_key:, cancel_at_period_end: false, customer: "cus_test",
-                      period_start: 1.day.ago, period_end: 29.days.from_now, metadata: {})
-    {
-      id: id,
-      object: "subscription",
-      customer: customer,
-      status: status,
-      cancel_at_period_end: cancel_at_period_end,
-      canceled_at: (status == "canceled" ? Time.now.to_i : nil),
-      current_period_start: period_start.to_i,
-      current_period_end: period_end.to_i,
-      metadata: metadata,
-      items: {
-        object: "list",
-        data: [
-          {
-            id: "si_#{id}",
-            object: "subscription_item",
-            current_period_start: period_start.to_i,
-            current_period_end: period_end.to_i,
-            price: { id: "price_#{lookup_key}", object: "price", lookup_key: lookup_key }
-          }
-        ]
-      }
-    }
-  end
-
   def stripe_sub(**attrs)
     Stripe::Subscription.construct_from(stripe_sub_hash(**attrs))
   end

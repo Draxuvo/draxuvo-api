@@ -180,8 +180,6 @@ module Whatsapp
     def log(level, msg)
       tagged = "[WhatsApp::TicketService] #{msg}"
       Rails.logger.public_send(level, tagged)
-      $stdout.puts tagged
-      $stdout.flush
     end
 
     def phone_number_id

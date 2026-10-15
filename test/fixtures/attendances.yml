@@ -1,19 +1,17 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
 one:
   employee: one
   company: one
-  checkin_at: 2026-04-14 13:43:41
-  checkout_at: 2026-04-14 13:43:41
-  lat: 9.99
-  lng: 9.99
-  attendance_type: 1
+  checkin_at: <%= 1.day.ago.beginning_of_day.advance(hours: 8).to_fs(:db) %>
+  checkout_at: <%= 1.day.ago.beginning_of_day.advance(hours: 17).to_fs(:db) %>
+  lat: 19.4326
+  lng: -99.1332
+  attendance_type: 0
 
 two:
   employee: two
   company: two
-  checkin_at: 2026-04-14 13:43:41
-  checkout_at: 2026-04-14 13:43:41
-  lat: 9.99
-  lng: 9.99
+  checkin_at: <%= 1.day.ago.beginning_of_day.advance(hours: 9, minutes: 20).to_fs(:db) %>
+  checkout_at: <%= 1.day.ago.beginning_of_day.advance(hours: 17).to_fs(:db) %>
+  lat: 19.4326
+  lng: -99.1332
   attendance_type: 1

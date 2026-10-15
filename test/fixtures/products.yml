@@ -1,17 +1,19 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
 one:
   company: one
-  sku: MyString
-  name: MyString
-  stock: 1
-  min_stock: 1
-  unit_cost: 9.99
+  sku: CON-001
+  name: Contacto doble
+  stock: 18
+  min_stock: 5
+  unit_cost: 45.00
+  price: 80.00
+  category: Eléctrico
 
 two:
   company: two
-  sku: MyString
-  name: MyString
-  stock: 1
-  min_stock: 1
-  unit_cost: 9.99
+  sku: CIN-001
+  name: Cinta aislante
+  stock: 10
+  min_stock: 4
+  unit_cost: 12.00
+  price: 25.00
+  category: Eléctrico

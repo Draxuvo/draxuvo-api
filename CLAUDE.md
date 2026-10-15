@@ -18,7 +18,7 @@ bin/rubocop                   # Lint (Rails Omakase style)
 bin/brakeman                  # Security scan
 ```
 
-Tests live in `test/models/` and `test/controllers/api/v1/`. All tests use fixtures (`test/fixtures/`). Parallel execution is enabled by default.
+Tests live in `test/models/`, `test/services/` (one file per service), `test/controllers/api/v1/` and `test/lib/`. All tests use fixtures (`test/fixtures/`, coherent data, no scaffold). Parallel execution is enabled by default, so a test that touches global state restores it: use the `test/support` helpers (`with_env`, `with_memory_cache`, `stripe_sub_hash`, `with_checkout_stubs`, `with_cancel_stubs`). Third parties are stubbed with Minitest `stub` (no mocha/webmock/vcr). Brakeman's one accepted warning (Rails 8.0.2 end of support) lives in `config/brakeman.ignore` and expires 2026-11-07.
 
 ## Architecture
 

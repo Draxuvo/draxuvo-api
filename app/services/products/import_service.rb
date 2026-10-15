@@ -16,11 +16,13 @@ module Products
       row_errors = []
 
       rows = spreadsheet.sheet(0)
-      headers = rows.row(1).map { |h| h.to_s.strip.downcase.tr(" ", "_") }
+      lookup  = self.class.header_lookup
+      headers = rows.row(1).map { |h| lookup[self.class.normalize_header(h)] || self.class.normalize_header(h) }
 
       (2..rows.last_row).each do |i|
         row = rows.row(i)
         next if row.compact.empty?
+        next if row.first.to_s.start_with?("#") # fila de nota de la plantilla
 
         attrs = headers.zip(row).to_h.slice(*HEADER_KEYS)
         sku   = attrs["sku"].to_s.strip
@@ -56,6 +58,20 @@ module Products
       Result.new(created: created, updated: updated, errors: row_errors)
     end
 
+    # Texto de encabezado sin acentos, en minúsculas y con guiones bajos ("COSTO UNITARIO" → "costo_unitario").
+    def self.normalize_header(value)
+      I18n.transliterate(value.to_s).strip.downcase.tr(" ", "_")
+    end
+
+    # Encabezado normalizado → clave. Acepta las claves en inglés y los rótulos de la plantilla en
+    # cada idioma, para que la plantilla descargada se pueda volver a importar.
+    def self.header_lookup
+      labels = I18n.available_locales.flat_map do |locale|
+        HEADER_KEYS.map { |key| [ normalize_header(I18n.t("products.import.headers.#{key}", locale: locale)), key ] }
+      end
+      labels.to_h.merge(HEADER_KEYS.index_by { |key| normalize_header(key) })
+    end
+
     def self.generate_template
       t = ->(key) { I18n.t("products.import.#{key}") }
 
@@ -75,7 +91,7 @@ module Products
           sheet.add_row sample
 
           sheet.add_row [], style: note_style
-          sheet.add_row ["# #{t.call('hint')}"], style: note_style
+          sheet.add_row [ "# #{t.call('hint')}" ], style: note_style
 
           sheet.column_widths 15, 30, 35, 20, 12, 12, 10, 12, 12
         end

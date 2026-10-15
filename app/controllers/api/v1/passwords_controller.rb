@@ -1,8 +1,8 @@
 # app/controllers/api/v1/passwords_controller.rb
 module Api::V1
   class PasswordsController < ApplicationController
-    skip_before_action :authenticate_request, only: [:reset, :update_with_token]
-    before_action :set_user_from_token, only: [:update_with_token]
+    skip_before_action :authenticate_request, only: [ :reset, :update_with_token ]
+    before_action :set_user_from_token, only: [ :update_with_token ]
 
     # PATCH /api/v1/passwords/update
     # Update password for authenticated user
@@ -16,7 +16,7 @@ module Api::V1
       if current_user.update(password: params[:new_password])
         render json: {
           message: "Contraseña actualizada exitosamente",
-          user: UserSerializer.new(current_user),
+          user: UserSerializer.new(current_user)
         }, status: :ok
       else
         raise ApiErrors::UnprocessableEntityError.new(details: current_user.errors.full_messages)
@@ -42,7 +42,7 @@ module Api::V1
 
       if result[:success]
         render json: {
-          message: "Se ha enviado un correo con las instrucciones para restablecer tu contraseña",
+          message: "Se ha enviado un correo con las instrucciones para restablecer tu contraseña"
         }, status: :ok
       else
         raise ApiErrors::UnprocessableEntityError.new(details: result[:error])
@@ -61,7 +61,7 @@ module Api::V1
 
       render json: {
         message: "Contraseña restablecida exitosamente",
-        user: UserSerializer.new(@user),
+        user: UserSerializer.new(@user)
       }, status: :ok
     rescue ActiveRecord::RecordInvalid => e
       raise ApiErrors::UnprocessableEntityError.new(details: e.record.errors.full_messages)
@@ -70,7 +70,7 @@ module Api::V1
     private
 
     def validate_password_update_params
-      required_params = [:current_password, :new_password, :new_password_confirmation]
+      required_params = [ :current_password, :new_password, :new_password_confirmation ]
       missing_params = required_params.select { |param| params[param].blank? }
 
       unless missing_params.empty?
@@ -99,7 +99,7 @@ module Api::V1
     end
 
     def validate_token_update_params
-      required_params = [:new_password, :new_password_confirmation]
+      required_params = [ :new_password, :new_password_confirmation ]
       missing_params = required_params.select { |param| params[param].blank? }
 
       unless missing_params.empty?

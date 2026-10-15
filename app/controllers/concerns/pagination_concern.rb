@@ -4,7 +4,7 @@ module PaginationConcern
   included do
     def paginate_response(pagy, results)
       {
-        info: pagy_info(pagy), results: results,
+        info: pagy_info(pagy), results: results
       }
     end
 
@@ -15,7 +15,7 @@ module PaginationConcern
         total: pagy.count,
         page_start: pagy.from,
         page_end: pagy.to,
-        pages_total: pagy.pages,
+        pages_total: pagy.pages
       }
     end
   end
