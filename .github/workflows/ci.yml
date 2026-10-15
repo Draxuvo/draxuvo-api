@@ -99,3 +99,107 @@ jobs:
           name: screenshots
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432
+      SECRET_KEY_BASE: e2e-secret-key-base-0000000000000000000000000000000000000000000000000000
+      SUPER_ADMIN_PASSWORD: E2eSuperAdmin123*
+      STRIPE_WEBHOOK_SECRET: whsec_e2e_test
+      E2E_LOG_DIR: ${{ github.workspace }}/e2e-logs
+      CI: "true"
+
+    steps:
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+
+      - name: Checkout api
+        uses: actions/checkout@v4
+        with:
+          path: api
+
+      # La misma rama en ui si existe (constitución, flujo de trabajo); si no, main.
+      - name: Resolve ui ref
+        id: uiref
+        env:
+          TOKEN: ${{ secrets.E2E_REPO_TOKEN || github.token }}
+        run: |
+          BRANCH="${{ github.head_ref || github.ref_name }}"
+          URL="https://x-access-token:${TOKEN}@github.com/Draxuvo/draxuvo-ui.git"
+          if git ls-remote --exit-code --heads "$URL" "$BRANCH" >/dev/null 2>&1; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout ui
+        uses: actions/checkout@v4
+        with:
+          repository: Draxuvo/draxuvo-ui
+          ref: ${{ steps.uiref.outputs.ref }}
+          token: ${{ secrets.E2E_REPO_TOKEN || github.token }}
+          path: ui
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+          working-directory: api
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install ui dependencies
+        run: npm ci
+        working-directory: ui
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: ui/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}-${{ hashFiles('ui/src/**') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}-
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: ui
+
+      - name: Start stack
+        env:
+          API_DIR: ${{ github.workspace }}/api
+          UI_DIR: ${{ github.workspace }}/ui
+        run: ui/e2e/ci/up.sh
+
+      - name: E2E suite pr
+        run: npm run e2e:pr
+        working-directory: ui
+
+      - name: Keep report, traces and API log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            ui/playwright-report
+            ui/test-results
+            e2e-logs
+          retention-days: 14
+          if-no-files-found: ignore
