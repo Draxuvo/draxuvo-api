@@ -8,7 +8,8 @@ module Api
 
       skip_before_action :authenticate_request
 
-      rate_limit to: 5, within: 1.hour, store: RATE_LIMIT_STORE, only: :create,
+      # REGISTRATION_RATE_LIMIT sube el tope en el CI de pruebas e2e, que crea varias empresas desde una IP.
+      rate_limit to: ENV.fetch("REGISTRATION_RATE_LIMIT", 5).to_i, within: 1.hour, store: RATE_LIMIT_STORE, only: :create,
                  with: -> { raise ApiErrors::TooManyRequestsError }
 
       # POST /api/v1/registrations
