@@ -1,13 +1,1 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
-one:
-  work_order: one
-  uploaded_by: one
-  uploaded_by_type: Uploaded by
-  description: MyString
-
-two:
-  work_order: two
-  uploaded_by: two
-  uploaded_by_type: Uploaded by
-  description: MyString
+# Sin fixtures de fotos: los archivos de Active Storage se suben en las pruebas.

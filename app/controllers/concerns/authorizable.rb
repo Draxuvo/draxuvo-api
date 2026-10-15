@@ -3,6 +3,7 @@ module Authorizable
   extend ActiveSupport::Concern
 
   ADMIN_ROLES = %w[admin owner super_admin].freeze
+  BOSS_ROLES = %w[manager admin owner super_admin].freeze
 
   private
 
@@ -12,6 +13,10 @@ module Authorizable
 
   def require_admin!
     forbid! unless ADMIN_ROLES.include?(current_role)
+  end
+
+  def require_boss!
+    forbid! unless BOSS_ROLES.include?(current_role)
   end
 
   def require_owner!

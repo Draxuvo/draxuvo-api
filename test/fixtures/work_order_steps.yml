@@ -1,0 +1,21 @@
+pro_open_step_1:
+  work_order: pro_open
+  description: Cortar la corriente
+  position: 0
+
+pro_open_step_2:
+  work_order: pro_open
+  description: Instalar y probar
+  position: 1
+
+pro_started_step_1:
+  work_order: pro_started
+  description: Desmontar el centro de carga anterior
+  position: 0
+  done_at: <%= 1.hour.ago.to_fs(:db) %>
+  done_by: pro_staff (User)
+
+pro_started_step_2:
+  work_order: pro_started
+  description: Montar el nuevo
+  position: 1

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_15_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_16_000006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -64,6 +64,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_000003) do
     t.datetime "updated_at", null: false
     t.string "disabled_modules", default: [], null: false, array: true
     t.bigint "parent_company_id"
+    t.integer "order_mode", default: 0, null: false
     t.index ["parent_company_id"], name: "index_companies_on_parent_company_id"
   end
 
@@ -154,9 +155,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_000003) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "payment_method"
+    t.decimal "amount_received", precision: 10, scale: 2
+    t.decimal "change_given", precision: 10, scale: 2
+    t.string "charged_by_type"
+    t.bigint "charged_by_id"
+    t.datetime "voided_at"
+    t.string "voided_by_type"
+    t.bigint "voided_by_id"
+    t.text "void_reason"
+    t.index ["charged_by_type", "charged_by_id"], name: "index_tickets_on_charged_by"
     t.index ["company_id"], name: "index_tickets_on_company_id"
     t.index ["folio"], name: "index_tickets_on_folio", unique: true
     t.index ["status"], name: "index_tickets_on_status"
+    t.index ["voided_by_type", "voided_by_id"], name: "index_tickets_on_voided_by"
     t.index ["work_order_id"], name: "index_tickets_on_work_order_id", unique: true
   end
 
@@ -210,20 +222,42 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_000003) do
     t.index ["work_order_id"], name: "index_work_order_attachments_on_work_order_id"
   end
 
+  create_table "work_order_events", force: :cascade do |t|
+    t.bigint "work_order_id", null: false
+    t.integer "kind", null: false
+    t.string "actor_type", null: false
+    t.bigint "actor_id", null: false
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_type", "actor_id"], name: "index_work_order_events_on_actor"
+    t.index ["work_order_id", "created_at"], name: "index_work_order_events_on_work_order_id_and_created_at"
+  end
+
   create_table "work_order_items", force: :cascade do |t|
     t.bigint "work_order_id", null: false
     t.string "description"
     t.decimal "quantity"
     t.string "unit"
-    t.integer "status"
     t.integer "position"
-    t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "product_id"
     t.decimal "unit_price", precision: 10, scale: 2
     t.index ["product_id"], name: "index_work_order_items_on_product_id"
     t.index ["work_order_id"], name: "index_work_order_items_on_work_order_id"
+  end
+
+  create_table "work_order_steps", force: :cascade do |t|
+    t.bigint "work_order_id", null: false
+    t.string "description", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "done_at"
+    t.string "done_by_type"
+    t.bigint "done_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["done_by_type", "done_by_id"], name: "index_work_order_steps_on_done_by"
+    t.index ["work_order_id"], name: "index_work_order_steps_on_work_order_id"
   end
 
   create_table "work_orders", force: :cascade do |t|
@@ -234,13 +268,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_000003) do
     t.string "title"
     t.text "description"
     t.integer "priority"
-    t.integer "status"
+    t.integer "status", default: 0, null: false
     t.datetime "due_date"
     t.datetime "completed_at"
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "total", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "customer_name"
+    t.string "customer_phone"
+    t.text "customer_address"
+    t.datetime "started_at"
+    t.text "cancel_reason"
     t.index ["company_id"], name: "index_work_orders_on_company_id"
     t.index ["created_by_type", "created_by_id"], name: "index_work_orders_on_created_by"
     t.index ["created_by_type", "created_by_id"], name: "index_work_orders_on_created_by_type_and_created_by_id"
@@ -262,8 +301,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_15_000003) do
   add_foreign_key "user_companies", "companies"
   add_foreign_key "user_companies", "users"
   add_foreign_key "work_order_attachments", "work_orders"
+  add_foreign_key "work_order_events", "work_orders"
   add_foreign_key "work_order_items", "products"
   add_foreign_key "work_order_items", "work_orders"
+  add_foreign_key "work_order_steps", "work_orders"
   add_foreign_key "work_orders", "companies"
   add_foreign_key "work_orders", "employees"
 end

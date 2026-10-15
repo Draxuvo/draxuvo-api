@@ -142,6 +142,15 @@ es:
     status:
       pending: "Pendiente de pago"
       paid:    "Pagado"
+      voided:  "Anulado"
+    payment_method:
+      cash:     "Efectivo"
+      card:     "Tarjeta"
+      transfer: "Transferencia"
+    insufficient_cash:      "El efectivo recibido es menor al total"
+    invalid_payment_method: "Método de pago inválido"
+    phone_required:         "Falta el teléfono de WhatsApp"
+    not_paid:               "El ticket no está pagado"
     already_paid:  "Este ticket ya fue marcado como pagado"
     not_found:     "Ticket no encontrado"
     whatsapp_sent: "Ticket enviado por WhatsApp exitosamente"
@@ -157,13 +166,37 @@ es:
   work_order:
     already_cancelled: "La orden de trabajo ya está cancelada"
     status:
-      pending:     "Pendiente"
-      in_progress: "En progreso"
-      in_review:   "En revisión"
-      completed:   "Completada"
+      open:        "Abierta"
+      in_progress: "En curso"
+      done:        "Terminada"
+      paid:        "Cobrada"
       cancelled:   "Cancelada"
+    locked:               "La orden está cobrada o cancelada y no admite cambios"
+    invalid_transition:   "La orden no puede pasar a ese estado desde el actual"
+    reason_required:      "Escribe el motivo"
+    no_items:             "La orden no tiene conceptos con precio"
+    catalog_item_required: "Elige un producto del catálogo"
+    deleted:              "Orden de trabajo eliminada"
+    photo:
+      invalid_type:  "El archivo debe ser una imagen"
+      too_large:     "La foto pesa más de 10 MB"
+      limit_reached: "La orden ya tiene 10 fotos"
+    event:
+      created:    "Orden creada"
+      started:    "Orden iniciada"
+      finished:   "Orden terminada"
+      reopened:   "Orden reabierta"
+      charged:    "Orden cobrada"
+      voided:     "Cobro anulado"
+      cancelled:  "Orden cancelada"
+      reassigned: "Orden reasignada"
+      note:       "Nota"
+      photo:      "Foto"
     priority:
       low:    "Baja"
       medium: "Media"
       high:   "Alta"
       urgent: "Urgente"
+
+  company:
+    invalid_order_mode: "Modo de órdenes inválido"

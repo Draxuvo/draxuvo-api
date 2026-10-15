@@ -15,3 +15,21 @@ two:
   department: MyString
   salary: 9.99
   status: 1
+
+# Personal de Servicios Pro (spec 007): pro_staff_employee es el empleado ligado al usuario staff.
+pro_staff_employee:
+  company: pro_co
+  user: pro_staff
+  name: Empleado Pro
+  position: Técnico
+  department: Servicio
+  salary: 9000
+  status: 0
+
+pro_other_employee:
+  company: pro_co
+  name: Otro Técnico
+  position: Técnico
+  department: Servicio
+  salary: 9000
+  status: 0

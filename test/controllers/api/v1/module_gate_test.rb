@@ -130,7 +130,9 @@ class Api::V1::ModuleGateTest < ActionDispatch::IntegrationTest
       assert body.key?(key), "missing #{key}"
     end
     assert_equal 0, body["work_orders"]["total"]
-    assert_equal 0, body["work_orders"]["by_status"]["pending"]
+    assert_equal 0, body["work_orders"]["by_status"]["open"]
+    assert_equal 0, body["work_orders"]["to_charge"]
+    assert_equal 0.0, body["work_orders"]["to_charge_total"]
     assert_equal 0, body["tickets"]["total"]
     assert_equal 1, body["inventory"]["total"]
     assert_equal %w[employees attendance inventory], body["active_modules"]
@@ -155,9 +157,8 @@ class Api::V1::ModuleGateTest < ActionDispatch::IntegrationTest
   end
 
   def create_ticket(company, user)
-    order = company.work_orders.create!(title: "Servicio", created_by: user, status: :in_review)
-    order.update!(status: :completed)
-    order.reload.ticket || Ticket.create!(work_order: order, company: company)
+    order = company.work_orders.create!(title: "Servicio", created_by: user)
+    Ticket.create!(work_order: order, company: company)
   end
 
   def json

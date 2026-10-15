@@ -1,0 +1,12 @@
+# status: 0 pending, 1 paid, 2 voided. payment_method: 0 cash, 1 card, 2 transfer.
+pro_paid_ticket:
+  work_order: pro_paid
+  company: pro_co
+  folio: T-900001
+  status: 1
+  total: 500.00
+  paid_at: <%= 1.day.ago.to_fs(:db) %>
+  payment_method: 1
+  amount_received: 500.00
+  change_given: 0
+  charged_by: pro_co_owner (User)

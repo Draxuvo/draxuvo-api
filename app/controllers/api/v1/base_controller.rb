@@ -24,6 +24,19 @@ module Api
         scope.order(column => direction)
       end
 
+      # Empleado ligado a la persona en la empresa activa (nil si no tiene). Es por empresa: un usuario
+      # puede ser dueño de una y staff de otra (spec 007, R5).
+      def current_employee
+        return @current_employee if defined?(@current_employee)
+
+        @current_employee = current_company.employees.find_by(user_id: current_user.id)
+      end
+
+      # Quién actúa, para las reglas de WorkOrders::Transition y allowed_actions.
+      def work_order_context
+        WorkOrders::Transition::Context.new(user: current_user, role: current_role, employee: current_employee)
+      end
+
       def current_company
         @current_company ||= begin
           company_id = request.headers["X-Company-Id"].presence

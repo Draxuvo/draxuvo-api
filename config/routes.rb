@@ -37,6 +37,7 @@ Rails.application.routes.draw do
       # Equipo (owner/admin) y sucursales (owner, plan Empresa) de la empresa actual
       resource :company, only: [] do
         patch :modules, to: "company_modules#update"
+        patch :order_mode, to: "company_order_modes#update"
         resources :members, controller: "company_members", param: :user_id, only: [ :index, :create, :update, :destroy ]
         resources :branches, only: [ :index, :create ]
       end
@@ -82,7 +83,6 @@ Rails.application.routes.draw do
 
       resources :tickets, only: [ :index, :show ] do
         member do
-          patch :mark_as_paid
           get   :download
           post  :send_whatsapp
         end
@@ -101,12 +101,22 @@ Rails.application.routes.draw do
       get "reports/payroll",  to: "reports#payroll"
 
       resources :work_orders do
+        collection do
+          get :summary
+        end
         member do
-          patch :update_status
+          %w[start finish reopen cancel charge void_charge].each do |action|
+            post action, to: "work_orders#transition", defaults: { transition: action }
+          end
           post   "items",                  to: "work_orders#create_item",  as: :create_item
           patch  "items/:item_id",         to: "work_orders#update_item",  as: :update_item
           delete "items/:item_id",         to: "work_orders#destroy_item", as: :destroy_item
-          patch  "items/:item_id/toggle",  to: "work_orders#toggle_item",  as: :toggle_item
+          post   "steps",                  to: "work_orders#create_step",  as: :create_step
+          patch  "steps/:step_id",         to: "work_orders#update_step",  as: :update_step
+          delete "steps/:step_id",         to: "work_orders#destroy_step", as: :destroy_step
+          post   "notes",                  to: "work_orders#create_note",  as: :create_note
+          post   "photos",                 to: "work_orders#create_photo", as: :create_photo
+          delete "photos/:photo_id",       to: "work_orders#destroy_photo", as: :destroy_photo
         end
       end
     end

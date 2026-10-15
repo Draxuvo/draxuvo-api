@@ -1,0 +1,20 @@
+pro_open_created:
+  work_order: pro_open
+  kind: 0
+  actor: pro_co_owner (User)
+  data: {}
+  created_at: <%= 5.hours.ago.to_fs(:db) %>
+
+pro_started_created:
+  work_order: pro_started
+  kind: 0
+  actor: pro_co_owner (User)
+  data: {}
+  created_at: <%= 4.hours.ago.to_fs(:db) %>
+
+pro_started_started:
+  work_order: pro_started
+  kind: 1
+  actor: pro_staff (User)
+  data: {}
+  created_at: <%= 2.hours.ago.to_fs(:db) %>

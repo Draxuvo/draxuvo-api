@@ -1,21 +1,29 @@
 # app/models/work_order.rb
 class WorkOrder < ApplicationRecord
+  PHONE_FORMAT = /\A[0-9 +\-()]+\z/
+
   belongs_to :company
   belongs_to :employee, optional: true
   belongs_to :created_by, polymorphic: true
+  has_many   :work_order_steps, -> { order(:position) }, dependent: :destroy
   has_many   :work_order_items, -> { order(:position) }, dependent: :destroy
+  has_many   :work_order_attachments, dependent: :destroy
+  has_many   :work_order_events, -> { order(:created_at) }, dependent: :destroy
   has_many   :products, through: :work_order_items
-  has_many_attached :attachments
   has_one    :ticket, dependent: :destroy
+
+  alias_method :steps, :work_order_steps
+  alias_method :events, :work_order_events
+  alias_method :attachments, :work_order_attachments
 
   enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }, default: :medium
   enum :status, {
-    pending:     0,
+    open:        0,
     in_progress: 1,
-    in_review:   2,
-    completed:   3,
+    done:        2,
+    paid:        3,
     cancelled:   4
-  }, default: :pending
+  }, default: :open
 
   scope :search, ->(q) {
     return all unless q.present?
@@ -23,41 +31,43 @@ class WorkOrder < ApplicationRecord
   }
 
   validates :title, presence: true
+  validates :customer_phone, format: { with: PHONE_FORMAT }, length: { in: 7..20 }, allow_blank: true
+  validates :cancel_reason, presence: true, if: :cancelled?
+  validate  :employee_belongs_to_company
+  before_update :reject_changes_when_locked
 
-  after_commit :generate_ticket!, if: -> {
-    previous_changes["status"]&.last == "completed" && ticket.nil?
-  }
-
-  # Checklist progress
-  def progress
-    return 0 if work_order_items.none?
-    done = work_order_items.where(status: :completed).count
-    total = work_order_items.count
-    (done.to_f / total * 100).round
+  # Una orden cobrada o cancelada no acepta cambios (FR-007)
+  def locked?
+    paid? || cancelled?
   end
 
-  # Auto-complete cuando todos los items están listos
-  def sync_status!
-    return if cancelled?
-    return unless work_order_items.any?
-    if work_order_items.all?(&:completed?)
-      update!(status: :in_review, completed_at: nil)
-    end
+  # Porcentaje de pasos hechos sobre pasos totales
+  def progress
+    total = work_order_steps.size
+    return 0 if total.zero?
+    done_count = work_order_steps.count { |s| s.done_at.present? }
+    (done_count.to_f / total * 100).round
+  end
+
+  # Suma los subtotales (unit_price * quantity) de todos los conceptos que tengan precio
+  def recalculate_total!
+    new_total = work_order_items.reload.sum(&:subtotal)
+    update_column(:total, new_total)
   end
 
   private
 
-  def generate_ticket!
-    Ticket.create!(work_order: self, company: company)
-  rescue => e
-    Rails.logger.error "Ticket generation failed for WorkOrder##{id}: #{e.message}"
+  def employee_belongs_to_company
+    return if employee.nil? || employee.company_id == company_id
+    errors.add(:employee, :invalid)
   end
 
-  public
-
-  # Suma los subtotales (unit_price * quantity) de todos los items que tengan precio
-  def recalculate_total!
-    new_total = work_order_items.reload.sum(&:subtotal)
-    update_column(:total, new_total)
+  # Solo se permite la salida paid -> done (void_charge); cancelled no tiene salida.
+  def reject_changes_when_locked
+    before = status_in_database
+    return unless %w[paid cancelled].include?(before)
+    return if before == "paid" && status == "done" && (changed - %w[status updated_at]).empty?
+    errors.add(:base, :locked)
+    throw :abort
   end
 end

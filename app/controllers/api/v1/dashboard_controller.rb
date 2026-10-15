@@ -59,11 +59,14 @@ module Api
 
         {
           total:       orders.count,
+          # Por cobrar: órdenes terminadas (done) que aún no se cobran.
+          to_charge:       status_counts["done"].to_i,
+          to_charge_total: orders.where(status: :done).sum(:total).to_f,
           by_status:   {
-            pending:     status_counts["pending"].to_i,
+            open:        status_counts["open"].to_i,
             in_progress: status_counts["in_progress"].to_i,
-            in_review:   status_counts["in_review"].to_i,
-            completed:   status_counts["completed"].to_i,
+            done:        status_counts["done"].to_i,
+            paid:        status_counts["paid"].to_i,
             cancelled:   status_counts["cancelled"].to_i
           },
           by_priority: {
@@ -81,6 +84,7 @@ module Api
 
         pending_count = status_counts["pending"].to_i
         paid_count    = status_counts["paid"].to_i
+        voided_count  = status_counts["voided"].to_i
 
         total_revenue   = tickets.where(status: :paid).sum(:total)
         pending_revenue = tickets.where(status: :pending).sum(:total)
@@ -89,6 +93,7 @@ module Api
           total:           tickets.count,
           pending:         pending_count,
           paid:            paid_count,
+          voided:          voided_count,
           total_revenue:   total_revenue.to_f,
           pending_revenue: pending_revenue.to_f
         }

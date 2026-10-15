@@ -15,6 +15,9 @@ class Company < ApplicationRecord
   belongs_to :parent, class_name: "Company", foreign_key: :parent_company_id, optional: true, inverse_of: :branches
   has_many :branches, class_name: "Company", foreign_key: :parent_company_id, inverse_of: :parent
 
+  # Modo de órdenes (007): servicio (checklist de pasos) o pedido (entrega y cobro).
+  enum :order_mode, { service: 0, order: 1 }, default: :service, prefix: true
+
   MAX_COMPANIES_PER_ACCOUNT = 3
 
   validates :name, presence: true
@@ -23,6 +26,7 @@ class Company < ApplicationRecord
   validate :one_level_of_branches
 
   before_validation :generate_slug, on: :create
+  before_validation :inherit_order_mode, on: :create
   after_create :create_trial_subscription, unless: :branch?
 
   def branch?
@@ -57,6 +61,11 @@ class Company < ApplicationRecord
   end
 
   private
+
+  # Una sucursal nueva hereda el modo de su principal; después se cambia por separado.
+  def inherit_order_mode
+    self.order_mode = parent.order_mode if parent
+  end
 
   def generate_slug
     self.slug ||= name.to_s.downcase.gsub(/\s+/, "-").gsub(/[^a-z0-9-]/, "")
