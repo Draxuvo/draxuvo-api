@@ -51,6 +51,25 @@ Todos los endpoints (excepto los marcados como **público**) requieren los sigui
 | `owner` | Dueño de la empresa |
 | `super_admin` | Acceso global a todas las empresas |
 
+### Cabeceras opcionales y configuración para la app móvil (spec 011)
+
+| Header | Dónde | Efecto |
+|---|---|---|
+| `locale` | Toda petición | `es` o `en`: idioma de los mensajes |
+| `X-App-Version` | Toda petición de la app | Informativa (por ejemplo `1.0.0 ios`); la API no la valida |
+| `Idempotency-Key` | `POST /work_orders/:id/notes` y `POST /work_orders/:id/photos` | Cadena de hasta 64 caracteres (la app manda un UUID). Sin cabecera, igual que siempre. La primera vez ejecuta y guarda estado y cuerpo de la respuesta (solo 2xx). Repetida con el mismo usuario y ruta, responde lo guardado sin crear otra nota o foto. En otra ruta responde `422`; de más de 64 caracteres, `400` |
+
+#### `GET /app_config` — público
+
+Sin token ni `X-Company-Id`. Responde siempre `200`:
+
+```json
+{ "min_app_version": { "ios": "1.0.0", "android": "1.0.0" } }
+```
+
+Los valores salen de `MIN_APP_VERSION_IOS` y `MIN_APP_VERSION_ANDROID`; sin definir, `0.0.0`. La app compara su versión con la de su plataforma y, si es menor, solo muestra la pantalla de actualizar.
+
+
 ---
 
 ## 2. Paginación
