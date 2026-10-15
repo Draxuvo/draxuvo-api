@@ -3,6 +3,8 @@ require_relative "../config/environment"
 require "rails/test_help"
 require "minitest/mock"
 
+Dir[File.expand_path("support/*.rb", __dir__)].sort.each { |file| require file unless file.end_with?("_test.rb") }
+
 module ActiveSupport
   class TestCase
     # Run tests in parallel with specified workers
@@ -10,6 +12,10 @@ module ActiveSupport
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
+
+    include StripeHelpers
+    include CacheHelpers
+    include EnvHelpers
 
     # Headers de una request autenticada: JWT del usuario y la empresa activa.
     def auth_headers(user, company = user.companies.first)

@@ -1,15 +1,35 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
+# El stock de cada producto es la suma con signo de sus movimientos.
 one:
   product: one
   company: one
+  movement_type: 0
+  qty: 20
+  note: Compra inicial
+
+one_exit:
+  product: one
+  company: one
   movement_type: 1
-  qty: 1
-  note: MyString
+  qty: 5
+  note: Salida a una orden
+
+one_adjustment:
+  product: one
+  company: one
+  movement_type: 2
+  qty: 3
+  note: Conteo físico
 
 two:
   product: two
   company: two
-  movement_type: 1
-  qty: 1
-  note: MyString
+  movement_type: 0
+  qty: 12
+  note: Compra inicial
+
+two_adjustment:
+  product: two
+  company: two
+  movement_type: 2
+  qty: -2
+  note: Merma

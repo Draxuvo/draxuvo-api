@@ -1,20 +1,20 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
 one:
   company: one
-  name: MyString
-  position: MyString
-  department: MyString
-  salary: 9.99
-  status: 1
+  name: Ana Torres Ruiz
+  position: Administradora
+  department: Oficina
+  salary: 12000
+  status: 0
+  email: ana.torres@empresa-uno.test
 
 two:
   company: two
-  name: MyString
-  position: MyString
-  department: MyString
-  salary: 9.99
-  status: 1
+  name: Luis Ramírez
+  position: Técnico
+  department: Servicio
+  salary: 9000
+  status: 0
+  email: luis.ramirez@empresa-dos.test
 
 # Personal de Servicios Pro (spec 007): pro_staff_employee es el empleado ligado al usuario staff.
 pro_staff_employee:
