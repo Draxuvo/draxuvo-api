@@ -52,7 +52,7 @@ module Api::V1
         filename: blob.filename,
         content_type: blob.content_type,
         byte_size: blob.byte_size,
-        url: url_for(blob),
+        url: url_for(blob)
       }
     end
 

@@ -18,7 +18,7 @@ module Pdf
     end
 
     def generate
-      pdf = Prawn::Document.new(page_size: "A4", margin: [50, 50, 50, 50])
+      pdf = Prawn::Document.new(page_size: "A4", margin: [ 50, 50, 50, 50 ])
       draw_header(pdf)
       draw_info(pdf)
       draw_items(pdf) if @items.any?
@@ -31,9 +31,9 @@ module Pdf
 
     def draw_header(pdf)
       pdf.fill_color PRIMARY
-      pdf.fill_rectangle [0, pdf.cursor], pdf.bounds.width, 70
+      pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, 70
       pdf.fill_color WHITE
-      pdf.bounding_box([15, pdf.cursor - 12], width: pdf.bounds.width - 30) do
+      pdf.bounding_box([ 15, pdf.cursor - 12 ], width: pdf.bounds.width - 30) do
         pdf.text @company.name.upcase, size: 18, style: :bold
         pdf.text "TICKET DE COBRO", size: 10
       end
@@ -45,15 +45,15 @@ module Pdf
       col_w = (pdf.bounds.width - 10) / 2
 
       # Columna izquierda: datos del ticket
-      pdf.bounding_box([0, pdf.cursor], width: col_w) do
+      pdf.bounding_box([ 0, pdf.cursor ], width: col_w) do
         label_value(pdf, "Folio",  @ticket.folio)
         label_value(pdf, "Fecha",  format_date(@ticket.created_at))
         label_value(pdf, "Estado", status_label)
-        label_value(pdf, "Paid", format_date(@ticket.paid_at)) if @ticket.paid_at
+        label_value(pdf, I18n.t("ticket.pdf.paid_at"), format_date(@ticket.paid_at)) if @ticket.paid_at
       end
 
       # Columna derecha: datos de la orden
-      pdf.bounding_box([col_w + 10, pdf.cursor + info_block_height(pdf)], width: col_w) do
+      pdf.bounding_box([ col_w + 10, pdf.cursor + info_block_height(pdf) ], width: col_w) do
         label_value(pdf, "Orden",    @order.title)
         label_value(pdf, "Prioridad", priority_label)
         label_value(pdf, "Empleado", @order.employee&.name || "—")
@@ -70,7 +70,7 @@ module Pdf
       pdf.text "Detalle de servicios / productos", size: 11, style: :bold
       pdf.move_down 8
 
-      header = [["Descripción", "Cant.", "Unidad", "Precio unit.", "Subtotal"]]
+      header = [ [ "Descripción", "Cant.", "Unidad", "Precio unit.", "Subtotal" ] ]
       rows   = @items.map do |item|
         [
           item.description.to_s,
@@ -90,8 +90,8 @@ module Pdf
         columns(1..4).align = :right
         column(0).width     = 220
 
-        self.row_colors = [WHITE, LIGHT_BG]
-        self.cell_style = { padding: [6, 8], size: 9, border_width: 0 }
+        self.row_colors = [ WHITE, LIGHT_BG ]
+        self.cell_style = { padding: [ 6, 8 ], size: 9, border_width: 0 }
         self.header    = true
       end
 
@@ -103,10 +103,10 @@ module Pdf
       x     = pdf.bounds.width - box_w
 
       pdf.fill_color LIGHT_BG
-      pdf.fill_rectangle [x, pdf.cursor], box_w, 36
+      pdf.fill_rectangle [ x, pdf.cursor ], box_w, 36
       pdf.fill_color BLACK
 
-      pdf.bounding_box([x + 10, pdf.cursor - 10], width: box_w - 20) do
+      pdf.bounding_box([ x + 10, pdf.cursor - 10 ], width: box_w - 20) do
         pdf.text "Total", size: 11, style: :bold
         pdf.move_up 14
         pdf.text format_money(@ticket.total), size: 14, style: :bold, align: :right

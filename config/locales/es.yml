@@ -149,6 +149,8 @@ es:
       transfer: "Transferencia"
     insufficient_cash:      "El efectivo recibido es menor al total"
     invalid_payment_method: "Método de pago inválido"
+    pdf:
+      paid_at: "Pagado el"
     phone_required:         "Falta el teléfono de WhatsApp"
     not_paid:               "El ticket no está pagado"
     already_paid:  "Este ticket ya fue marcado como pagado"

@@ -4,7 +4,7 @@ module Api::V1
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
     rescue_from ActiveRecord::RecordInvalid, with: :handle_record_invalid
 
-    before_action :authenticate_request, only: [:me]
+    before_action :authenticate_request, only: [ :me ]
 
     # GET /api/v1/auth/me
     def me
@@ -30,7 +30,7 @@ module Api::V1
       end
 
       token = jwt_encode(user_id: user.id, email: user.email, full_name: user.full_name)
-      
+
       if user.employee.present?
         employee = user.employee
         today_open = employee.attendances

@@ -66,7 +66,7 @@ gem "bcrypt", "~> 3.1.7"
 gem "jwt"
 gem "rack-cors"
 
-gem "dotenv-rails", groups: [:development, :test]
+gem "dotenv-rails", groups: [ :development, :test ]
 gem "active_model_serializers"
 
 gem "pagy"

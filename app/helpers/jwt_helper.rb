@@ -5,7 +5,7 @@ module JwtHelper
 
   def jwt_encode(payload, exp = DEFAULT_EXPIRATION.from_now)
     payload = payload.dup
-    payload[:exp] = exp.to_i
+    payload[:exp] ||= exp.to_i # un exp dentro del payload (p. ej. el de 72 h de SetPasswordService) se respeta
     JWT.encode(payload, SECRET_KEY, "HS256")
   end
 
@@ -21,7 +21,7 @@ module JwtHelper
   class << self
     def jwt_encode(payload, exp = DEFAULT_EXPIRATION.from_now)
       payload = payload.dup
-      payload[:exp] = exp.to_i
+      payload[:exp] ||= exp.to_i # un exp dentro del payload (p. ej. el de 72 h de SetPasswordService) se respeta
       JWT.encode(payload, SECRET_KEY, "HS256")
     end
 
