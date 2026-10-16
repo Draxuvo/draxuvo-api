@@ -1,20 +1,11 @@
 # Blueprint de producción de la API de Draxuvo (spec 012). Inventario de variables, con valores
 # esperados y responsables: specs/012-deploy-produccion/contracts/env-inventory.md del workspace.
 #
-# Planes (nombres actuales de Render): web `0.5c-512mb` (antes Starter) y base `0.1c-256mb`
-# (antes Basic-256mb). Los precios cambian: confirmarlos en render.com/pricing al contratar.
-# El almacenamiento de la base se cobra aparte, por eso `diskSizeGB: 1` (el valor por defecto de
-# este plan son 15 GB).
+# Plan web `0.5c-512mb` (antes Starter) y base `0.1c-256mb` (antes Basic-256mb). Los precios cambian:
+# confirmarlos en render.com/pricing. El almacenamiento de la base se cobra aparte (1 GB).
 
-databases:
-  - name: draxuvo-db
-    plan: 0.1c-256mb
-    region: virginia
-    postgresMajorVersion: "17"   # igual que la base local y la del CI
-    diskSizeGB: 1
-    databaseName: draxuvo_production
-    user: draxuvo
-    ipAllowList: []              # solo red privada: ningún acceso externo
+# La base de datos NO está en este Blueprint: `draxuvo-db` (Postgres 17, plan 0.1c-256mb, Virginia, 1 GB,
+# sin acceso externo) se creó aparte en el workspace Draxuvo. Su URL interna se carga como DATABASE_URL.
 
 services:
   - type: web
@@ -31,10 +22,8 @@ services:
         value: production
       - key: RAILS_LOG_TO_STDOUT
         value: "true"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: draxuvo-db
-          property: connectionString
+      - key: DATABASE_URL        # URL interna de draxuvo-db (misma región, red privada)
+        sync: false
       - key: SECRET_KEY_BASE
         generateValue: true      # firma los JWT: rotarla cierra todas las sesiones
       # Hosts y orígenes (CORS): ver FR-001 y FR-005 de la spec 012.
