@@ -1,28 +1,67 @@
+# Blueprint de producción de la API de Draxuvo (spec 012). Inventario de variables, con valores
+# esperados y responsables: specs/012-deploy-produccion/contracts/env-inventory.md del workspace.
+#
+# Planes (nombres actuales de Render): web `0.5c-512mb` (antes Starter) y base `0.1c-256mb`
+# (antes Basic-256mb). Los precios cambian: confirmarlos en render.com/pricing al contratar.
+# El almacenamiento de la base se cobra aparte, por eso `diskSizeGB: 1` (el valor por defecto de
+# este plan son 15 GB).
+
+databases:
+  - name: draxuvo-db
+    plan: 0.1c-256mb
+    region: virginia
+    postgresMajorVersion: "17"   # igual que la base local y la del CI
+    diskSizeGB: 1
+    databaseName: draxuvo_production
+    user: draxuvo
+    ipAllowList: []              # solo red privada: ningún acceso externo
+
 services:
   - type: web
-    name: grupo-bothi-api
+    name: draxuvo-api
     runtime: docker
+    region: virginia             # misma región que la base (conexión por red privada)
+    plan: 0.5c-512mb
     dockerfilePath: ./Dockerfile
-    plan: free
     healthCheckPath: /up
+    # Despliega solo cuando pasan los checks de CI de la rama (FR-002); no por cada commit.
+    autoDeployTrigger: checksPass
     envVars:
       - key: RAILS_ENV
         value: production
       - key: RAILS_LOG_TO_STDOUT
         value: "true"
       - key: DATABASE_URL
-        sync: false        # Lo pones manualmente en el dashboard de Render
-      - key: RAILS_MASTER_KEY
-        sync: false        # Lo pones manualmente en el dashboard de Render
+        fromDatabase:
+          name: draxuvo-db
+          property: connectionString
       - key: SECRET_KEY_BASE
-        sync: false
+        generateValue: true      # firma los JWT: rotarla cierra todas las sesiones
+      # Hosts y orígenes (CORS): ver FR-001 y FR-005 de la spec 012.
+      - key: APP_HOST
+        value: api.draxuvo.com
+      - key: ALLOWED_HOSTS
+        value: api.draxuvo.com
+      - key: FRONTEND_URL          # panel (ui): enlaces de correo y CORS
+        value: https://app.draxuvo.com
+      - key: FRONTEND_URL_UI       # sitio público (web): CORS
+        value: https://draxuvo.com
+      # Correo (Resend)
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL
+        value: Draxuvo <no-reply@draxuvo.com>
+      # Stripe: modo prueba al lanzar (FR-008)
+      - key: STRIPE_API_KEY
         sync: false
-      - key: FRONTEND_URL
+      - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: APP_HOST
-        sync: false        # Host público (mailer y default_url_options); por defecto www.grupobothi.com
-      - key: ALLOWED_HOSTS
-        sync: false        # Hosts permitidos separados por comas; por defecto grupobothi.com,www.grupobothi.com
+      # Solo la leen los seeds al crear el super admin (db:prepare en la primera ejecución)
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      # Versión mínima de la app móvil; se sube aquí sin publicar una build nueva (FR-015)
+      - key: MIN_APP_VERSION_IOS
+        value: 0.0.0
+      - key: MIN_APP_VERSION_ANDROID
+        value: 0.0.0
+      # WhatsApp (WHATSAPP_*) queda sin definir a propósito: desactivado en el lanzamiento (FR-009).
