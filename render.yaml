@@ -64,4 +64,16 @@ services:
         value: 0.0.0
       - key: MIN_APP_VERSION_ANDROID
         value: 0.0.0
+      # Archivos subidos (avatares, fotos de órdenes, imágenes de productos): Cloudflare R2.
+      # El disco del contenedor es efímero; sin esto se pierden en cada despliegue.
+      - key: ACTIVE_STORAGE_SERVICE
+        value: r2
+      - key: R2_ACCOUNT_ID
+        value: 653dfb7bcb7b75b826d6cef4f1a9947d
+      - key: R2_BUCKET
+        value: draxuvo-uploads
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
       # WhatsApp (WHATSAPP_*) queda sin definir a propósito: desactivado en el lanzamiento (FR-009).

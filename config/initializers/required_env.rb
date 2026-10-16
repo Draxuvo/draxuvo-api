@@ -22,8 +22,15 @@ module RequiredEnv
     STRIPE_WEBHOOK_SECRET
   ].freeze
 
+  # Con ACTIVE_STORAGE_SERVICE=r2 (archivos en Cloudflare R2) se exigen también sus credenciales.
+  R2_NAMES = %w[R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET].freeze
+
+  def self.required(env = ENV)
+    env["ACTIVE_STORAGE_SERVICE"].to_s == "r2" ? NAMES + R2_NAMES : NAMES
+  end
+
   def self.missing(env = ENV)
-    NAMES.select { |name| env[name].to_s.strip.empty? }
+    required(env).select { |name| env[name].to_s.strip.empty? }
   end
 
   def self.check!(env = ENV)

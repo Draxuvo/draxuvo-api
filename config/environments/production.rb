@@ -25,7 +25,9 @@ Rails.application.configure do
   # config.asset_host = "http://assets.example.com"
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Archivos subidos: en producción ACTIVE_STORAGE_SERVICE=r2 (Cloudflare R2, ver config/storage.yml);
+  # `local` es disco del contenedor y se pierde en cada despliegue.
+  config.active_storage.service = ENV.fetch("ACTIVE_STORAGE_SERVICE", "local").to_sym
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
