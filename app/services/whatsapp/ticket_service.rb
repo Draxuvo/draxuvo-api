@@ -172,9 +172,10 @@ module Whatsapp
       missing << "WHATSAPP_PHONE_NUMBER_ID" unless ENV["WHATSAPP_PHONE_NUMBER_ID"].present?
       return if missing.empty?
 
-      raise ApiErrors::UnprocessableEntityError.new(
-        details: "Variables de entorno faltantes: #{missing.join(', ')}"
-      )
+      # WhatsApp está desactivado en el lanzamiento (spec 012): al cliente solo se le dice que no está
+      # disponible; los nombres de las variables van al log, no a la respuesta.
+      log(:warn, "WhatsApp no configurado, faltan: #{missing.join(', ')}")
+      raise ApiErrors::UnprocessableEntityError.new(details: I18n.t("whatsapp.not_configured"))
     end
 
     def log(level, msg)

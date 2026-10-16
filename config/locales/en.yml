@@ -141,6 +141,8 @@ en:
       monthly: "Monthly"
       annual:  "Annual"
 
+  whatsapp:
+    not_configured: "WhatsApp messaging is not available right now."
   ticket:
     status:
       pending: "Pending payment"

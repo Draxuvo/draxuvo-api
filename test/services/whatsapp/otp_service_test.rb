@@ -125,8 +125,8 @@ class Whatsapp::OtpServiceTest < ActiveSupport::TestCase
   test "missing configuration raises and sends nothing" do
     http, = with_whatsapp(env: { "WHATSAPP_ACCESS_TOKEN" => nil, "WHATSAPP_PHONE_NUMBER_ID" => "" }) do
       error = assert_raises(ApiErrors::UnprocessableEntityError) { Whatsapp::OtpService.new("5512345678").send_code }
-      assert_includes error.details, "WHATSAPP_ACCESS_TOKEN"
-      assert_includes error.details, "WHATSAPP_PHONE_NUMBER_ID"
+      assert_equal I18n.t("whatsapp.not_configured"), error.details
+      assert_not_includes error.details, "WHATSAPP_"
     end
     assert_empty http.requests
   end
