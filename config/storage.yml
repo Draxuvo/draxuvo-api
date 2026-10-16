@@ -6,6 +6,21 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
+# Cloudflare R2 (compatible con S3): almacenamiento de producción (spec 012). El disco del contenedor
+# es efímero en Render, así que los archivos subidos no pueden quedarse en `local`.
+# Se activa con ACTIVE_STORAGE_SERVICE=r2 y estas variables: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID,
+# R2_SECRET_ACCESS_KEY y R2_BUCKET. El bucket es privado: Active Storage entrega URLs firmadas.
+r2:
+  service: S3
+  access_key_id: <%= ENV["R2_ACCESS_KEY_ID"] %>
+  secret_access_key: <%= ENV["R2_SECRET_ACCESS_KEY"] %>
+  bucket: <%= ENV["R2_BUCKET"] %>
+  region: auto
+  endpoint: https://<%= ENV["R2_ACCOUNT_ID"] %>.r2.cloudflarestorage.com
+  # aws-sdk-s3 reciente envía checksums que R2 no acepta en todas las operaciones.
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
+
 # ─── OPCIÓN 1: Cloudinary (recomendado) ────────────────────────────────────────
 # Free tier: 25 GB storage + 25 GB bandwidth/mes + CDN incluido
 # Gem requerida: gem "cloudinary" (ya en Gemfile)

@@ -25,7 +25,9 @@ Rails.application.configure do
   # config.asset_host = "http://assets.example.com"
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Archivos subidos: en producción ACTIVE_STORAGE_SERVICE=r2 (Cloudflare R2, ver config/storage.yml);
+  # `local` es disco del contenedor y se pierde en cada despliegue.
+  config.active_storage.service = ENV.fetch("ACTIVE_STORAGE_SERVICE", "local").to_sym
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
@@ -61,7 +63,8 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "www.grupobothi.com") }
+  # APP_HOST es obligatoria en producción (config/initializers/required_env.rb): sin valor por defecto.
+  config.action_mailer.default_url_options = { host: ENV["APP_HOST"] }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -83,9 +86,10 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # ALLOWED_HOSTS: comma separated list. Defaults to the current live domain.
+  # ALLOWED_HOSTS: comma separated list. Obligatoria en producción (config/initializers/required_env.rb);
+  # sin valor por defecto de otra marca.
   config.hosts = [
-    *ENV.fetch("ALLOWED_HOSTS", "grupobothi.com,www.grupobothi.com").split(",").map(&:strip).reject(&:empty?),
+    *ENV.fetch("ALLOWED_HOSTS", "").split(",").map(&:strip).reject(&:empty?),
     /.*\.onrender\.com/
   ]
 
