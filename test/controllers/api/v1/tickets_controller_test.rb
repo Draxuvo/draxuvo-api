@@ -80,6 +80,21 @@ class Api::V1::TicketsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("ticket.phone_required"), response.parsed_body.dig("error", "details")
   end
 
+  test "send_whatsapp without WhatsApp configured answers 422 with a clear message, not 500" do
+    company = companies(:enterprise_co)
+    owner = users(:enterprise_co_owner)
+    order = company.work_orders.create!(title: "Con teléfono", created_by: owner, customer_phone: "5512345678")
+    ticket = Ticket.create!(work_order: order, company: company)
+
+    with_env("WHATSAPP_ACCESS_TOKEN" => nil, "WHATSAPP_PHONE_NUMBER_ID" => nil) do
+      post "/api/v1/tickets/#{ticket.id}/send_whatsapp", headers: auth_headers(owner, company), as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal I18n.t("whatsapp.not_configured"), response.parsed_body.dig("error", "details")
+    assert_not_includes response.body, "WHATSAPP_"
+  end
+
   test "search with no match returns an empty page" do
     get "/api/v1/tickets", params: { search: "transmisión" }, headers: auth_headers(@owner, @company)
 
