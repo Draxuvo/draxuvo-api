@@ -50,3 +50,26 @@ stripe trigger invoice.payment_failed
 ```
 
 El recorrido completo de prueba está en `specs/002-rebrand-suscripciones/quickstart.md` del workspace.
+
+## Pasar de modo prueba a modo real
+
+Draxuvo sale en **modo prueba** (cuenta `Draxuvo sandbox`): se valida el flujo completo sin cobrar. El paso a modo real es
+un cambio de claves y de IDs; no cambia código. Hazlo solo tras el recorrido de pago de prueba completo.
+
+1. **Activa la cuenta** de Stripe para cobrar (datos del negocio y cuenta bancaria). Hasta entonces, el modo real no funciona.
+2. **Productos y precios reales.** Los IDs del modo prueba no existen en el modo real. Crea Básico, Pro y Empresa con los
+   seis precios de la tabla de arriba y los mismos `lookup_key` (`draxuvo_<plan>_<monthly|annual>`), en MXN, recurrentes y
+   sin IVA incluido (`tax_behavior: exclusive`). Como la API busca por `lookup_key`, no hay IDs que cambiar en ningún lado.
+3. **Clave restringida real** (`rk_live_…`) con los mismos permisos: Write en Customers, Checkout Sessions, Subscriptions y
+   Customer portal; Read en Prices; todo lo demás en None. Cópiala directo en Render, no la pegues en chats ni archivos.
+4. **Customer Portal real** (Settings → Billing → Customer portal, ya en modo real): método de pago, historial de facturas,
+   cancelar al final del periodo y cambiar de plan con los seis precios y prorrateo.
+5. **Webhook real:** endpoint `https://api.draxuvo.com/api/v1/stripe/webhooks` con los seis eventos de arriba. Su secreto
+   `whsec_…` es distinto al del modo prueba.
+6. **Render:** cambia `STRIPE_API_KEY` por la `rk_live_…` y `STRIPE_WEBHOOK_SECRET` por el secreto del webhook real, en un
+   solo guardado (dispara un despliegue).
+7. **Prueba con dinero real:** una suscripción del plan más barato con tu tarjeta, confirma que el webhook responde 2xx y la
+   suscripción queda `active`; después cancélala y reembolsa desde el panel.
+8. El webhook y las claves de prueba siguen existiendo en el sandbox; no estorban. Para volver a probar sin riesgo,
+   vuelve a poner las claves de prueba en Render.
+
