@@ -6,7 +6,7 @@ module Api
       requires_module :whatsapp, only: :send_whatsapp
 
       def index
-        tickets = base_scope.includes(work_order: :work_order_items)
+        tickets = base_scope.includes(:check, work_order: :work_order_items)
 
         tickets = tickets.where(status: params[:status]) if Ticket.statuses.key?(params[:status])
         tickets = search_tickets(tickets, params[:search])  if params[:search].present?
@@ -34,7 +34,7 @@ module Api
 
       def send_whatsapp
         ticket = find_ticket
-        phone  = params[:phone].presence || ticket.work_order.customer_phone.presence
+        phone  = params[:phone].presence || ticket.work_order&.customer_phone.presence
         raise ApiErrors::BadRequestError.new(details: I18n.t("ticket.phone_required")) if phone.blank?
 
         Whatsapp::TicketService.new(ticket, phone: phone).call
@@ -45,22 +45,23 @@ module Api
 
       def search_tickets(tickets, query)
         term = "%#{Ticket.sanitize_sql_like(query)}%"
-        tickets.joins(:work_order)
-               .where("tickets.folio ILIKE :term OR work_orders.title ILIKE :term OR work_orders.customer_name ILIKE :term", term: term)
+        tickets.left_joins(:work_order, check: :dining_table)
+               .where("tickets.folio ILIKE :term OR work_orders.title ILIKE :term OR work_orders.customer_name ILIKE :term " \
+                      "OR checks.takeout_name ILIKE :term OR dining_tables.name ILIKE :term", term: term)
       end
 
       def find_ticket
-        base_scope.includes(work_order: :work_order_items).find(params[:id])
+        base_scope.includes(:check, work_order: :work_order_items).find(params[:id])
       end
 
-      # Staff solo ve los tickets de sus órdenes; sin empleado ligado, ninguno.
+      # Staff solo ve los tickets de sus órdenes y de sus cuentas de restaurante.
       def base_scope
         scope = current_company.tickets
         return scope unless current_role == "staff"
 
-        return scope.none unless current_employee
-
-        scope.joins(:work_order).where(work_orders: { employee_id: current_employee.id })
+        scope.left_joins(:work_order, :check)
+             .where("work_orders.employee_id = :employee OR checks.waiter_id = :user",
+                    employee: current_employee&.id, user: current_user.id)
       end
     end
   end

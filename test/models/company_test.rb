@@ -3,7 +3,7 @@ require "test_helper"
 # T017 · R13, R16, data-model.md (Company). Activos = módulos del plan menos disabled_modules.
 class CompanyTest < ActiveSupport::TestCase
   BASIC_MODULES = %i[employees attendance inventory].freeze
-  PRO_MODULES = (BASIC_MODULES + %i[work_orders tickets reports]).freeze
+  PRO_MODULES = (BASIC_MODULES + %i[work_orders tickets reports restaurant]).freeze
   ENTERPRISE_MODULES = (PRO_MODULES + %i[whatsapp multi_company]).freeze
 
   def assert_same_modules(expected, actual)

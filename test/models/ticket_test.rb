@@ -62,7 +62,7 @@ class TicketTest < ActiveSupport::TestCase
 
   test "enums expose statuses and payment methods" do
     assert_equal({ "pending" => 0, "paid" => 1, "voided" => 2 }, Ticket.statuses)
-    assert_equal({ "cash" => 0, "card" => 1, "transfer" => 2 }, Ticket.payment_methods)
+    assert_equal({ "cash" => 0, "card" => 1, "transfer" => 2, "mixed" => 3 }, Ticket.payment_methods)
     assert_nil build_ticket.payment_method
     assert_raises(ArgumentError) { build_ticket(payment_method: :bitcoin) }
   end
@@ -82,5 +82,24 @@ class TicketTest < ActiveSupport::TestCase
       work_orders(:pro_paid).update_columns(status: WorkOrder.statuses[:done])
       work_orders(:pro_paid).destroy!
     end
+  end
+
+  test "a ticket belongs to exactly one of a work order or a check" do
+    paid = tickets(:resto_paid_ticket)
+    assert paid.valid?
+
+    paid.work_order = work_orders(:pro_paid)
+    assert_not paid.valid?, "no puede tener orden y cuenta a la vez"
+
+    paid.work_order = nil
+    paid.check = nil
+    assert_not paid.valid?, "tampoco ninguno de los dos"
+  end
+
+  test "a mixed ticket is a valid payment method for a check" do
+    paid = tickets(:resto_paid_ticket)
+    paid.payment_method = :mixed
+
+    assert paid.valid?
   end
 end

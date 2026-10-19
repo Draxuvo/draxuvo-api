@@ -1,0 +1,6 @@
+first_round:
+  company: resto_co
+  check: open_check
+  sent_by: resto_waiter
+  sent_at: <%= 15.minutes.ago.to_fs(:db) %>
+  number: 1

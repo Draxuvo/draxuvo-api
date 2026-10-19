@@ -1,0 +1,56 @@
+# status: 0 draft, 1 new, 2 preparing, 3 ready, 4 delivered, 5 cancelled
+item_new:
+  company: resto_co
+  check: open_check
+  kitchen_order: first_round
+  product: resto_tacos
+  name: Tacos al pastor
+  unit_price: 70.00
+  quantity: 1
+  note: sin cebolla
+  station: kitchen
+  status: 1
+
+item_preparing:
+  company: resto_co
+  check: open_check
+  kitchen_order: first_round
+  product: resto_sopa
+  name: Sopa del día
+  unit_price: 55.00
+  quantity: 1
+  station: kitchen
+  status: 2
+  preparing_at: <%= 10.minutes.ago.to_fs(:db) %>
+
+item_ready:
+  company: resto_co
+  check: open_check
+  kitchen_order: first_round
+  product: resto_cola
+  name: Refresco de cola
+  unit_price: 30.00
+  quantity: 1
+  station: bar
+  status: 3
+  preparing_at: <%= 12.minutes.ago.to_fs(:db) %>
+  ready_at: <%= 3.minutes.ago.to_fs(:db) %>
+
+item_draft:
+  company: resto_co
+  check: open_check
+  product: resto_agua
+  name: Agua de horchata
+  unit_price: 25.00
+  quantity: 1
+  status: 0
+
+closed_item:
+  company: resto_co
+  check: closed_check
+  product: resto_tacos
+  name: Tacos al pastor
+  unit_price: 70.00
+  quantity: 1
+  station: kitchen
+  status: 4

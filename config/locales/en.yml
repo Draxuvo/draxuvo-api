@@ -15,6 +15,7 @@ en:
     work_orders:   "Work orders"
     tickets:       "Tickets"
     reports:       "Reports"
+    restaurant:    "Restaurant"
     whatsapp:      "WhatsApp"
     multi_company: "Multi-company"
 
@@ -152,6 +153,7 @@ en:
       cash:     "Cash"
       card:     "Card"
       transfer: "Transfer"
+      mixed:    "Mixed"
     insufficient_cash:      "The cash received is less than the total"
     invalid_payment_method: "Invalid payment method"
     pdf:
@@ -207,3 +209,37 @@ en:
 
   company:
     invalid_order_mode: "Invalid order mode"
+
+  restaurant:
+    item_status:
+      draft: "Not sent"
+      new: "New"
+      preparing: "Preparing"
+      ready: "Ready"
+      delivered: "Delivered"
+      cancelled: "Cancelled"
+    check_status:
+      open: "Open"
+      closed: "Closed"
+      cancelled: "Cancelled"
+    takeout: "Takeout"
+    errors:
+      table_occupied: "The table already has an open check"
+      table_inactive: "The table is not available"
+      sold_out: "%{name} is sold out"
+      nothing_to_send: "There is nothing to send"
+      reference_required: "The payment reference is missing"
+      exceeds_balance: "The payment exceeds the outstanding balance"
+      incomplete_items: "Some items are not completed"
+      check_not_open: "The check is no longer open"
+      invalid_transition: "That item already changed state"
+      reason_required: "Write the reason"
+      has_sent_items: "The check has sent items"
+      not_zero_total: "The check still has a balance"
+      not_draft: "Only an unsent item can be edited"
+      default_station: "Pick another default station before disabling this one"
+      station_required: "There is no station to receive the item"
+      invalid_amount: "Invalid amount"
+      waiter_not_member: "That person does not belong to the company"
+      cancelled_item: "The item is already cancelled"
+    stock_note: "Check #%{id}"

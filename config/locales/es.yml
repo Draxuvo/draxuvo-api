@@ -15,6 +15,7 @@ es:
     work_orders:   "Órdenes de trabajo"
     tickets:       "Tickets"
     reports:       "Reportes"
+    restaurant:    "Restaurante"
     whatsapp:      "WhatsApp"
     multi_company: "Multiempresa"
 
@@ -152,6 +153,7 @@ es:
       cash:     "Efectivo"
       card:     "Tarjeta"
       transfer: "Transferencia"
+      mixed:    "Mixto"
     insufficient_cash:      "El efectivo recibido es menor al total"
     invalid_payment_method: "Método de pago inválido"
     pdf:
@@ -207,3 +209,37 @@ es:
 
   company:
     invalid_order_mode: "Modo de órdenes inválido"
+
+  restaurant:
+    item_status:
+      draft: "Sin mandar"
+      new: "Nuevo"
+      preparing: "En preparación"
+      ready: "Listo"
+      delivered: "Entregado"
+      cancelled: "Cancelado"
+    check_status:
+      open: "Abierta"
+      closed: "Cerrada"
+      cancelled: "Cancelada"
+    takeout: "Para llevar"
+    errors:
+      table_occupied: "La mesa ya tiene una cuenta abierta"
+      table_inactive: "La mesa no está disponible"
+      sold_out: "%{name} está agotado"
+      nothing_to_send: "No hay artículos por mandar"
+      reference_required: "Falta la referencia del pago"
+      exceeds_balance: "El pago excede el saldo pendiente"
+      incomplete_items: "Hay artículos sin completar"
+      check_not_open: "La cuenta ya no está abierta"
+      invalid_transition: "Ese artículo ya cambió de estado"
+      reason_required: "Escribe el motivo"
+      has_sent_items: "La cuenta tiene artículos mandados"
+      not_zero_total: "La cuenta tiene saldo por cobrar"
+      not_draft: "Solo se puede editar un artículo sin mandar"
+      default_station: "Elige otra estación predeterminada antes de desactivar esta"
+      station_required: "No hay una estación para recibir el artículo"
+      invalid_amount: "Monto inválido"
+      waiter_not_member: "Esa persona no es de la empresa"
+      cancelled_item: "El artículo ya está cancelado"
+    stock_note: "Cuenta #%{id}"

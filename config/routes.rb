@@ -95,6 +95,33 @@ Rails.application.routes.draw do
 
       get "dashboard", to: "dashboard#index"
 
+      # Restaurante (spec 013): mesas, cuentas, comandas, estaciones y cobro
+      namespace :restaurant do
+        resources :stations, only: %i[index create update] do
+          get  "board",                  to: "station_boards#show"
+          post "items/:id/advance",      to: "station_items#advance"
+          post "kitchen_orders/:id/advance", to: "station_orders#advance"
+        end
+        resources :tables, only: :index
+        resources :tables, only: %i[create update], controller: "dining_tables"
+        resources :stock_alerts, only: :index
+        resources :checks, only: %i[create show update] do
+          get :waiters, on: :collection
+          member do
+            post :cancel
+            post :rounds,   to: "rounds#create"
+            post :payments, to: "payments#create"
+            post :close,    to: "check_closures#create"
+          end
+          resources :items, only: %i[create update destroy], controller: "check_items" do
+            member do
+              post :deliver, to: "deliveries#create"
+              post :cancel,  to: "item_cancellations#create"
+            end
+          end
+        end
+      end
+
       # Reports
       get "reports/summary",  to: "reports#summary"
       get "reports/income",   to: "reports#income"

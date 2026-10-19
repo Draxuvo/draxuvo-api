@@ -161,4 +161,63 @@ class Api::V1::TicketsControllerTest < ActionDispatch::IntegrationTest
   def ids
     response.parsed_body["results"].map { |t| t["id"] }
   end
+
+  # Tickets de cuentas de restaurante (spec 013, FR-025).
+  def resto_get(path, user, params = {})
+    get path, params: params, headers: auth_headers(user, companies(:resto_co))
+  end
+
+  test "a restaurant ticket lists with its check and without a work order" do
+    resto_get("/api/v1/tickets", users(:resto_owner))
+
+    assert_response :ok
+    ticket = response.parsed_body["results"].find { |t| t["folio"] == "T-900050" }
+    assert_nil ticket["work_order"]
+    assert_equal "2", ticket.dig("check", "table")
+    assert_equal "cash", ticket["payment_method"]
+  end
+
+  test "the detail lists what was sold and each payment" do
+    resto_get("/api/v1/tickets/#{tickets(:resto_paid_ticket).id}", users(:resto_owner))
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal [ "Tacos al pastor" ], body["items"].map { |i| i["description"] }
+    assert_equal [ [ "cash", "70.00", "100.00", "30.00" ] ],
+                 body["payments"].map { |p| p.values_at("method", "amount", "amount_received", "change_given") }
+    assert_equal users(:resto_waiter).id, body.dig("check", "waiter", "id")
+  end
+
+  test "a waiter sees only the tickets of their own checks" do
+    resto_get("/api/v1/tickets", users(:resto_waiter))
+    assert_equal [ "T-900050" ], response.parsed_body["results"].map { |t| t["folio"] }
+
+    resto_get("/api/v1/tickets", users(:resto_waiter2))
+    assert_empty response.parsed_body["results"]
+  end
+
+  test "a waiter cannot open the ticket of someone else's check" do
+    resto_get("/api/v1/tickets/#{tickets(:resto_paid_ticket).id}", users(:resto_waiter2))
+
+    assert_response :not_found
+  end
+
+  test "search finds a restaurant ticket by table or takeout name" do
+    resto_get("/api/v1/tickets", users(:resto_owner), search: "2")
+    assert_includes response.parsed_body["results"].map { |t| t["folio"] }, "T-900050"
+
+    takeout = checks(:takeout_check)
+    Ticket.create!(check: takeout, company: takeout.company, status: :paid, total: 0, paid_at: Time.current,
+                   payment_method: :cash, amount_received: 0, charged_by: users(:resto_owner))
+    resto_get("/api/v1/tickets", users(:resto_owner), search: "luis")
+    assert_equal 1, response.parsed_body["results"].size
+  end
+
+  test "the PDF of a restaurant ticket downloads" do
+    resto_get("/api/v1/tickets/#{tickets(:resto_paid_ticket).id}/download", users(:resto_owner))
+
+    assert_response :ok
+    assert_equal "application/pdf", response.media_type
+    assert response.body.b.start_with?("%PDF")
+  end
 end

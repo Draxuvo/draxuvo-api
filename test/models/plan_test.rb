@@ -10,8 +10,8 @@ class PlanTest < ActiveSupport::TestCase
 
   EXPECTED_MODULES = {
     basic:      %i[employees attendance inventory],
-    pro:        %i[employees attendance inventory work_orders tickets reports],
-    enterprise: %i[employees attendance inventory work_orders tickets reports whatsapp multi_company]
+    pro:        %i[employees attendance inventory work_orders tickets reports restaurant],
+    enterprise: %i[employees attendance inventory work_orders tickets reports restaurant whatsapp multi_company]
   }.freeze
 
   test "keys are basic, pro and enterprise in that order" do
@@ -23,8 +23,8 @@ class PlanTest < ActiveSupport::TestCase
     assert_equal Subscription.plans.keys.map(&:to_sym).sort, Plan.keys.sort
   end
 
-  test "MODULES lists the eight modules in order" do
-    assert_equal %i[employees attendance inventory work_orders tickets reports whatsapp multi_company],
+  test "MODULES lists the nine modules in order" do
+    assert_equal %i[employees attendance inventory work_orders tickets reports restaurant whatsapp multi_company],
                  Plan::MODULES
   end
 
@@ -132,5 +132,11 @@ class PlanTest < ActiveSupport::TestCase
 
   def normalize(pair)
     pair&.map { |value| value.to_s.to_sym }
+  end
+
+  test "restaurant is in Pro and Enterprise but not in Basic" do
+    assert Plan.find(:pro).includes?(:restaurant)
+    assert Plan.find(:enterprise).includes?(:restaurant)
+    assert_not Plan.find(:basic).includes?(:restaurant)
   end
 end

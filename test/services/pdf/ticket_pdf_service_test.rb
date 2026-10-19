@@ -67,4 +67,23 @@ class Pdf::TicketPdfServiceTest < ActiveSupport::TestCase
     I18n.with_locale(:en) { pdf_for(tickets(:pro_paid_ticket)) }
     assert_equal before, I18n.locale
   end
+
+  test "a restaurant ticket shows the table, the waiter, the items and each payment" do
+    text = pdf_text(pdf_for(tickets(:resto_paid_ticket)))
+
+    assert_includes text, "RESTAURANTE PRUEBA"
+    assert_includes text, "T-900050"
+    assert_includes text, "Mesa 2"
+    assert_includes text, "Tacos al pastor"
+    assert_includes text, "Efectivo"
+    assert_includes text, "$70.00"
+  end
+
+  test "a takeout ticket shows the customer's name" do
+    check = checks(:takeout_check)
+    ticket = Ticket.create!(check: check, company: check.company, status: :paid, total: 0, paid_at: Time.current,
+                            payment_method: :cash, amount_received: 0, charged_by: users(:resto_owner))
+
+    assert_includes pdf_text(pdf_for(ticket)), "Para llevar: Luis"
+  end
 end

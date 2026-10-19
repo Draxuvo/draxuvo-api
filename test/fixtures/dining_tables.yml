@@ -1,0 +1,7 @@
+<% (1..4).each do |n| %>
+table_<%= n %>:
+  company: resto_co
+  name: "<%= n %>"
+  active: true
+  position: <%= n %>
+<% end %>

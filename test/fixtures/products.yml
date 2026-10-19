@@ -17,3 +17,51 @@ two:
   unit_cost: 12.00
   price: 25.00
   category: Eléctrico
+
+# Menú del restaurante de prueba. `cola` es controlada y está bajo su mínimo; `tacos` es controlado con existencias.
+resto_tacos:
+  company: resto_co
+  sku: TAC-001
+  name: Tacos al pastor
+  stock: 10
+  min_stock: 3
+  unit_cost: 25.00
+  price: 70.00
+  category: Platillos
+  tracks_stock: true
+  station: kitchen
+
+resto_sopa:
+  company: resto_co
+  sku: SOP-001
+  name: Sopa del día
+  stock: 0
+  min_stock: 0
+  unit_cost: 15.00
+  price: 55.00
+  category: Platillos
+  tracks_stock: false
+  station: kitchen
+
+resto_cola:
+  company: resto_co
+  sku: COL-001
+  name: Refresco de cola
+  stock: 2
+  min_stock: 3
+  unit_cost: 8.00
+  price: 30.00
+  category: Bebidas
+  tracks_stock: true
+  station: bar
+
+resto_agua:
+  company: resto_co
+  sku: AGU-001
+  name: Agua de horchata
+  stock: 0
+  min_stock: 0
+  unit_cost: 6.00
+  price: 25.00
+  category: Bebidas
+  available: true

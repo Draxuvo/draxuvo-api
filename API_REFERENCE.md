@@ -26,6 +26,7 @@ Formato: `JSON`
 16. [Uploads (imágenes)](#16-uploads-imágenes)
 17. [Dashboard](#17-dashboard)
 18. [Reportes](#18-reportes)
+19. [Restaurante](#19-restaurante)
 
 ---
 
@@ -1378,6 +1379,38 @@ Reporte de nómina para un rango de fechas.
   ]
 }
 ```
+
+---
+
+## 19. Restaurante
+
+Módulo `restaurant` (planes Pro y Empresa; otro plan recibe `403 module_not_in_plan`). Todo vive bajo `/restaurant`. Las listas acotadas (`stations`, `tables`, `stock_alerts`) devuelven `{ results }` completo, sin paginar. Los endpoints con **idem** aceptan `Idempotency-Key`; los marcados **etag** responden `304` si no cambió nada. Contrato completo: `specs/013-restaurante-comandas/contracts/restaurant-api.md` del workspace.
+
+| Método y ruta | Quién | Descripción |
+|---|---|---|
+| `GET /restaurant/stations` | todos | Estaciones |
+| `POST`, `PATCH /restaurant/stations[/:id]` | encargado o superior | `{ name, is_default, active, position }` |
+| `GET /restaurant/tables` | todos, etag | Mesas con su cuenta abierta, `takeouts`, `ready_items` de la persona y `stock_alerts` (solo encargado) |
+| `POST`, `PATCH /restaurant/tables[/:id]` | encargado o superior | `{ name, active, position }` |
+| `POST /restaurant/checks` | todos | `{ dining_table_id }` o `{ takeout_name }`; `422 table_occupied` |
+| `GET /restaurant/checks/:id` | todos, etag | Cuenta con artículos, pagos y `allowed_actions` |
+| `GET /restaurant/checks/waiters` | encargado o superior | Personas a quienes reasignar |
+| `PATCH /restaurant/checks/:id` | encargado o superior | `{ waiter_id }` |
+| `POST /restaurant/checks/:id/cancel` | mesero de la cuenta o encargado | Solo sin artículos mandados |
+| `POST`, `PATCH`, `DELETE /restaurant/checks/:id/items[/:item_id]` | todos | Agregar, ajustar o quitar artículos sin mandar; `422 sold_out` |
+| `POST /restaurant/checks/:id/rounds` | todos, idem | Manda los artículos sin mandar como una comanda |
+| `POST /restaurant/checks/:id/items/:item_id/deliver` | todos | `ready` a `delivered` |
+| `POST /restaurant/checks/:id/items/:item_id/cancel` | mesero (nuevo) o encargado | `{ reason }` obligatorio |
+| `POST /restaurant/checks/:id/payments` | mesero de la cuenta o encargado, idem | `{ method, amount, reference?, amount_received?, confirm_incomplete? }`; el pago que cubre el saldo cierra la cuenta y devuelve el ticket |
+| `POST /restaurant/checks/:id/close` | encargado o superior | Cierra en cero con `{ reason }` |
+| `GET /restaurant/stations/:id/board` | todos, etag | Comandas pendientes de la estación |
+| `POST /restaurant/stations/:id/items/:item_id/advance` | todos | `new` a `preparing` a `ready` |
+| `POST /restaurant/stations/:id/kitchen_orders/:id/advance` | todos | Avanza todos los artículos de la comanda |
+| `GET /restaurant/stock_alerts` | encargado o superior | Productos controlados agotados o en su mínimo |
+
+Códigos de error en `error.details.code`: `table_occupied`, `sold_out`, `nothing_to_send`, `reference_required`, `exceeds_balance`, `incomplete_items`, `check_not_open`, `invalid_transition`, `reason_required`, `has_sent_items`, `not_zero_total`, `not_draft`, `waiter_not_member`.
+
+Los tickets de una cuenta salen en `GET /tickets` con `work_order: null`, un bloque `check`, `payment_method` `mixed` si hubo varios métodos y, en el detalle, `payments[]`. Los productos aceptan `station_id` y `tracks_stock`, y `GET /products/menu` suma `available_qty`, `sold_out` y `low`.
 
 ---
 

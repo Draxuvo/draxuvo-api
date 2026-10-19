@@ -5,7 +5,7 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
   PATH = "/api/v1/company/modules".freeze
 
   BASIC_MODULES = %w[employees attendance inventory].freeze
-  PRO_MODULES = %w[employees attendance inventory work_orders tickets reports].freeze
+  PRO_MODULES = %w[employees attendance inventory work_orders tickets reports restaurant].freeze
 
   test "an owner disables a module of the plan and gets the module lists back" do
     patch PATH, params: { disabled_modules: [ "inventory" ] },

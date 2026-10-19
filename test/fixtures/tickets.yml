@@ -10,3 +10,15 @@ pro_paid_ticket:
   amount_received: 500.00
   change_given: 0
   charged_by: pro_co_owner (User)
+
+resto_paid_ticket:
+  check: closed_check
+  company: resto_co
+  folio: T-900050
+  status: 1
+  total: 70.00
+  paid_at: <%= 1.hour.ago.to_fs(:db) %>
+  payment_method: 0
+  amount_received: 100.00
+  change_given: 30.00
+  charged_by: resto_waiter (User)
