@@ -48,7 +48,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   test "an owner cannot make itself super admin through /users" do
     owner = users(:pro_co_owner)
 
-    patch "#{BASE}/#{owner.id}", params: { user: { role: "super_admin", company_ids: [ companies(:one).id ] } },
+    patch "#{BASE}/#{owner.id}", params: { user: { role: "super_admin", memberships: [ { company_id: companies(:one).id, role: "owner" } ] } },
                                  headers: auth_headers(owner), as: :json
 
     assert_response :forbidden
@@ -71,7 +71,119 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renombrado", users(:one_owner).reload.first_name
   end
 
+  # Spec 014: el rol se guarda en la membresía de cada empresa (contracts/api.md).
+  test "the super admin sets the role of a person in a company" do
+    target = users(:pro_staff)
+
+    patch "#{BASE}/#{target.id}", params: { user: { memberships: [ { company_id: companies(:pro_co).id, role: "owner" } ] } },
+                                  headers: super_admin_headers, as: :json
+
+    assert_response :ok
+    assert_equal "owner", target.role_in(companies(:pro_co))
+    assert_equal [ { "id" => companies(:pro_co).id, "role" => "owner" } ],
+                 json["companies"].map { |c| c.slice("id", "role") }
+  end
+
+  test "changing the role in one company keeps the role in another" do
+    target = users(:pro_staff)
+    create_member(companies(:two), role: :manager, user: target)
+
+    patch "#{BASE}/#{target.id}", params: { user: { memberships: [
+      { company_id: companies(:pro_co).id, role: "admin" }, { company_id: companies(:two).id, role: "manager" }
+    ] } }, headers: super_admin_headers, as: :json
+
+    assert_response :ok
+    assert_equal "admin", target.role_in(companies(:pro_co))
+    assert_equal "manager", target.role_in(companies(:two))
+  end
+
+  test "demoting the last owner saves nothing" do
+    owner = users(:one_owner)
+
+    patch "#{BASE}/#{owner.id}", params: { user: { first_name: "Cambiado", memberships: [ { company_id: companies(:one).id, role: "admin" } ] } },
+                                 headers: super_admin_headers, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "last_owner", json.dig("error", "details", "code")
+    owner.reload
+    assert_equal "Dueño", owner.first_name
+    assert_equal "owner", owner.role_in(companies(:one))
+  end
+
+  test "an update without memberships leaves the companies alone" do
+    target = users(:pro_staff)
+
+    patch "#{BASE}/#{target.id}", params: { user: { phone: "5599990000" } }, headers: super_admin_headers, as: :json
+
+    assert_response :ok
+    assert_equal [ companies(:pro_co).id ], target.user_companies.reload.map(&:company_id)
+    assert_equal "staff", target.role_in(companies(:pro_co))
+  end
+
+  test "role and company_ids are no longer read" do
+    target = users(:pro_staff)
+
+    patch "#{BASE}/#{target.id}", params: { user: { role: "owner", company_ids: [ companies(:two).id ] } },
+                                  headers: super_admin_headers, as: :json
+
+    assert_response :ok
+    target.reload
+    assert target.staff?
+    assert_equal [ companies(:pro_co).id ], target.user_companies.map(&:company_id)
+  end
+
+  test "an update keeps the person active unless active changes" do
+    target = users(:pro_staff)
+
+    patch "#{BASE}/#{target.id}", params: { user: { first_name: "Otro" } }, headers: super_admin_headers, as: :json
+    assert target.reload.active?
+
+    patch "#{BASE}/#{target.id}", params: { user: { active: false } }, headers: super_admin_headers, as: :json
+    assert_not target.reload.active?
+  end
+
+  test "the super admin creates a person with a role in a company" do
+    sent = []
+    ResendMailer.stub(:set_password, ->(**args) { sent << args; { "id" => "email_1" } }) do
+      post BASE, params: { user: new_user_params(memberships: [ { company_id: companies(:pro_co).id, role: "manager" } ]) },
+                 headers: super_admin_headers, as: :json
+    end
+
+    assert_response :created
+    user = User.find_by!(email: "nueva@persona.test")
+    assert_equal "manager", user.role_in(companies(:pro_co))
+    assert_equal 1, sent.size
+    assert_equal companies(:pro_co).name, sent.first[:company_name]
+  end
+
+  test "a new membership without role is staff" do
+    ResendMailer.stub(:set_password, ->(**) { { "id" => "email_1" } }) do
+      post BASE, params: { user: new_user_params(memberships: [ { company_id: companies(:pro_co).id } ]) },
+                 headers: super_admin_headers, as: :json
+    end
+
+    assert_response :created
+    assert_equal "staff", User.find_by!(email: "nueva@persona.test").role_in(companies(:pro_co))
+  end
+
+  test "creating with an invalid role creates nobody" do
+    post BASE, params: { user: new_user_params(memberships: [ { company_id: companies(:pro_co).id, role: "super_admin" } ]) },
+               headers: super_admin_headers, as: :json
+
+    assert_response :bad_request
+    assert_not User.exists?(email: "nueva@persona.test")
+  end
+
   private
+
+  def super_admin_headers
+    auth_headers(users(:super_admin), companies(:pro_co))
+  end
+
+  def new_user_params(**extra)
+    { first_name: "Nueva", last_name: "Persona", second_last_name: "Prueba", phone: "5511112222",
+      email: "nueva@persona.test", active: true }.merge(extra)
+  end
 
   def json
     JSON.parse(response.body)

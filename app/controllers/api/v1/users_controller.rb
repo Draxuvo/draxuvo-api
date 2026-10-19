@@ -31,17 +31,20 @@ module Api::V1
       attrs[:password] = SecureRandom.hex(12) if attrs[:password].blank?
 
       @user = User.new(attrs)
-      if @user.save
-        send_set_password_email(@user)
-        render json: UserSerializer.new(@user).serializable_hash, status: :created
-      else
-        render_error_response
+      ActiveRecord::Base.transaction do
+        raise ApiErrors::UnprocessableEntityError.new(details: @user.errors) unless @user.save
+        sync_memberships!
       end
+      send_set_password_email(@user)
+      render json: UserSerializer.new(@user).serializable_hash, status: :created
     end
 
     # PATCH/PUT /api/v1/users/1
     def update
-      raise ApiErrors::UnprocessableEntityError.new(details: @user.errors) unless @user.update(user_update_params)
+      ActiveRecord::Base.transaction do
+        raise ApiErrors::UnprocessableEntityError.new(details: @user.errors) unless @user.update(user_update_params)
+        sync_memberships!
+      end
       render json: @user
     end
 
@@ -73,13 +76,8 @@ module Api::V1
       Rails.logger.error "[UsersController] SetPasswordService error class=#{e.class} message=#{e.message}"
     end
 
-    def render_error_response
-      error = ApiErrors::UnprocessableEntityError.new(details: @user.errors)
-      render json: error.as_json, status: error.status
-    end
-
-    # Solo llega aquí un super admin (require_super_admin!). El rol global y las empresas se toman
-    # aparte y validados, en vez de abrir `role` y `company_ids` al mass assignment.
+    # Solo llega aquí un super admin (require_super_admin!). El rol es por empresa y viaja en
+    # `memberships` (spec 014); `role` y `company_ids` ya no se leen.
     def user_create_params
       user_params(%i[first_name middle_name last_name second_last_name email phone password active])
     end
@@ -89,19 +87,17 @@ module Api::V1
     end
 
     def user_params(fields)
-      attrs = params.require(:user).permit(*fields)
-      user = params[:user]
-
-      if user.key?(:role)
-        role = user[:role].to_s
-        raise ApiErrors::BadRequestError.new(details: { role: role }) unless User.roles.key?(role)
-
-        attrs[:role] = role
-      end
-      attrs[:company_ids] = Company.where(id: Array(user[:company_ids])).ids if user.key?(:company_ids)
-      attrs
+      params.require(:user).permit(*fields)
     rescue ActionController::ParameterMissing => e
       raise ApiErrors::BadRequestError.new(message: e.message)
+    end
+
+    # Sin la llave `memberships` no se tocan las empresas; con ella, la lista es el estado final.
+    def sync_memberships!
+      return unless params[:user].key?(:memberships)
+
+      memberships = Array.wrap(params[:user][:memberships]).map { |m| { company_id: m[:company_id], role: m[:role] } }
+      Users::SyncMemberships.new(@user, memberships).call
     end
   end
 end

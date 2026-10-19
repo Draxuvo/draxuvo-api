@@ -112,6 +112,8 @@ en:
   users:
     not_found: "User not found"
     deleted:   "User deleted"
+    company_not_found: "The company does not exist."
+    duplicate_company: "The company is listed twice."
 
   company_members:
     already_member: "This person is already a member of this company."
