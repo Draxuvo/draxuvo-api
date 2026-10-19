@@ -108,6 +108,8 @@ class Api::V1::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "price_draxuvo_pro_annual", captured.dig(:line_items, 0, :price)
     assert_equal "https://ui.test/es/suscripcion/exito", captured[:success_url]
     assert_equal "https://ui.test/es/suscripcion/cancelado", captured[:cancel_url]
+    assert_equal({ enabled: true }, captured[:tax_id_collection])
+    assert_equal({ name: "auto" }, captured[:customer_update])
   end
 
   test "checkout defaults the billing cycle to monthly" do
