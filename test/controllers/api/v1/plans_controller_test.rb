@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Api::V1::PlansControllerTest < ActionDispatch::IntegrationTest
-  ALL_MODULES = %w[employees attendance inventory work_orders tickets reports whatsapp multi_company].freeze
+  ALL_MODULES = %w[employees attendance inventory work_orders tickets reports restaurant whatsapp multi_company].freeze
 
   EXPECTED_PLANS = [
     {
@@ -14,7 +14,7 @@ class Api::V1::PlansControllerTest < ActionDispatch::IntegrationTest
     },
     {
       "key" => "pro",
-      "modules" => %w[employees attendance inventory work_orders tickets reports],
+      "modules" => %w[employees attendance inventory work_orders tickets reports restaurant],
       "prices" => {
         "monthly" => { "amount_cents" => 70_000, "iva_cents" => 11_200, "total_cents" => 81_200 },
         "annual" => { "amount_cents" => 700_000, "iva_cents" => 112_000, "total_cents" => 812_000 }

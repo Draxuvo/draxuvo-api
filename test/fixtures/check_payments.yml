@@ -1,0 +1,9 @@
+# payment_method: 0 cash, 1 card, 2 transfer
+closed_payment:
+  company: resto_co
+  check: closed_check
+  payment_method: 0
+  amount: 70.00
+  amount_received: 100.00
+  change_given: 30.00
+  created_by: resto_waiter

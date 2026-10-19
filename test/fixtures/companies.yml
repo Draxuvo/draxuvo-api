@@ -26,3 +26,8 @@ expired_co:
 past_due_co:
   name: Pago Pendiente
   slug: pago-pendiente
+
+# Restaurante (spec 013): plan Pro con el módulo `restaurant`.
+resto_co:
+  name: Restaurante Prueba
+  slug: restaurante-prueba

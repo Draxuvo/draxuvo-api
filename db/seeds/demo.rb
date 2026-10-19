@@ -274,4 +274,29 @@ multi = demo_user(email: "multi@demo.demo", first_name: "Paula", last_name: "Mul
 demo_membership(multi, sazon, :staff)
 puts "  [ok] multi@demo.demo: owner de Electricidad Volta y staff de Restaurante Sazón"
 
+# Restaurante (spec 013): estaciones, mesas y menú de Sazón. Se puede volver a ejecutar sin duplicar.
+cocina = sazon.stations.find_or_create_by!(name: "Cocina") { |st| st.position = 1 }
+barra = sazon.stations.find_or_create_by!(name: "Barra") { |st| st.position = 2 }
+(1..6).each { |n| sazon.dining_tables.find_or_create_by!(name: n.to_s) { |t| t.position = n } }
+[
+  [ "SZN-TAC", "Tacos al pastor", "Platillos", 25.0, 70.0, cocina, true, 40, 10 ],
+  [ "SZN-ENS", "Ensalada de la casa", "Platillos", 22.0, 85.0, cocina, true, 25, 5 ],
+  [ "SZN-SOP", "Sopa del día", "Platillos", 15.0, 55.0, cocina, false, 0, 0 ],
+  [ "SZN-POS", "Pastel de chocolate", "Postres", 20.0, 65.0, cocina, true, 12, 4 ],
+  [ "SZN-AGU", "Agua de horchata", "Bebidas", 6.0, 25.0, barra, false, 0, 0 ],
+  [ "SZN-CER", "Cerveza artesanal", "Bebidas", 18.0, 60.0, barra, true, 48, 12 ],
+  [ "SZN-COL", "Refresco de cola", "Bebidas", 8.0, 30.0, barra, true, 5, 3 ]
+].each do |sku, name, category, cost, price, station, tracked, stock, min_stock|
+  product = sazon.products.find_or_initialize_by(sku: sku)
+  next unless product.new_record?
+
+  product.assign_attributes(name: name, category: category, unit_cost: cost, price: price, station: station,
+                            tracks_stock: tracked, stock: 0, min_stock: min_stock)
+  product.save!
+  next unless stock.positive?
+
+  StockMovement.create!(product: product, company: sazon, movement_type: :entry, qty: stock, note: "Inventario inicial")
+end
+puts "  [ok] #{sazon.name}: estaciones Cocina y Barra, 6 mesas y menú de restaurante"
+
 puts "  Usuarios de demo: dueno@, admin@, manager@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"

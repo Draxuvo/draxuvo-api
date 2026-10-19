@@ -1,0 +1,13 @@
+kitchen:
+  company: resto_co
+  name: Cocina
+  is_default: true
+  active: true
+  position: 1
+
+bar:
+  company: resto_co
+  name: Barra
+  is_default: false
+  active: true
+  position: 2

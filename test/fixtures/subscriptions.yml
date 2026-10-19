@@ -63,3 +63,13 @@ past_due_co:
   stripe_subscription_id: sub_past_due
   current_period_start: <%= 30.days.ago.to_fs(:db) %>
   current_period_end: <%= 1.day.ago.to_fs(:db) %>
+
+resto_co:
+  company: resto_co
+  plan: 1
+  status: 1
+  billing_cycle: 0
+  amount_cents: 70000
+  stripe_subscription_id: sub_resto
+  current_period_start: <%= 5.days.ago.to_fs(:db) %>
+  current_period_end: <%= 25.days.from_now.to_fs(:db) %>

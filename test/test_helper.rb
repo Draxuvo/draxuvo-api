@@ -35,3 +35,23 @@ module ActiveSupport
     end
   end
 end
+
+module ActiveSupport
+  class TestCase
+    # Deja una cuenta de restaurante lista para cobrar: todo entregado y sin artículos sin mandar.
+    def settle_check(check)
+      check.check_items.status_draft.destroy_all
+      check.check_items.where.not(status: :cancelled).update_all(status: CheckItem.statuses[:delivered], delivered_at: Time.current)
+      check.reload.recalculate_total!
+      check.reload
+    end
+
+    # Vuelve los tres artículos mandados de `open_check` a su estado de fixture (nuevo, en preparación, listo).
+    def unsettle_open_check
+      { item_new: :new, item_preparing: :preparing, item_ready: :ready }.each do |name, status|
+        check_items(name).update_columns(status: CheckItem.statuses.fetch(status), delivered_at: nil)
+      end
+      checks(:open_check).reload.recalculate_total!
+    end
+  end
+end

@@ -31,19 +31,25 @@ module Reports
     end
 
     def breakdown(tickets)
-      tickets.includes(work_order: :employee).map do |ticket|
+      tickets.includes({ work_order: :employee }, { check: %i[dining_table waiter] }).map do |ticket|
         {
           id:         ticket.id,
           folio:      ticket.folio,
           total:      ticket.total.to_f,
           paid_at:    ticket.paid_at,
-          work_order: {
-            id:       ticket.work_order_id,
-            title:    ticket.work_order.title,
-            employee: ticket.work_order.employee&.name
-          }
+          work_order: breakdown_source(ticket)
         }
       end
+    end
+
+    # Una orden de trabajo, o una cuenta de restaurante con su mesa y su mesero en los mismos campos.
+    def breakdown_source(ticket)
+      order = ticket.work_order
+      return { id: ticket.work_order_id, title: order.title, employee: order.employee&.name } if order
+
+      check = ticket.check
+      title = check.dining_table ? "Mesa #{check.dining_table.name}" : "Para llevar: #{check.takeout_name}"
+      { id: nil, title: title, employee: check.waiter.full_name }
     end
 
     def period_key(datetime)

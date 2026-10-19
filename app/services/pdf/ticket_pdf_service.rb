@@ -10,11 +10,14 @@ module Pdf
     WHITE     = "FFFFFF"
     GREEN     = "27AE60"
 
+    Line = Struct.new(:description, :quantity, :unit, :unit_price, :subtotal)
+
     def initialize(ticket)
       @ticket  = ticket
       @order   = ticket.work_order
+      @check   = ticket.check
       @company = ticket.company
-      @items   = @order.work_order_items.to_a
+      @items   = @order ? @order.work_order_items.to_a : check_lines
     end
 
     def generate
@@ -23,6 +26,7 @@ module Pdf
       draw_info(pdf)
       draw_items(pdf) if @items.any?
       draw_totals(pdf)
+      draw_payments(pdf) if @check
       draw_footer(pdf)
       pdf.render
     end
@@ -54,9 +58,14 @@ module Pdf
 
       # Columna derecha: datos de la orden
       pdf.bounding_box([ col_w + 10, pdf.cursor + info_block_height(pdf) ], width: col_w) do
-        label_value(pdf, "Orden",    @order.title)
-        label_value(pdf, "Prioridad", priority_label)
-        label_value(pdf, "Empleado", @order.employee&.name || "—")
+        if @order
+          label_value(pdf, "Orden",    @order.title)
+          label_value(pdf, "Prioridad", priority_label)
+          label_value(pdf, "Empleado", @order.employee&.name || "—")
+        else
+          label_value(pdf, "Cuenta", check_title)
+          label_value(pdf, "Mesero", @check.waiter.full_name)
+        end
       end
 
       pdf.move_down 20
@@ -115,6 +124,24 @@ module Pdf
       pdf.move_down 50
     end
 
+    # Pagos de una cuenta de restaurante: método, referencia y monto de cada uno.
+    def draw_payments(pdf)
+      payments = @check.check_payments.order(:id).to_a
+      return if payments.empty?
+
+      pdf.text "Pagos", size: 11, style: :bold
+      pdf.move_down 6
+      rows = payments.map do |payment|
+        [ I18n.t("ticket.payment_method.#{payment.payment_method}"), payment.reference.to_s, format_money(payment.amount) ]
+      end
+      pdf.table([ [ "Método", "Referencia", "Monto" ] ] + rows, width: pdf.bounds.width) do
+        row(0).font_style = :bold
+        columns(2).align = :right
+        self.cell_style = { padding: [ 4, 8 ], size: 9, border_width: 0 }
+      end
+      pdf.move_down 12
+    end
+
     def draw_footer(pdf)
       pdf.stroke_color "DDDDDD"
       pdf.stroke_horizontal_rule
@@ -151,6 +178,16 @@ module Pdf
 
     def status_label
       I18n.t("ticket.status.#{@ticket.status}")
+    end
+
+    def check_lines
+      @check.check_items.counted.order(:id).map do |item|
+        Line.new(item.name, item.quantity, nil, item.unit_price, item.subtotal)
+      end
+    end
+
+    def check_title
+      @check.dining_table ? "Mesa #{@check.dining_table.name}" : "Para llevar: #{@check.takeout_name}"
     end
 
     def priority_label

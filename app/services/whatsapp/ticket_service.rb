@@ -79,13 +79,13 @@ module Whatsapp
     # Mensaje de texto con los datos del ticket cuando no hay ventana de 24h abierta.
     def send_text_fallback
       order = @ticket.work_order
-      items = order.work_order_items.map do |i|
-        "  • #{i.description} x#{i.quantity} — $#{format('%.2f', i.subtotal)}"
-      end.join("\n")
+      lines = order ? order.work_order_items.map { |i| [ i.description, i.quantity, i.subtotal ] } : check_lines
+      items = lines.map { |description, quantity, subtotal| "  • #{description} x#{quantity} — $#{format('%.2f', subtotal)}" }.join("\n")
+      subject = order ? order.title : check_subject
 
       body = <<~MSG.strip
         🧾 *Ticket #{@ticket.folio}*
-        Orden: #{order.title}
+        #{order ? 'Orden' : 'Cuenta'}: #{subject}
         Estado: #{@ticket.status_label_text}
         Fecha: #{@ticket.created_at.strftime('%d/%m/%Y')}
 
@@ -176,6 +176,15 @@ module Whatsapp
       # disponible; los nombres de las variables van al log, no a la respuesta.
       log(:warn, "WhatsApp no configurado, faltan: #{missing.join(', ')}")
       raise ApiErrors::UnprocessableEntityError.new(details: I18n.t("whatsapp.not_configured"))
+    end
+
+    def check_lines
+      @ticket.check.check_items.counted.order(:id).map { |i| [ i.name, i.quantity, i.subtotal ] }
+    end
+
+    def check_subject
+      check = @ticket.check
+      check.dining_table ? "Mesa #{check.dining_table.name}" : "Para llevar: #{check.takeout_name}"
     end
 
     def log(level, msg)

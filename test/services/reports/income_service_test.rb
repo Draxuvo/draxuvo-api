@@ -94,4 +94,18 @@ class Reports::IncomeServiceTest < ActiveSupport::TestCase
     assert_equal({ id: paid.work_order_id, title: "Instalación", employee: "Técnico Uno" }, first[:work_order])
     assert_nil second[:work_order][:employee]
   end
+
+  test "the breakdown shows restaurant tickets with their table and waiter instead of a work order" do
+    company = companies(:resto_co)
+    range = Time.utc(2020, 1, 1)..Time.utc(2030, 12, 31)
+    tickets(:resto_paid_ticket).update_columns(paid_at: Time.utc(2026, 3, 10))
+
+    result = Reports::IncomeService.new(company, range, "month").call
+
+    assert_equal 70.0, result[:total_revenue]
+    row = result[:breakdown].first
+    assert_equal "Mesa 2", row[:work_order][:title]
+    assert_equal users(:resto_waiter).full_name, row[:work_order][:employee]
+    assert_nil row[:work_order][:id]
+  end
 end

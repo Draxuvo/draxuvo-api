@@ -20,3 +20,10 @@ expired_staff:
   user: expired_staff
   company: expired_co
   role: 0
+
+<% { "owner" => 3, "manager" => 1, "waiter" => 0, "waiter2" => 0 }.each do |who, role| %>
+resto_<%= who %>:
+  user: resto_<%= who %>
+  company: resto_co
+  role: <%= role %>
+<% end %>

@@ -1,0 +1,28 @@
+# status: 0 open, 1 closed, 2 cancelled
+open_check:
+  company: resto_co
+  dining_table: table_1
+  opened_by: resto_waiter
+  waiter: resto_waiter
+  status: 0
+  total: 155.00
+  opened_at: <%= 20.minutes.ago.to_fs(:db) %>
+
+takeout_check:
+  company: resto_co
+  takeout_name: Luis
+  opened_by: resto_waiter2
+  waiter: resto_waiter2
+  status: 0
+  total: 0
+  opened_at: <%= 5.minutes.ago.to_fs(:db) %>
+
+closed_check:
+  company: resto_co
+  dining_table: table_2
+  opened_by: resto_waiter
+  waiter: resto_waiter
+  status: 1
+  total: 70.00
+  opened_at: <%= 2.hours.ago.to_fs(:db) %>
+  closed_at: <%= 1.hour.ago.to_fs(:db) %>

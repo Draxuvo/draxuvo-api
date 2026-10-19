@@ -23,10 +23,11 @@ module Api
         products = products.by_category(params[:category]) if params[:category].present?
         products = products.order(:category, :name)
 
+        availability = ::Restaurant::Availability.new(current_company)
         grouped = products.group_by(&:category).map do |cat, items|
           {
             category: cat || I18n.t("products.menu.uncategorized"),
-            items: items.map { |p| ProductSerializer.new(p).as_json }
+            items: items.map { |p| ProductSerializer.new(p, availability: availability).as_json }
           }
         end
 
@@ -83,7 +84,7 @@ module Api
       end
 
       def product_params
-        params.require(:product).permit(:sku, :name, :description, :category, :price, :available, :stock, :min_stock, :unit_cost)
+        params.require(:product).permit(:sku, :name, :description, :category, :price, :available, :stock, :min_stock, :unit_cost, :station_id, :tracks_stock)
       end
     end
   end

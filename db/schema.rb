@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_19_190100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,6 +56,71 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
     t.index ["employee_id"], name: "index_attendances_on_employee_id"
   end
 
+  create_table "check_items", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "check_id", null: false
+    t.bigint "kitchen_order_id"
+    t.bigint "product_id"
+    t.string "name", null: false
+    t.decimal "unit_price", precision: 10, scale: 2, default: "0.0", null: false
+    t.integer "quantity", default: 1, null: false
+    t.text "note"
+    t.bigint "station_id"
+    t.integer "status", default: 0, null: false
+    t.datetime "preparing_at"
+    t.datetime "ready_at"
+    t.datetime "delivered_at"
+    t.datetime "cancelled_at"
+    t.text "cancel_reason"
+    t.bigint "cancelled_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cancelled_by_id"], name: "index_check_items_on_cancelled_by_id"
+    t.index ["check_id"], name: "index_check_items_on_check_id"
+    t.index ["company_id"], name: "index_check_items_on_company_id"
+    t.index ["kitchen_order_id"], name: "index_check_items_on_kitchen_order_id"
+    t.index ["product_id"], name: "index_check_items_on_product_id"
+    t.index ["station_id", "status"], name: "index_check_items_on_station_id_and_status"
+    t.index ["station_id"], name: "index_check_items_on_station_id"
+  end
+
+  create_table "check_payments", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "check_id", null: false
+    t.integer "payment_method", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "reference"
+    t.decimal "amount_received", precision: 10, scale: 2
+    t.decimal "change_given", precision: 10, scale: 2
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["check_id"], name: "index_check_payments_on_check_id"
+    t.index ["company_id"], name: "index_check_payments_on_company_id"
+    t.index ["created_by_id"], name: "index_check_payments_on_created_by_id"
+  end
+
+  create_table "checks", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "dining_table_id"
+    t.string "takeout_name"
+    t.bigint "opened_by_id", null: false
+    t.bigint "waiter_id", null: false
+    t.integer "status", default: 0, null: false
+    t.decimal "total", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "opened_at", null: false
+    t.datetime "closed_at"
+    t.text "cancel_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "status"], name: "index_checks_on_company_id_and_status"
+    t.index ["company_id"], name: "index_checks_on_company_id"
+    t.index ["dining_table_id"], name: "index_checks_on_dining_table_id"
+    t.index ["dining_table_id"], name: "index_checks_on_open_dining_table", unique: true, where: "(status = 0)"
+    t.index ["opened_by_id"], name: "index_checks_on_opened_by_id"
+    t.index ["waiter_id"], name: "index_checks_on_waiter_id"
+  end
+
   create_table "companies", force: :cascade do |t|
     t.string "name"
     t.string "slug"
@@ -66,6 +131,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
     t.bigint "parent_company_id"
     t.integer "order_mode", default: 0, null: false
     t.index ["parent_company_id"], name: "index_companies_on_parent_company_id"
+  end
+
+  create_table "dining_tables", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "name", null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "name"], name: "index_dining_tables_on_company_id_and_name", unique: true
+    t.index ["company_id"], name: "index_dining_tables_on_company_id"
   end
 
   create_table "employees", force: :cascade do |t|
@@ -98,6 +174,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
     t.index ["user_id", "key"], name: "index_idempotency_keys_on_user_id_and_key", unique: true
   end
 
+  create_table "kitchen_orders", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "check_id", null: false
+    t.bigint "sent_by_id", null: false
+    t.datetime "sent_at", null: false
+    t.integer "number", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["check_id", "number"], name: "index_kitchen_orders_on_check_id_and_number", unique: true
+    t.index ["check_id"], name: "index_kitchen_orders_on_check_id"
+    t.index ["company_id"], name: "index_kitchen_orders_on_company_id"
+    t.index ["sent_by_id"], name: "index_kitchen_orders_on_sent_by_id"
+  end
+
   create_table "products", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.string "sku"
@@ -111,9 +201,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
     t.string "category"
     t.text "description"
     t.boolean "available", default: true, null: false
+    t.boolean "tracks_stock", default: false, null: false
+    t.bigint "station_id"
     t.index ["available"], name: "index_products_on_available"
     t.index ["category"], name: "index_products_on_category"
     t.index ["company_id"], name: "index_products_on_company_id"
+    t.index ["station_id"], name: "index_products_on_station_id"
+  end
+
+  create_table "stations", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "name", null: false
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "name"], name: "index_stations_on_company_id_and_name", unique: true
+    t.index ["company_id"], name: "index_stations_on_company_id"
   end
 
   create_table "stock_movements", force: :cascade do |t|
@@ -159,7 +264,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
   end
 
   create_table "tickets", force: :cascade do |t|
-    t.bigint "work_order_id", null: false
+    t.bigint "work_order_id"
     t.bigint "company_id", null: false
     t.string "folio", null: false
     t.integer "status", default: 0, null: false
@@ -177,12 +282,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
     t.string "voided_by_type"
     t.bigint "voided_by_id"
     t.text "void_reason"
+    t.bigint "check_id"
     t.index ["charged_by_type", "charged_by_id"], name: "index_tickets_on_charged_by"
+    t.index ["check_id"], name: "index_tickets_on_check_id", unique: true
     t.index ["company_id"], name: "index_tickets_on_company_id"
     t.index ["folio"], name: "index_tickets_on_folio", unique: true
     t.index ["status"], name: "index_tickets_on_status"
     t.index ["voided_by_type", "voided_by_id"], name: "index_tickets_on_voided_by"
     t.index ["work_order_id"], name: "index_tickets_on_work_order_id", unique: true
+    t.check_constraint "(work_order_id IS NULL) <> (check_id IS NULL)", name: "tickets_one_owner"
   end
 
   create_table "units", force: :cascade do |t|
@@ -303,13 +411,33 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_16_000007) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "attendances", "companies"
   add_foreign_key "attendances", "employees"
+  add_foreign_key "check_items", "checks"
+  add_foreign_key "check_items", "companies"
+  add_foreign_key "check_items", "kitchen_orders"
+  add_foreign_key "check_items", "products"
+  add_foreign_key "check_items", "stations"
+  add_foreign_key "check_items", "users", column: "cancelled_by_id"
+  add_foreign_key "check_payments", "checks"
+  add_foreign_key "check_payments", "companies"
+  add_foreign_key "check_payments", "users", column: "created_by_id"
+  add_foreign_key "checks", "companies"
+  add_foreign_key "checks", "dining_tables"
+  add_foreign_key "checks", "users", column: "opened_by_id"
+  add_foreign_key "checks", "users", column: "waiter_id"
+  add_foreign_key "dining_tables", "companies"
   add_foreign_key "employees", "companies"
   add_foreign_key "employees", "users"
   add_foreign_key "idempotency_keys", "users"
+  add_foreign_key "kitchen_orders", "checks"
+  add_foreign_key "kitchen_orders", "companies"
+  add_foreign_key "kitchen_orders", "users", column: "sent_by_id"
   add_foreign_key "products", "companies"
+  add_foreign_key "products", "stations"
+  add_foreign_key "stations", "companies"
   add_foreign_key "stock_movements", "companies"
   add_foreign_key "stock_movements", "products"
   add_foreign_key "subscriptions", "companies"
+  add_foreign_key "tickets", "checks"
   add_foreign_key "tickets", "companies"
   add_foreign_key "tickets", "work_orders"
   add_foreign_key "user_companies", "companies"

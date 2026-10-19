@@ -45,3 +45,14 @@ super_admin:
   password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
   active: true
   role: 4
+
+<% %w[owner manager waiter waiter2].each_with_index do |who, i| %>
+resto_<%= who %>:
+  first_name: <%= who.camelize %>
+  last_name: Resto
+  email: <%= who %>@resto-co.test
+  phone: "55123456<%= 80 + i %>"
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  active: true
+  role: <%= { "owner" => 3, "manager" => 1, "waiter" => 0, "waiter2" => 0 }[who] %>
+<% end %>
