@@ -85,10 +85,15 @@ class ResendMailer
       )
     end
 
+    # RESEND_FROM_EMAIL puede ser solo la dirección (`no-reply@draxuvo.com`) o con nombre
+    # (`Draxuvo <no-reply@draxuvo.com>`). Con el nombre de la empresa se arma `Empresa <dirección>`;
+    # envolver un valor que ya trae `<>` daba un remitente inválido y Resend rechazaba el correo.
     def sender_email(company_name = nil)
-      address = ENV["RESEND_FROM_EMAIL"]
-      log(:warn, "#sender_email RESEND_FROM_EMAIL=#{address.inspect} company_name=#{company_name.inspect}")
-      company_name.present? ? "#{company_name} <#{address}>" : address
+      configured = ENV["RESEND_FROM_EMAIL"].to_s.strip
+      log(:warn, "#sender_email RESEND_FROM_EMAIL=#{configured.inspect} company_name=#{company_name.inspect}")
+      address = configured[/<([^>]+)>/, 1] || configured
+      name = company_name.to_s.delete('<>"').strip.presence
+      name ? "#{name} <#{address}>" : configured
     end
 
     def send_email(params)

@@ -52,6 +52,22 @@ class Api::V1::CompanyMembersControllerTest < ActionDispatch::IntegrationTest
     assert_not user.super_admin?
   end
 
+  test "inviting a new person reports whether the email went out" do
+    sent = { success: true }
+    Email::SetPasswordService.stub(:new, ->(*, **) { Struct.new(:call).new(sent) }) do
+      post BASE, params: { member: { email: "nuevo@pro-co.test", first_name: "Nuevo", last_name: "Miembro", phone: "5511111111", role: "staff" } }, headers: auth_headers(@admin, @company), as: :json
+    end
+    assert_response :created
+    assert_equal true, json["email_sent"]
+
+    sent = { success: false, error: "Resend rechazó el remitente" }
+    Email::SetPasswordService.stub(:new, ->(*, **) { Struct.new(:call).new(sent) }) do
+      post BASE, params: { member: { email: "otro@pro-co.test", first_name: "Otro", last_name: "Miembro", phone: "5522222222", role: "staff" } }, headers: auth_headers(@admin, @company), as: :json
+    end
+    assert_response :created, "la persona queda dada de alta aunque el correo falle"
+    assert_equal false, json["email_sent"]
+  end
+
   test "an admin cannot invite an owner or a super admin" do
     %w[owner super_admin].each do |role|
       assert_no_difference [ "User.count", "UserCompany.count" ] do
