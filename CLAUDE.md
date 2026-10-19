@@ -88,7 +88,7 @@ The `Authenticable` and `Authorizable` concerns live in `app/controllers/concern
 **Services** are organized into subdirectories:
 - `app/services/pdf/` — `TicketPdfService` generates Prawn A4 PDF
 - `app/services/email/` — `SetPasswordService`, `PasswordResetService` (wrap `ResendMailer`)
-- `app/services/users/` — user-related logic
+- `app/services/users/` — `SyncMemberships`: the super admin's `POST/PATCH /users` send `memberships: [{ company_id, role }]` (the full final list, role per company); same rules as `/company/members` (no `super_admin`, never remove or demote a company's last owner). `users.role` is not written there (spec 014)
 - `app/services/products/` — `ImportService` for Excel import (roo); template download uses caxlsx
 - `app/services/subscriptions/` — `CreateCheckoutService`, `PriceLookupService`, `SyncService`, `PortalService`, `CancelService`, `HandleWebhookService`
 

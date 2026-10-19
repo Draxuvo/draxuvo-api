@@ -112,6 +112,8 @@ es:
   users:
     not_found: "Usuario no encontrado"
     deleted:   "Usuario eliminado"
+    company_not_found: "La empresa no existe."
+    duplicate_company: "La empresa está repetida."
 
   company_members:
     already_member: "La persona ya es miembro de esta empresa."
