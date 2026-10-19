@@ -15,8 +15,9 @@ services:
     plan: 0.5c-512mb
     dockerfilePath: ./Dockerfile
     healthCheckPath: /up
-    # Despliega solo cuando pasan los checks de CI de la rama (FR-002); no por cada commit.
-    autoDeployTrigger: checksPass
+    # El despliegue lo dispara el job `deploy` de .github/workflows/ci.yml con el Deploy Hook, solo con el CI en
+    # verde (FR-002). El servicio no está conectado a la app de GitHub de Render, así que no hay auto-deploy propio.
+    autoDeployTrigger: "off"
     envVars:
       - key: RAILS_ENV
         value: production

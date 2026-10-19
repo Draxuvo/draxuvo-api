@@ -19,8 +19,11 @@ arranca y el log dice cuáles (`RequiredEnv::MissingError`, `config/initializers
 
 ## Desplegar
 
-- **Automático:** con *Auto-Deploy → After CI checks pass* (Settings → Build & Deploy), cada merge a `main` con el CI en
-  verde despliega solo. Es el mecanismo de FR-002; sin él, Render no espera al CI.
+- **Automático (FR-002):** el job `deploy` de `.github/workflows/ci.yml` corre solo en un push a `main`, **después** de
+  `scan_ruby`, `scan_js`, `lint`, `test` y `e2e`, y llama al **Deploy Hook** del servicio con `ref` igual al commit que
+  acaba de pasar el CI. El secreto del repo es `RENDER_DEPLOY_HOOK_URL` (Render → `draxuvo-api` → Settings → Deploy Hook).
+  Render no está conectado a la app de GitHub (el repo es público y el servicio se creó con su URL), por eso no se usa
+  *After CI checks pass*. **Auto-Deploy del servicio debe estar en Off** para no desplegar dos veces.
 - **Manual:** Render → `draxuvo-api` → **Manual Deploy → Deploy latest commit**.
 - Cada cambio de variables de entorno dispara un despliegue. Al cambiar varias, hazlo en un solo guardado.
 - Al arrancar, `bin/docker-entrypoint` corre `db:prepare`: aplica migraciones y, en una base vacía, los seeds (crea al
