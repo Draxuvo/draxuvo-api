@@ -83,22 +83,8 @@ test:
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
+# Una sola base: las tablas de Solid Cache, Queue y Cable están en la principal (migración
+# create_solid_tables). Con bases separadas apuntando a la misma URL, db:prepare no las creaba.
 production:
-  primary: &primary_production
-    <<: *default
-    url: <%= ENV["DATABASE_URL"] %>
-  cache:
-    <<: *primary_production
-    url: <%= ENV["DATABASE_URL"] %>
-    migrations_paths: db/cache_migrate
-    prepared_statements: false
-  queue:
-    <<: *primary_production
-    url: <%= ENV["DATABASE_URL"] %>
-    migrations_paths: db/queue_migrate
-    prepared_statements: false
-  cable:
-    <<: *primary_production
-    url: <%= ENV["DATABASE_URL"] %>
-    migrations_paths: db/cable_migrate
-    prepared_statements: false
+  <<: *default
+  url: <%= ENV["DATABASE_URL"] %>

@@ -98,7 +98,7 @@ class ResendMailer
 
     def send_email(params)
       api_key = ENV["RESEND_API_KEY"]
-      log(:warn, "#send_email RESEND_API_KEY present=#{api_key.present?} length=#{api_key&.length} prefix=#{api_key&.slice(0, 8).inspect}")
+      log(:warn, "#send_email RESEND_API_KEY present=#{api_key.present?}")
       log(:warn, "#send_email calling Resend::Emails.send to=#{params[:to].inspect} from=#{params[:from].inspect}")
 
       response = Resend::Emails.send(params)
