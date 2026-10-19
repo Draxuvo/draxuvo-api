@@ -23,6 +23,9 @@ services:
         value: production
       - key: RAILS_LOG_TO_STDOUT
         value: "true"
+      # Corre Solid Queue dentro de Puma (config/puma.rb): sin esto los jobs se encolan y nadie los ejecuta.
+      - key: SOLID_QUEUE_IN_PUMA
+        value: "true"
       - key: DATABASE_URL        # URL interna de draxuvo-db (misma región, red privada)
         sync: false
       - key: SECRET_KEY_BASE

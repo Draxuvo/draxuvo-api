@@ -106,7 +106,7 @@ Any plan and cycle goes through a Stripe Checkout Session (`Subscriptions::Creat
 
 ### Background Jobs & Caching
 
-Uses Rails 8 defaults: **Solid Queue** for jobs, **Solid Cache** for caching, **Solid Cable** for ActionCable. Production uses separate databases for primary, cache, queue, and cable — all configured from `DATABASE_URL`.
+Uses Rails 8 defaults: **Solid Queue** for jobs, **Solid Cache** for caching, **Solid Cable** for ActionCable. Production uses a single database (`DATABASE_URL`): the Solid tables live in the primary schema (migration `create_solid_tables`). Solid Queue runs inside Puma when `SOLID_QUEUE_IN_PUMA` is set (it is in `render.yaml`).
 
 ### File Storage
 
