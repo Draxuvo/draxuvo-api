@@ -203,3 +203,29 @@ jobs:
             e2e-logs
           retention-days: 14
           if-no-files-found: ignore
+
+  # Despliegue a producción (Render): solo tras un push a main con todos los jobs anteriores en verde (FR-002).
+  # El servicio no está conectado a la app de GitHub de Render, así que se dispara su Deploy Hook.
+  # Secreto del repo: RENDER_DEPLOY_HOOK_URL (Render → draxuvo-api → Settings → Deploy Hook).
+  # Con este job, Auto-Deploy del servicio debe estar en "Off" para no desplegar dos veces.
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [scan_ruby, scan_js, lint, test, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Disparar el despliegue en Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Falta el secreto RENDER_DEPLOY_HOOK_URL (ver docs/deploy.md)"
+            exit 1
+          fi
+          # ref: despliega exactamente el commit que acaba de pasar el CI
+          curl --fail --silent --show-error -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
+          echo "Despliegue solicitado para ${GITHUB_SHA}"
