@@ -29,16 +29,17 @@ module Api
           )
         end
 
+        email_sent = true
         membership = ActiveRecord::Base.transaction do
           new_user = user.nil?
           user ||= User.create!(member_params.slice(:first_name, :last_name, :phone).to_h
                                   .merge(email: email, password: SecureRandom.hex(12), active: true))
           created = current_company.user_companies.create!(user: user, role: role)
-          send_set_password_email(user) if new_user
+          email_sent = send_set_password_email(user) if new_user
           created
         end
 
-        render json: CompanyMemberSerializer.new(membership).as_json, status: :created
+        render json: CompanyMemberSerializer.new(membership).as_json.merge(email_sent: email_sent), status: :created
       end
 
       # PATCH /api/v1/company/members/:user_id
@@ -104,9 +105,10 @@ module Api
       end
 
       def send_set_password_email(user)
-        Email::SetPasswordService.new(user, company_name: current_company.name).call
+        Email::SetPasswordService.new(user, company_name: current_company.name).call[:success]
       rescue => e
         Rails.logger.error "[CompanyMembersController] SetPasswordService error class=#{e.class} message=#{e.message}"
+        false
       end
     end
   end
