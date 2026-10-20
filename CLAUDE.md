@@ -54,7 +54,7 @@ The `Authenticable` and `Authorizable` concerns live in `app/controllers/concern
 | Entity | Notes |
 |---|---|
 | `User` | Roles: `staff`, `manager`, `admin`, `owner`, `super_admin`; uses `has_secure_password` |
-| `Company` | Tenant container; holds `stripe_id` and `disabled_modules`; `active_modules` = its plan's modules minus the disabled ones. No plan column: the plan lives in `Subscription` |
+| `Company` | Tenant container; holds `stripe_id` and `disabled_modules`; `active_modules` = its plan's modules minus the disabled ones. No plan column: the plan lives in `Subscription`. Only the super admin changes `disabled_modules` (`PATCH /company/modules` with `X-Company-Id`, 403 for any other role, spec 017); each change of state is logged in `ModuleChange` (company, actor, module, enabled, created_at; no screen) |
 | `Employee` | Company staff; optional `user` association; `parsed_name_parts` splits `name` for User creation |
 | `Plan` | PORO catalog (`app/models/plan.rb`): `basic`, `pro`, `enterprise` with their modules and monthly/annual prices (cents MXN, without IVA) |
 | `Subscription` | One per Company (unique); plan `basic/pro/enterprise`, `billing_cycle`, `cancel_at_period_end`; statuses: `trialing/active/past_due/cancelled/expired`; `active_access?` returns true for trialing (within trial), active, or past_due |

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_21_100200) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_21_100300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -189,6 +189,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_100200) do
     t.index ["check_id"], name: "index_kitchen_orders_on_check_id"
     t.index ["company_id"], name: "index_kitchen_orders_on_company_id"
     t.index ["sent_by_id"], name: "index_kitchen_orders_on_sent_by_id"
+  end
+
+  create_table "module_changes", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "actor_id", null: false
+    t.string "module", null: false
+    t.boolean "enabled", null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_module_changes_on_actor_id"
+    t.index ["company_id", "created_at"], name: "index_module_changes_on_company_id_and_created_at"
+    t.index ["company_id"], name: "index_module_changes_on_company_id"
   end
 
   create_table "payment_terminals", force: :cascade do |t|
@@ -629,6 +640,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_100200) do
   add_foreign_key "kitchen_orders", "checks"
   add_foreign_key "kitchen_orders", "companies"
   add_foreign_key "kitchen_orders", "users", column: "sent_by_id"
+  add_foreign_key "module_changes", "companies"
+  add_foreign_key "module_changes", "users", column: "actor_id"
   add_foreign_key "payment_terminals", "companies"
   add_foreign_key "product_types", "companies"
   add_foreign_key "products", "companies"
