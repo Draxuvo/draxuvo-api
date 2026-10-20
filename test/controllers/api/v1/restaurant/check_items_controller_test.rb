@@ -102,4 +102,10 @@ class Api::V1::Restaurant::CheckItemsControllerTest < ActionDispatch::Integratio
 
     assert_response :created
   end
+
+  test "a supply cannot be added to a check (spec 016)" do
+    lime = @company.products.create!(name: "Limón", sku: "LIM", product_type: product_types(:resto_co_supply), stock: 5)
+    add(lime)
+    assert_response :not_found
+  end
 end

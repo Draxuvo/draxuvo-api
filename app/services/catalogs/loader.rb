@@ -68,18 +68,33 @@ module Catalogs
       Array(@data["products"]).each do |item|
         product = company.products.find_or_initialize_by(sku: item.fetch("sku"))
         station = item["station"] && stations.fetch(item["station"]) { raise ArgumentError, "Estación #{item['station']} no está en stations" }
+        type = product_type_for(company, product, item)
         count(product) do
           product.update!(
             name: item.fetch("name"), category: item["category"], description: item["description"],
-            price: item["price"], unit_cost: item["cost"], station: station,
-            tracks_stock: item.fetch("tracks_stock", false), min_stock: item.fetch("min_stock", 0), available: item.fetch("available", true)
+            price: item["price"], unit_cost: item["cost"], station: station, product_type: type, unit_key: item["unit"],
+            min_stock: item.fetch("min_stock", 0),
+            # "disponible" ya no esconde insumos (spec 016): lo que no se vende queda disponible.
+            available: type.sellable ? item.fetch("available", true) : true
           )
         end
-        stock = item["stock"].to_i
+        stock = item["stock"].to_d
         next unless stock.positive? && product.stock_movements.none?
 
         StockMovement.create!(product: product, company: company, movement_type: :entry, qty: stock, note: "Inventario inicial")
       end
+    end
+
+    # `type` del YAML por nombre; sin él, la regla de los tipos iniciales con `tracks_stock` y `available` del YAML.
+    def product_type_for(company, product, item)
+      if item["type"].present?
+        return company.product_types.find_by("lower(name) = ?", item["type"].to_s.downcase) ||
+               raise(ArgumentError, "Tipo #{item['type']} no existe en la empresa")
+      end
+
+      product.tracks_stock = item.fetch("tracks_stock", false)
+      product.available = item.fetch("available", true)
+      ProductTypes::Defaults.classify(company, product)
     end
 
     def count(record)

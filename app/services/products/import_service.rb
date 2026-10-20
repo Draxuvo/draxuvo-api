@@ -1,6 +1,6 @@
 module Products
   class ImportService
-    HEADER_KEYS = %w[sku name description category price unit_cost stock min_stock available].freeze
+    HEADER_KEYS = %w[sku name description category price unit_cost stock min_stock available product_type unit].freeze
 
     Result = Struct.new(:created, :updated, :errors, keyword_init: true)
 
@@ -41,10 +41,11 @@ module Products
           category:    attrs["category"].to_s.strip.presence,
           price:       parse_decimal(attrs["price"]),
           unit_cost:   parse_decimal(attrs["unit_cost"]),
-          stock:       parse_integer(attrs["stock"]) || (was_new ? 0 : product.stock),
-          min_stock:   parse_integer(attrs["min_stock"]),
+          stock:       parse_decimal(attrs["stock"]) || (was_new ? 0 : product.stock),
+          min_stock:   parse_decimal(attrs["min_stock"]),
           available:   parse_boolean(attrs["available"])
         )
+        assign_type_and_unit(product, attrs)
 
         if product.save
           was_new ? created += 1 : updated += 1
@@ -93,7 +94,7 @@ module Products
           sheet.add_row [], style: note_style
           sheet.add_row [ "# #{t.call('hint')}" ], style: note_style
 
-          sheet.column_widths 15, 30, 35, 20, 12, 12, 10, 12, 12
+          sheet.column_widths 15, 30, 35, 20, 12, 12, 10, 12, 12, 16, 12
         end
       end
 
@@ -101,6 +102,21 @@ module Products
     end
 
     private
+
+    # Tipo por nombre y unidad por clave o nombre (spec 016, FR-016). Sin tipo, o con uno que no existe, se
+    # clasifica con la regla de los tipos iniciales.
+    def assign_type_and_unit(product, attrs)
+      name = attrs["product_type"].to_s.strip
+      type = @company.product_types.find_by("lower(name) = ?", name.downcase) if name.present?
+      product.product_type = type || (product.product_type if name.blank?) || ProductTypes::Defaults.classify(@company, product)
+      product.available = true unless product.product_type.sellable
+
+      unit = attrs["unit"].to_s.strip
+      return if unit.blank?
+
+      found = Unit.where("lower(key) = :u OR lower(name) = :u", u: unit.downcase).first
+      product.unit_key = found&.key
+    end
 
     def open_spreadsheet
       path = @file.respond_to?(:path) ? @file.path : @file.tempfile.path

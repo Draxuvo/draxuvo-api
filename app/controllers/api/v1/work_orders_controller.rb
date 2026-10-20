@@ -308,7 +308,7 @@ module Api
 
       # Artículo del catálogo con su precio: el staff no pone precios ni conceptos libres.
       def catalog_item_attributes(item)
-        product = current_company.products.find_by(id: item[:product_id]) if item[:product_id].present?
+        product = current_company.products.sellable.find_by(id: item[:product_id]) if item[:product_id].present?
         raise unprocessable(I18n.t("work_order.catalog_item_required")) unless product
 
         { product_id: product.id, description: product.name, unit_price: product.price, quantity: item[:quantity] || 1 }
@@ -322,7 +322,8 @@ module Api
       end
 
       def item_attributes(item, idx)
-        product = current_company.products.find_by(id: item[:product_id]) if item[:product_id].present?
+        # Solo productos de tipos que se venden (spec 016, FR-009).
+        product = current_company.products.sellable.find_by(id: item[:product_id]) if item[:product_id].present?
         {
           description: item[:description].presence || product&.name,
           quantity:    item[:quantity] || 1,

@@ -6,7 +6,8 @@ module Api
         before_action :set_check
 
         def create
-          product = current_company.products.available.find(params[:product_id])
+          # Solo productos de tipos que se venden (spec 016); un insumo responde 404 como uno no disponible.
+          product = current_company.products.available.sellable.find(params[:product_id])
           quantity = params[:quantity].to_i
           quantity = 1 if quantity < 1
           availability = ::Restaurant::Availability.new(current_company)

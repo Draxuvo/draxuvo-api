@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_20_100200) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_21_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -202,12 +202,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_100200) do
     t.index ["company_id"], name: "index_payment_terminals_on_company_id"
   end
 
+  create_table "product_types", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "name", null: false
+    t.string "kind"
+    t.boolean "sellable", default: true, null: false
+    t.boolean "counted", default: false, null: false
+    t.boolean "fractional", default: false, null: false
+    t.string "default_unit_key", default: "pza", null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "company_id, lower((name)::text)", name: "index_product_types_on_company_and_lower_name", unique: true
+    t.index ["company_id"], name: "index_product_types_on_company_id"
+  end
+
   create_table "products", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.string "sku"
     t.string "name"
-    t.integer "stock"
-    t.integer "min_stock"
+    t.decimal "stock", precision: 12, scale: 3, default: "0.0"
+    t.decimal "min_stock", precision: 12, scale: 3
     t.decimal "unit_cost"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -217,9 +233,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_100200) do
     t.boolean "available", default: true, null: false
     t.boolean "tracks_stock", default: false, null: false
     t.bigint "station_id"
+    t.bigint "product_type_id", null: false
+    t.string "unit_key"
     t.index ["available"], name: "index_products_on_available"
     t.index ["category"], name: "index_products_on_category"
     t.index ["company_id"], name: "index_products_on_company_id"
+    t.index ["product_type_id"], name: "index_products_on_product_type_id"
     t.index ["station_id"], name: "index_products_on_station_id"
   end
 
@@ -381,7 +400,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_100200) do
     t.bigint "product_id", null: false
     t.bigint "company_id", null: false
     t.integer "movement_type"
-    t.integer "qty"
+    t.decimal "qty", precision: 12, scale: 3
     t.string "note"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -611,7 +630,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_20_100200) do
   add_foreign_key "kitchen_orders", "companies"
   add_foreign_key "kitchen_orders", "users", column: "sent_by_id"
   add_foreign_key "payment_terminals", "companies"
+  add_foreign_key "product_types", "companies"
   add_foreign_key "products", "companies"
+  add_foreign_key "products", "product_types"
   add_foreign_key "products", "stations"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

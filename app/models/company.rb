@@ -12,6 +12,7 @@ class Company < ApplicationRecord
   has_many :dining_tables, dependent: :destroy
   has_many :checks, dependent: :destroy
   has_many :payment_terminals, dependent: :destroy
+  has_many :product_types, dependent: :destroy
   has_one :subscription, dependent: :destroy
 
   # Sucursales del plan Empresa (R17): un solo nivel. Si la principal se borra, las sucursales
@@ -32,6 +33,7 @@ class Company < ApplicationRecord
   before_validation :generate_slug, on: :create
   before_validation :inherit_order_mode, on: :create
   after_create :create_trial_subscription, unless: :branch?
+  after_create { ProductTypes::Defaults.create_missing(self) }
 
   def branch?
     parent_company_id.present?

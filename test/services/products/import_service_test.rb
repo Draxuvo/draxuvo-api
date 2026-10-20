@@ -76,8 +76,24 @@ class Products::ImportServiceTest < ActiveSupport::TestCase
 
   test "the available column accepts true, 1, yes, si and defaults to true when empty" do
     import(csv("A-1,A,,,,,,,true", "A-2,B,,,,,,,1", "A-3,C,,,,,,,si", "A-4,D,,,,,,,no", "A-5,E,,,,,,,false", "A-6,F,,,,,,,"))
-    availability = companies(:one).products.where(sku: %w[A-1 A-2 A-3 A-4 A-5 A-6]).order(:sku).pluck(:available)
-    assert_equal [ true, true, true, false, false, true ], availability
+    rows = companies(:one).products.where(sku: %w[A-1 A-2 A-3 A-4 A-5 A-6]).order(:sku).includes(:product_type)
+    # Sin columna de tipo (spec 016): "no disponible" se clasifica como el tipo que no se vende, que queda disponible.
+    assert_equal %w[sold sold sold supply supply sold], rows.map { |p| p.product_type.kind }
+    assert(rows.all?(&:available))
+  end
+
+  test "the type and unit columns pick the company type by name and the unit by key or name" do
+    file = Tempfile.new([ "productos", ".csv" ])
+    file.write("sku,name,stock,min_stock,product_type,unit\nT-1,Cable,2.5,1,material,Kilogramo\nT-2,Foco,3,,Refacción,pza\n")
+    file.close
+    result = Products::ImportService.new(companies(:one), Rack::Test::UploadedFile.new(file.path, "text/csv", original_filename: "productos.csv")).call
+
+    assert_empty result.errors
+    cable = companies(:one).products.find_by!(sku: "T-1")
+    assert_equal "Material", cable.product_type.name
+    assert_equal "kg", cable.unit_key
+    assert_equal BigDecimal("2.5"), cable.stock
+    assert_equal "Refacción", companies(:one).products.find_by!(sku: "T-2").product_type.name
   end
 
   test "prices drop currency symbols and thousands separators" do

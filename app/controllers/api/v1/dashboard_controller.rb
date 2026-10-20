@@ -107,10 +107,21 @@ module Api
           total:       products.count,
           available:   avail_counts[true].to_i,
           unavailable: avail_counts[false].to_i,
-          # Misma regla que GET /products?low_stock=true y ProductSerializer#low_stock.
-          low_stock:   products.where("stock <= min_stock").count,
-          out_of_stock: products.where(stock: 0).count
+          # Misma regla que GET /products?low_stock=true y ProductSerializer#low_stock (Product.low_stock, spec 016).
+          low_stock:   products.low_stock.count,
+          out_of_stock: products.counted.where(stock: 0).count,
+          by_type:     by_type(products)
         }
+      end
+
+      # Productos y valor a costo (solo tipos que se cuentan) por tipo de producto (spec 016, FR-014).
+      def by_type(products)
+        counts = products.group(:product_type_id).count
+        values = products.counted.group(:product_type_id).sum("products.stock * COALESCE(products.unit_cost, 0)")
+        current_company.product_types.ordered.select { |type| type.active || counts.key?(type.id) }.map do |type|
+          { id: type.id, name: type.name, counted: type.counted, products: counts.fetch(type.id, 0),
+            value: type.counted ? values.fetch(type.id, 0).to_f : nil }
+        end
       end
 
       def attendance_stats

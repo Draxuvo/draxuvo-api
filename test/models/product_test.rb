@@ -58,4 +58,25 @@ class ProductTest < ActiveSupport::TestCase
       product.destroy!
     end
   end
+
+  # --- spec 016: el tipo decide existencia, menú y alerta ---
+
+  test "the type decides tracking, whole quantities and the sellable and low_stock scopes" do
+    company = companies(:resto_co)
+    supply = company.products.create!(name: "Limón", sku: "LIM", product_type: product_types(:resto_co_supply), stock: 2.5, min_stock: 5)
+    dish = products(:resto_sopa)
+
+    assert supply.tracks_stock
+    assert_not dish.tracks_stock
+    assert_not company.products.new(name: "Coca", sku: "COC", product_type: product_types(:resto_co_counted), stock: 1.5).valid?
+    assert_not_includes Product.sellable, supply
+    assert_includes Product.sellable, dish
+    assert_includes Product.low_stock, supply
+    assert_not_includes Product.low_stock, dish
+    assert_equal "kg", supply.unit.key
+  end
+
+  test "a type from another company is rejected" do
+    assert_not companies(:resto_co).products.new(name: "X", sku: "X", product_type: product_types(:one_sold)).valid?
+  end
 end

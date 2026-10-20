@@ -233,4 +233,11 @@ class Api::V1::WorkOrdersStaffTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_equal [ tickets(:pro_paid_ticket).id ], response.parsed_body["results"].map { |t| t["id"] }
   end
+
+  test "staff cannot add a product of a type that is not sold (spec 016)" do
+    supply = products(:one)
+    supply.update_columns(company_id: @company.id, product_type_id: ProductTypes::Defaults.create_missing(@company).find_by!(kind: "supply").id)
+    post "#{BASE}/#{@mine.id}/items", params: { product_id: supply.id, quantity: 1 }, headers: @headers, as: :json
+    assert_response :unprocessable_entity
+  end
 end
