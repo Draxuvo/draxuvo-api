@@ -27,6 +27,7 @@ class WorkOrderSerializer
       customer_phone:   @order.customer_phone,
       customer_address: @order.customer_address,
       employee:     @order.employee ? { id: @order.employee.id, name: @order.employee.name } : nil,
+      created_by:   person(@order.created_by),
       items_count:  @order.work_order_items.size,
       steps_count:  steps.size,
       steps_done:   steps.count { |s| s.done_at.present? }
@@ -103,8 +104,9 @@ class WorkOrderSerializer
     actions.delete("charge") if charge_blocked_reason
     actions << "edit" << "edit_items" << "edit_steps" if boss && open_order
     actions << "delete" if ctx.admin? && open_order
-    service = order.company.order_mode_service?
-    actions << "add_item" if open_order && (boss || (ctx.assigned_to?(order) && service))
+    # El asignado agrega del catálogo, cambia cantidades y quita artículos en cualquier modo (spec 015).
+    actions << "add_item" if open_order && worker
+    actions << "change_items" if open_order && worker
     actions << "check_steps" if worker && open_order
     actions << "add_note" if worker
     actions << "add_photo" if worker && order.work_order_attachments.size < WorkOrderAttachment::MAX_PER_ORDER

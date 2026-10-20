@@ -1,0 +1,8 @@
+# payment_method: 0 cash, 1 card, 2 transfer.
+pro_paid_card:
+  company: pro_co
+  ticket: pro_paid_ticket
+  payment_method: 1
+  amount: 500.00
+  terminal: pro_bbva
+  created_by: pro_co_owner

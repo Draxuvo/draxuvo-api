@@ -228,6 +228,73 @@ class Api::V1::WorkOrdersFlowTest < ActionDispatch::IntegrationTest
     auth_headers(user, @company)
   end
 
+  # --- spec 015: cobro con varios pagos ---
+
+  test "a mixed charge creates one payment per method and a mixed ticket" do
+    order = work_orders(:pro_done)
+    act(order, :charge, payments: [ { method: "card", amount: 300, terminal_id: payment_terminals(:pro_bbva).id, authorization_code: "123456" },
+                                    { method: "cash", amount_received: 600 } ])
+    assert_response :ok
+    ticket = json["ticket"]
+    assert_equal "mixed", ticket["payment_method"]
+    assert_equal "50.0", ticket["change_given"].to_s
+    assert_equal [ %w[card 300.00], %w[cash 550.00] ], ticket["payments"].map { |p| [ p["method"], p["amount"] ] }
+    card = ticket["payments"].first
+    assert_equal({ "id" => payment_terminals(:pro_bbva).id, "name" => "BBVA caja 1", "provider" => "bbva" }, card["terminal"])
+    assert_equal "123456", card["authorization_code"]
+    assert_equal "manual", card["source"]
+    charged = json["events"].find { |e| e["kind"] == "charged" }
+    assert_equal [ { "method" => "card", "amount" => "300.0" }, { "method" => "cash", "amount" => "550.0" } ], charged.dig("data", "payments")
+  end
+
+  test "a repeated Idempotency-Key does not charge twice and a second charge is rejected" do
+    order = work_orders(:pro_done)
+    body = { payments: [ { method: "card", amount: 850 } ] }
+    key = { "Idempotency-Key" => "cobro-#{order.id}" }
+    2.times do
+      post "/api/v1/work_orders/#{order.id}/charge", params: body, headers: headers(@owner).merge(key), as: :json
+      assert_response :ok
+    end
+    assert_equal 1, order.reload.ticket.ticket_payments.count
+
+    act(order, :charge, body)
+    assert_response :unprocessable_entity
+    assert_equal 1, order.reload.ticket.ticket_payments.count
+  end
+
+  test "an invalid payment list answers 422 with its code and charges nothing" do
+    order = work_orders(:pro_done)
+    act(order, :charge, payments: [ { method: "card", amount: 900 } ])
+    assert_response :unprocessable_entity
+    assert_equal "exceeds_total", json.dig("error", "details", "code")
+    assert order.reload.done?
+    assert_nil order.ticket
+  end
+
+  test "voiding keeps the payments voided in the history and charging again adds new ones" do
+    order = work_orders(:pro_paid)
+    act(order, :void_charge, reason: "Error de captura")
+    assert_response :ok
+    payment = ticket_payments(:pro_paid_card).reload
+    assert_not_nil payment.voided_at
+    voided = json["events"].find { |e| e["kind"] == "voided" }
+    assert_equal [ { "method" => "card", "amount" => "500.0" } ], voided.dig("data", "payments")
+
+    act(order, :charge, payments: [ { method: "cash", amount_received: 500 } ])
+    assert_response :ok
+    assert_equal tickets(:pro_paid_ticket).folio, json.dig("ticket", "folio")
+    assert_equal 2, json.dig("ticket", "payments").size
+    assert_equal 1, json.dig("ticket", "payments").count { |p| p["voided_at"].nil? }
+  end
+
+  test "staff charges their own order with several payments" do
+    order = work_orders(:pro_open)
+    act(order, :finish, as: @staff)
+    act(order, :charge, { payments: [ { method: "transfer", amount: 100, reference: "SPEI 1" }, { method: "cash", amount_received: 500 } ] }, as: @staff)
+    assert_response :ok
+    assert_equal @staff.id, json.dig("ticket", "payments", 0, "created_by", "id")
+  end
+
   def act(order, action, params = {}, as: @owner, **extra)
     params = params.merge(extra)
     post "/api/v1/work_orders/#{order.id}/#{action}", params: params, headers: headers(as), as: :json

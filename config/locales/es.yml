@@ -158,6 +158,15 @@ es:
       mixed:    "Mixto"
     insufficient_cash:      "El efectivo recibido es menor al total"
     invalid_payment_method: "Método de pago inválido"
+    charge:
+      missing:            "Los pagos no cubren el total"
+      exceeds_total:      "Los pagos con tarjeta o transferencia pasan del total"
+      multiple_cash:      "Solo puede haber un pago en efectivo"
+      reference_required: "Escribe la referencia de la transferencia"
+      invalid_terminal:   "La terminal no existe o está desactivada"
+      invalid_amount:     "El monto del pago no es válido"
+      invalid_card_last4: "Los últimos 4 dígitos deben ser 4 números"
+      too_many_payments:  "Registra de 1 a 5 pagos"
     pdf:
       paid_at: "Pagado el"
     phone_required:         "Falta el teléfono de WhatsApp"
@@ -187,6 +196,7 @@ es:
     reason_required:      "Escribe el motivo"
     no_items:             "La orden no tiene conceptos con precio"
     catalog_item_required: "Elige un producto del catálogo"
+    employee_required:    "Tu usuario no tiene un empleado en esta empresa; pide al encargado que te dé de alta"
     deleted:              "Orden de trabajo eliminada"
     photo:
       invalid_type:  "El archivo debe ser una imagen"
@@ -203,11 +213,26 @@ es:
       reassigned: "Orden reasignada"
       note:       "Nota"
       photo:      "Foto"
+      item_added:   "Producto agregado"
+      item_updated: "Cantidad cambiada"
+      item_removed: "Producto quitado"
     priority:
       low:    "Baja"
       medium: "Media"
       high:   "Alta"
       urgent: "Urgente"
+
+  payment_terminal:
+    in_use: "La terminal tiene cobros; desactívala en lugar de borrarla"
+    providers:
+      bbva:         "BBVA"
+      banorte:      "Banorte"
+      santander:    "Santander"
+      banamex:      "Banamex"
+      getnet:       "Getnet"
+      mercado_pago: "Mercado Pago"
+      clip:         "Clip"
+      other:        "Otro"
 
   company:
     invalid_order_mode: "Modo de órdenes inválido"
@@ -226,6 +251,7 @@ es:
       cancelled: "Cancelada"
     takeout: "Para llevar"
     errors:
+      invalid_terminal: "La terminal no existe o está desactivada"
       table_occupied: "La mesa ya tiene una cuenta abierta"
       table_inactive: "La mesa no está disponible"
       sold_out: "%{name} está agotado"

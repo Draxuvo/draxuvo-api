@@ -38,7 +38,8 @@ class CheckSerializer
     {
       id: payment.id, method: payment.payment_method, amount: money(payment.amount), reference: payment.reference,
       amount_received: payment.amount_received && money(payment.amount_received),
-      change_given: payment.change_given && money(payment.change_given)
+      change_given: payment.change_given && money(payment.change_given),
+      terminal: PaymentTerminalSerializer.ref(payment.terminal)
     }
   end
 

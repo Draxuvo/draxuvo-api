@@ -14,11 +14,37 @@ module Reports
         total_revenue: tickets.sum(:total).to_f,
         total_tickets: tickets.count,
         by_period:     group_tickets(tickets),
-        breakdown:     breakdown(tickets)
+        breakdown:     breakdown(tickets),
+        by_method:     by_method(tickets),
+        by_terminal:   by_terminal(tickets)
       }
     end
 
     private
+
+    # Pagos que cuentan como ingreso (spec 015, R11): los no anulados de órdenes y los de cuentas, de los
+    # tickets pagados del rango. Cada uno como [método, terminal, monto].
+    def payments(tickets)
+      @payments ||= begin
+        ids = tickets.select(:id)
+        order_payments = TicketPayment.active.where(ticket_id: ids).includes(:terminal)
+        check_payments = CheckPayment.joins(check: :ticket).where(tickets: { id: ids }).includes(:terminal)
+        (order_payments.to_a + check_payments.to_a).map { |p| [ p.payment_method, p.terminal, p.amount ] }
+      end
+    end
+
+    def by_method(tickets)
+      payments(tickets).group_by(&:first).map do |method, group|
+        { method: method, label: I18n.t("ticket.payment_method.#{method}"), total: group.sum { |p| p.last.to_f }, count: group.size }
+      end.sort_by { |row| -row[:total] }
+    end
+
+    # Solo tarjeta, con un renglón `terminal: nil` para lo cobrado sin elegir terminal.
+    def by_terminal(tickets)
+      payments(tickets).select { |method, _, _| method == "card" }.group_by { |p| p[1] }.map do |terminal, group|
+        { terminal: PaymentTerminalSerializer.ref(terminal), total: group.sum { |p| p.last.to_f }, count: group.size }
+      end.sort_by { |row| -row[:total] }
+    end
 
     def group_tickets(tickets)
       tickets.group_by { |t| period_key(t.paid_at) }.map do |period, group|

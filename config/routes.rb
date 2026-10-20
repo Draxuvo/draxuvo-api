@@ -59,6 +59,9 @@ Rails.application.routes.draw do
       post "stripe/webhooks", to: "stripe_webhooks#create"
 
       # Employees + checkin/checkout + sus asistencias
+      # Terminales de cobro del negocio (spec 015)
+      resources :payment_terminals, only: %i[index create update destroy]
+
       resources :employees do
         member do
           post  :checkin

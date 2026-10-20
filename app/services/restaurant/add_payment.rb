@@ -64,7 +64,16 @@ module Restaurant
       fail!(:exceeds_balance) if amount > balance
       fail!(:reference_required) if @params[:reference].to_s.strip.empty?
 
-      { payment_method: method, amount: amount, reference: @params[:reference].to_s.strip }
+      { payment_method: method, amount: amount, reference: @params[:reference].to_s.strip }.merge(terminal_attributes(method))
+    end
+
+    # La terminal en que se cobró con tarjeta, opcional (spec 015, FR-022).
+    def terminal_attributes(method)
+      return {} unless method == "card" && @params[:terminal_id].present?
+
+      terminal = PaymentTerminal.usable_for(@check.company, @params[:terminal_id])
+      fail!(:invalid_terminal) unless terminal
+      { terminal: terminal }
     end
 
     def decimal(value)

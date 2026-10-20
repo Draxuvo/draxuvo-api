@@ -6,7 +6,8 @@ class WorkOrderEvent < ApplicationRecord
 
   enum :kind, {
     created: 0, started: 1, finished: 2, reopened: 3, charged: 4,
-    voided: 5, cancelled: 6, reassigned: 7, note: 8, photo: 9
+    voided: 5, cancelled: 6, reassigned: 7, note: 8, photo: 9,
+    item_added: 10, item_updated: 11, item_removed: 12
   }, validate: true
 
   validates :kind, presence: true

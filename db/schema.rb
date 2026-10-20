@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_19_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_20_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -95,9 +95,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_200000) do
     t.bigint "created_by_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "terminal_id"
+    t.integer "source", default: 0, null: false
     t.index ["check_id"], name: "index_check_payments_on_check_id"
     t.index ["company_id"], name: "index_check_payments_on_company_id"
     t.index ["created_by_id"], name: "index_check_payments_on_created_by_id"
+    t.index ["terminal_id"], name: "index_check_payments_on_terminal_id"
   end
 
   create_table "checks", force: :cascade do |t|
@@ -186,6 +189,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_200000) do
     t.index ["check_id"], name: "index_kitchen_orders_on_check_id"
     t.index ["company_id"], name: "index_kitchen_orders_on_company_id"
     t.index ["sent_by_id"], name: "index_kitchen_orders_on_sent_by_id"
+  end
+
+  create_table "payment_terminals", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "name", null: false
+    t.string "provider", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "company_id, lower((name)::text)", name: "index_payment_terminals_on_company_and_lower_name", unique: true
+    t.index ["company_id"], name: "index_payment_terminals_on_company_id"
   end
 
   create_table "products", force: :cascade do |t|
@@ -405,6 +419,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_200000) do
     t.index ["trial_ends_at"], name: "index_subscriptions_on_trial_ends_at"
   end
 
+  create_table "ticket_payments", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "ticket_id", null: false
+    t.integer "payment_method", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.decimal "amount_received", precision: 10, scale: 2
+    t.decimal "change_given", precision: 10, scale: 2
+    t.bigint "terminal_id"
+    t.string "authorization_code"
+    t.string "card_last4", limit: 4
+    t.string "reference"
+    t.integer "source", default: 0, null: false
+    t.bigint "created_by_id", null: false
+    t.datetime "voided_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_ticket_payments_on_company_id"
+    t.index ["created_by_id"], name: "index_ticket_payments_on_created_by_id"
+    t.index ["terminal_id"], name: "index_ticket_payments_on_terminal_id"
+    t.index ["ticket_id"], name: "index_ticket_payments_on_ticket_id"
+  end
+
   create_table "tickets", force: :cascade do |t|
     t.bigint "work_order_id"
     t.bigint "company_id", null: false
@@ -561,6 +597,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_200000) do
   add_foreign_key "check_items", "users", column: "cancelled_by_id"
   add_foreign_key "check_payments", "checks"
   add_foreign_key "check_payments", "companies"
+  add_foreign_key "check_payments", "payment_terminals", column: "terminal_id"
   add_foreign_key "check_payments", "users", column: "created_by_id"
   add_foreign_key "checks", "companies"
   add_foreign_key "checks", "dining_tables"
@@ -573,6 +610,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_200000) do
   add_foreign_key "kitchen_orders", "checks"
   add_foreign_key "kitchen_orders", "companies"
   add_foreign_key "kitchen_orders", "users", column: "sent_by_id"
+  add_foreign_key "payment_terminals", "companies"
   add_foreign_key "products", "companies"
   add_foreign_key "products", "stations"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
@@ -585,6 +623,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_19_200000) do
   add_foreign_key "stock_movements", "companies"
   add_foreign_key "stock_movements", "products"
   add_foreign_key "subscriptions", "companies"
+  add_foreign_key "ticket_payments", "companies"
+  add_foreign_key "ticket_payments", "payment_terminals", column: "terminal_id"
+  add_foreign_key "ticket_payments", "tickets"
+  add_foreign_key "ticket_payments", "users", column: "created_by_id"
   add_foreign_key "tickets", "checks"
   add_foreign_key "tickets", "companies"
   add_foreign_key "tickets", "work_orders"

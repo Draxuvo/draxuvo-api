@@ -158,6 +158,15 @@ en:
       mixed:    "Mixed"
     insufficient_cash:      "The cash received is less than the total"
     invalid_payment_method: "Invalid payment method"
+    charge:
+      missing:            "The payments do not cover the total"
+      exceeds_total:      "Card or transfer payments exceed the total"
+      multiple_cash:      "Only one cash payment is allowed"
+      reference_required: "Enter the transfer reference"
+      invalid_terminal:   "The terminal does not exist or is inactive"
+      invalid_amount:     "The payment amount is not valid"
+      invalid_card_last4: "The last 4 digits must be 4 numbers"
+      too_many_payments:  "Record 1 to 5 payments"
     pdf:
       paid_at: "Paid on"
     phone_required:         "WhatsApp phone number is missing"
@@ -187,6 +196,7 @@ en:
     reason_required:      "A reason is required"
     no_items:             "The order has no priced items"
     catalog_item_required: "Pick a product from the catalog"
+    employee_required:    "Your user has no employee in this company; ask a manager to add you"
     deleted:              "Work order deleted"
     photo:
       invalid_type:  "The file must be an image"
@@ -203,11 +213,26 @@ en:
       reassigned: "Order reassigned"
       note:       "Note"
       photo:      "Photo"
+      item_added:   "Product added"
+      item_updated: "Quantity changed"
+      item_removed: "Product removed"
     priority:
       low:    "Low"
       medium: "Medium"
       high:   "High"
       urgent: "Urgent"
+
+  payment_terminal:
+    in_use: "The terminal has payments; deactivate it instead of deleting it"
+    providers:
+      bbva:         "BBVA"
+      banorte:      "Banorte"
+      santander:    "Santander"
+      banamex:      "Banamex"
+      getnet:       "Getnet"
+      mercado_pago: "Mercado Pago"
+      clip:         "Clip"
+      other:        "Other"
 
   company:
     invalid_order_mode: "Invalid order mode"
@@ -226,6 +251,7 @@ en:
       cancelled: "Cancelled"
     takeout: "Takeout"
     errors:
+      invalid_terminal: "The terminal does not exist or is inactive"
       table_occupied: "The table already has an open check"
       table_inactive: "The table is not available"
       sold_out: "%{name} is sold out"
