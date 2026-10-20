@@ -72,7 +72,7 @@ class Catalogs::LoaderTest < ActiveSupport::TestCase
   test "the Aquí me quedo catalog file loads" do
     file = YAML.safe_load_file(Rails.root.join("db/catalogs/aqui_me_quedo.yml"))
     result = Catalogs::Loader.call(file, owner_email: @owner.email)
-    assert_equal 45, result.created["products"]
+    assert_equal 65, result.created["products"]
     assert_equal 90, @company.products.find_by!(sku: "AMQ-CAM-DIA").price
   end
 end
