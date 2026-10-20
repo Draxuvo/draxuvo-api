@@ -1,0 +1,17 @@
+pro_bbva:
+  company: pro_co
+  name: BBVA caja 1
+  provider: bbva
+  active: true
+
+pro_clip_off:
+  company: pro_co
+  name: Clip vieja
+  provider: clip
+  active: false
+
+resto_point:
+  company: resto_co
+  name: Point barra
+  provider: mercado_pago
+  active: true

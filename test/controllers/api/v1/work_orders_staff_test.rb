@@ -116,7 +116,7 @@ class Api::V1::WorkOrdersStaffTest < ActionDispatch::IntegrationTest
     assert_equal @staff.full_name, ticket.dig("charged_by", "name")
   end
 
-  test "staff cannot cancel void delete reassign create or change prices" do
+  test "staff cannot cancel void delete reassign or change prices" do
     post "#{BASE}/#{@mine.id}/cancel", params: { reason: "x" }, headers: @headers, as: :json
     assert_response :forbidden
 
@@ -130,12 +130,10 @@ class Api::V1::WorkOrdersStaffTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     assert_equal employees(:pro_staff_employee).id, @mine.reload.employee_id
 
-    post BASE, params: { work_order: { title: "Mío" } }, headers: @headers, as: :json
-    assert_response :forbidden
-
     patch "#{BASE}/#{@mine.id}/items/#{work_order_items(:pro_open_labor).id}", params: { unit_price: 1 }, headers: @headers, as: :json
     assert_response :forbidden
-    delete "#{BASE}/#{@mine.id}/items/#{work_order_items(:pro_open_labor).id}", headers: @headers
+    patch "#{BASE}/#{@mine.id}/items/#{work_order_items(:pro_open_labor).id}", params: { quantity: 3, description: "x" },
+                                                                             headers: @headers, as: :json
     assert_response :forbidden
   end
 
@@ -152,10 +150,71 @@ class Api::V1::WorkOrdersStaffTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "staff cannot add material in order mode" do
+  test "staff adds catalog material in order mode too and it is recorded in the history" do
     @company.update!(order_mode: :order)
-    post "#{BASE}/#{@mine.id}/items", params: { product_id: products(:one).id }, headers: @headers, as: :json
-    assert_response :forbidden
+    product = products(:one)
+    product.update_columns(company_id: @company.id, price: 30)
+    post "#{BASE}/#{@mine.id}/items", params: { product_id: product.id, quantity: 2 }, headers: @headers, as: :json
+    assert_response :created
+    added = response.parsed_body["events"].find { |e| e["kind"] == "item_added" }
+    assert_equal({ "description" => product.name, "quantity" => "2.0" }, added["data"].transform_values(&:to_s))
+  end
+
+  # --- spec 015: el operador crea y edita sus órdenes ------------------------------------------------
+
+  test "staff creates an order assigned to their own employee with catalog prices only" do
+    product = products(:one)
+    product.update_columns(company_id: @company.id, price: 45)
+
+    assert_difference -> { @company.work_orders.count } do
+      post BASE, params: { work_order: { title: "Mostrador", customer_name: "Juan", priority: "urgent",
+                                         employee_id: employees(:pro_other_employee).id },
+                           items: [ { product_id: product.id, quantity: 2, unit_price: 1 } ],
+                           steps: [ { description: "Paso" } ] },
+                 headers: @headers, as: :json
+    end
+    assert_response :created
+    body = response.parsed_body
+    assert_equal employees(:pro_staff_employee).id, body.dig("employee", "id")
+    assert_equal "medium", body["priority"]
+    assert_equal @staff.id, body.dig("created_by", "id")
+    assert_equal 90.0, body["total"].to_f
+    assert_equal [ 45.0 ], body["items"].map { |i| i["unit_price"].to_f }
+    assert_empty body["steps"]
+    assert_includes body["allowed_actions"], "change_items"
+  end
+
+  test "staff cannot create an order with a free concept" do
+    post BASE, params: { work_order: { title: "Libre" }, items: [ { description: "Servicio", unit_price: 100 } ] },
+               headers: @headers, as: :json
+    assert_response :unprocessable_entity
+    assert_equal 0, @company.work_orders.where(title: "Libre").count
+  end
+
+  test "staff without an employee in the company cannot create orders" do
+    other = create_member(@company, role: :staff)
+    post BASE, params: { work_order: { title: "Sin empleado" } }, headers: auth_headers(other, @company), as: :json
+    assert_response :unprocessable_entity
+    assert_equal "employee_required", response.parsed_body.dig("error", "details", "code")
+  end
+
+  test "staff changes the quantity and removes items of their order with history" do
+    item = work_order_items(:pro_open_labor)
+    patch "#{BASE}/#{@mine.id}/items/#{item.id}", params: { quantity: 5 }, headers: @headers, as: :json
+    assert_response :ok
+    assert_equal 5, item.reload.quantity
+    updated = response.parsed_body["events"].find { |e| e["kind"] == "item_updated" }
+    assert_equal 5, updated.dig("data", "to_quantity").to_i
+
+    delete "#{BASE}/#{@mine.id}/items/#{work_order_items(:pro_open_outlet).id}", headers: @headers
+    assert_response :ok
+    assert(response.parsed_body["events"].any? { |e| e["kind"] == "item_removed" })
+    assert_not WorkOrderItem.exists?(work_order_items(:pro_open_outlet).id)
+  end
+
+  test "staff cannot touch items of an order that is not theirs" do
+    patch "#{BASE}/#{@foreign.id}/items/#{work_order_items(:pro_open_labor).id}", params: { quantity: 9 }, headers: @headers, as: :json
+    assert_response :not_found
   end
 
   test "allowed_actions for staff never include boss actions" do

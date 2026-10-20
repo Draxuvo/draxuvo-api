@@ -19,8 +19,18 @@ class TicketSerializer
       payment_method: ticket.payment_method, amount_received: ticket.amount_received,
       change_given: ticket.change_given, total: ticket.total, paid_at: ticket.paid_at,
       charged_by: person(ticket.charged_by), voided_at: ticket.voided_at,
-      voided_by: person(ticket.voided_by), void_reason: ticket.void_reason
+      voided_by: person(ticket.voided_by), void_reason: ticket.void_reason,
+      payments: ticket.ticket_payments.map { |payment| payment_json(payment) }
     }
+  end
+
+  # Un pago del cobro de una orden (spec 015); los anulados traen `voided_at`.
+  def self.payment_json(payment)
+    CheckSerializer.payment(payment).merge(
+      method_label: I18n.t("ticket.payment_method.#{payment.payment_method}"),
+      authorization_code: payment.authorization_code, card_last4: payment.card_last4, source: payment.source,
+      created_by: person(payment.created_by), created_at: payment.created_at, voided_at: payment.voided_at
+    )
   end
 
   def as_json(*)
@@ -73,7 +83,8 @@ class TicketSerializer
         { description: item.description, quantity: item.quantity, unit: item.unit,
           unit_price: item.unit_price, subtotal: item.subtotal }
       end,
-      employee: order.employee ? { id: order.employee.id, name: order.employee.name } : nil
+      employee: order.employee ? { id: order.employee.id, name: order.employee.name } : nil,
+      payments: @ticket.ticket_payments.map { |payment| self.class.payment_json(payment) }
     }
   end
 

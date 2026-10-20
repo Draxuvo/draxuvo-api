@@ -299,4 +299,11 @@ barra = sazon.stations.find_or_create_by!(name: "Barra") { |st| st.position = 2 
 end
 puts "  [ok] #{sazon.name}: estaciones Cocina y Barra, 6 mesas y menú de restaurante"
 
+# Terminales de cobro (spec 015): el operador elige en cuál se pasó la tarjeta.
+aroma = Company.find_by!(slug: "cafe-aroma")
+[ [ aroma, "BBVA caja 1", "bbva" ], [ aroma, "Point barra", "mercado_pago" ], [ sazon, "Clip mesas", "clip" ] ].each do |company, name, provider|
+  company.payment_terminals.find_or_create_by!(name: name) { |terminal| terminal.provider = provider }
+end
+puts "  [ok] Terminales: BBVA caja 1 y Point barra en #{aroma.name}, Clip mesas en #{sazon.name}"
+
 puts "  Usuarios de demo: dueno@, admin@, manager@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"

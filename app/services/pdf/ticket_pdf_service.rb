@@ -26,7 +26,7 @@ module Pdf
       draw_info(pdf)
       draw_items(pdf) if @items.any?
       draw_totals(pdf)
-      draw_payments(pdf) if @check
+      draw_payments(pdf)
       draw_footer(pdf)
       pdf.render
     end
@@ -124,15 +124,16 @@ module Pdf
       pdf.move_down 50
     end
 
-    # Pagos de una cuenta de restaurante: método, referencia y monto de cada uno.
+    # Pagos de una cuenta o del cobro de una orden (spec 015): método, terminal y referencia o autorización, y
+    # monto de cada uno. Los pagos anulados no salen.
     def draw_payments(pdf)
-      payments = @check.check_payments.order(:id).to_a
+      payments = @check ? @check.check_payments.order(:id).to_a : @ticket.ticket_payments.active.to_a
       return if payments.empty?
 
       pdf.text "Pagos", size: 11, style: :bold
       pdf.move_down 6
       rows = payments.map do |payment|
-        [ I18n.t("ticket.payment_method.#{payment.payment_method}"), payment.reference.to_s, format_money(payment.amount) ]
+        [ I18n.t("ticket.payment_method.#{payment.payment_method}"), payment_detail(payment), format_money(payment.amount) ]
       end
       pdf.table([ [ "Método", "Referencia", "Monto" ] ] + rows, width: pdf.bounds.width) do
         row(0).font_style = :bold
@@ -140,6 +141,11 @@ module Pdf
         self.cell_style = { padding: [ 4, 8 ], size: 9, border_width: 0 }
       end
       pdf.move_down 12
+    end
+
+    def payment_detail(payment)
+      code = payment.respond_to?(:authorization_code) ? payment.authorization_code : nil
+      [ payment.terminal&.name, payment.reference.presence || code ].compact_blank.join(" · ")
     end
 
     def draw_footer(pdf)

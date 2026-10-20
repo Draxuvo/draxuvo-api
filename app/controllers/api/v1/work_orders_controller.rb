@@ -4,12 +4,12 @@ module Api
       include Idempotent
 
       requires_module :work_orders
-      idempotent :create_note, :create_photo
+      idempotent :create_note, :create_photo, :transition
 
       TRANSITIONS = %w[start finish reopen cancel charge void_charge].freeze
       ORDER_TIME_ZONE = "America/Mexico_City".freeze
 
-      before_action :require_boss!,  only: [ :create, :update ]
+      before_action :require_boss!,  only: [ :update ]
       before_action :require_admin!, only: [ :destroy ]
 
       def index
@@ -57,15 +57,20 @@ module Api
         render_order(base_scope.find(params[:id]))
       end
 
+      # El staff (spec 015) crea órdenes asignadas a sí mismo, solo con productos del catálogo y sin pasos.
       def create
-        order = current_company.work_orders.build(work_order_params)
+        order = current_company.work_orders.build(staff? ? staff_order_params : work_order_params)
         order.created_by = current_user
 
         WorkOrder.transaction do
           order.save!
           event(order, :created)
-          build_items(order, params[:items]) if params[:items].present?
-          build_steps(order, params[:steps]) if params[:steps].present? && current_company.order_mode_service?
+          if staff?
+            build_catalog_items(order, params[:items]) if params[:items].present?
+          else
+            build_items(order, params[:items]) if params[:items].present?
+            build_steps(order, params[:steps]) if params[:steps].present? && current_company.order_mode_service?
+          end
         end
 
         render_order(order.reload, status: :created)
@@ -104,8 +109,7 @@ module Api
         action = request.path_parameters[:transition].to_s
         raise ApiErrors::NotFoundError.new unless TRANSITIONS.include?(action)
 
-        WorkOrders::Transition.call(order, action, work_order_context,
-                                    params.permit(:payment_method, :amount_received, :reason))
+        WorkOrders::Transition.call(order, action, work_order_context, transition_params)
         render_order(order)
       end
 
@@ -116,37 +120,40 @@ module Api
 
         attrs =
           if staff?
-            forbid! unless current_company.order_mode_service?
-            product = current_company.products.find_by(id: params[:product_id]) if params[:product_id].present?
-            raise unprocessable(I18n.t("work_order.catalog_item_required")) unless product
-
-            { product_id: product.id, description: product.name, unit: params[:unit].presence,
-              unit_price: product.price, quantity: params[:quantity] || 1 }
+            catalog_item_attributes(params).merge(unit: params[:unit].presence)
           else
             item_attributes(params, order.work_order_items.count)
           end
 
-        order.work_order_items.create!(attrs.merge(position: params[:position] || order.work_order_items.count))
+        item = order.work_order_items.create!(attrs.merge(position: params[:position] || order.work_order_items.count))
+        event(order, :item_added, { description: item.description, quantity: item.quantity })
         render_order(order.reload, status: :created)
       end
 
       # PATCH /api/v1/work_orders/:id/items/:item_id
+      # El staff solo cambia la cantidad de los artículos de sus órdenes (spec 015, FR-003).
       def update_item
         order = base_scope.find(params[:id])
-        require_boss!
         ensure_unlocked!(order)
+        attrs = item_params
+        forbid! if staff? && (attrs.keys - [ "quantity" ]).any?
 
-        order.work_order_items.find(params[:item_id]).update!(item_params)
+        item = order.work_order_items.find(params[:item_id])
+        from_quantity = item.quantity
+        item.update!(attrs)
+        if item.quantity != from_quantity
+          event(order, :item_updated, { description: item.description, from_quantity: from_quantity, to_quantity: item.quantity })
+        end
         render_order(order.reload)
       end
 
       # DELETE /api/v1/work_orders/:id/items/:item_id
       def destroy_item
         order = base_scope.find(params[:id])
-        require_boss!
         ensure_unlocked!(order)
 
-        order.work_order_items.find(params[:item_id]).destroy!
+        item = order.work_order_items.find(params[:item_id]).destroy!
+        event(order, :item_removed, { description: item.description, quantity: item.quantity })
         render_order(order.reload)
       end
 
@@ -291,6 +298,29 @@ module Api
         end
       end
 
+      # Lo único que el staff decide al crear: qué es y quién es el cliente. Queda asignada a su empleado.
+      def staff_order_params
+        raise unprocessable(I18n.t("work_order.employee_required"), details: { code: "employee_required" }) unless current_employee
+
+        params.require(:work_order).permit(:title, :description, :customer_name, :customer_phone)
+              .merge(employee_id: current_employee.id)
+      end
+
+      # Artículo del catálogo con su precio: el staff no pone precios ni conceptos libres.
+      def catalog_item_attributes(item)
+        product = current_company.products.find_by(id: item[:product_id]) if item[:product_id].present?
+        raise unprocessable(I18n.t("work_order.catalog_item_required")) unless product
+
+        { product_id: product.id, description: product.name, unit_price: product.price, quantity: item[:quantity] || 1 }
+      end
+
+      def build_catalog_items(order, items)
+        Array(items).each_with_index do |item, idx|
+          order.work_order_items.create!(catalog_item_attributes(item).merge(position: idx))
+        end
+        order.recalculate_total!
+      end
+
       def item_attributes(item, idx)
         product = current_company.products.find_by(id: item[:product_id]) if item[:product_id].present?
         {
@@ -340,6 +370,12 @@ module Api
             order.work_order_steps.create!(description: step[:description], position: step[:position] || idx)
           end
         end
+      end
+
+      # `payments` es el cobro con varios pagos (spec 015); `payment_method` y `amount_received`, el formato anterior.
+      def transition_params
+        params.permit(:payment_method, :amount_received, :reason,
+                      payments: %i[method amount amount_received terminal_id authorization_code card_last4 reference])
       end
 
       def item_params

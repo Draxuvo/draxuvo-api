@@ -150,4 +150,22 @@ class Restaurant::AddPaymentTest < ActiveSupport::TestCase
 
     assert_not dining_tables(:table_1).occupied?
   end
+
+  # --- spec 015: terminal en pagos con tarjeta ---
+
+  test "a card payment keeps the chosen terminal and still requires a reference" do
+    terminal = payment_terminals(:resto_point)
+    result = pay(method: "card", amount: "50", reference: "A1", terminal_id: terminal.id)
+    assert_equal terminal, result.payment.terminal
+    assert_equal "manual", result.payment.source
+
+    assert_equal "reference_required", code_of { pay(method: "card", amount: "50", terminal_id: terminal.id) }
+  end
+
+  test "a terminal of another company or inactive is rejected" do
+    assert_equal "invalid_terminal", code_of { pay(method: "card", amount: "50", reference: "A1", terminal_id: payment_terminals(:pro_bbva).id) }
+    payment_terminals(:resto_point).update!(active: false)
+    assert_equal "invalid_terminal", code_of { pay(method: "card", amount: "50", reference: "A1", terminal_id: payment_terminals(:resto_point).id) }
+    assert_equal 0, @check.check_payments.count
+  end
 end

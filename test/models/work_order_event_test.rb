@@ -35,7 +35,8 @@ class WorkOrderEventTest < ActiveSupport::TestCase
   end
 
   test "all kinds are exposed" do
-    assert_equal %w[created started finished reopened charged voided cancelled reassigned note photo],
+    assert_equal %w[created started finished reopened charged voided cancelled reassigned note photo
+                    item_added item_updated item_removed],
                  WorkOrderEvent.kinds.keys
   end
 

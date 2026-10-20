@@ -108,4 +108,38 @@ class Reports::IncomeServiceTest < ActiveSupport::TestCase
     assert_equal users(:resto_waiter).full_name, row[:work_order][:employee]
     assert_nil row[:work_order][:id]
   end
+
+  # --- spec 015: desglose por método y por terminal ---
+
+  test "by_method and by_terminal add the active payments of orders and restaurant checks" do
+    company = companies(:pro_co)
+    range = Time.utc(2020, 1, 1)..Time.utc(2030, 12, 31)
+    paid = tickets(:pro_paid_ticket)
+    paid.update_columns(paid_at: Time.utc(2026, 3, 10), payment_method: Ticket.payment_methods[:mixed])
+    paid.ticket_payments.create!(company: company, payment_method: :cash, amount: 120, amount_received: 200, created_by: users(:pro_co_owner))
+    paid.ticket_payments.create!(company: company, payment_method: :card, amount: 80, created_by: users(:pro_co_owner))
+    paid.ticket_payments.create!(company: company, payment_method: :card, amount: 999, created_by: users(:pro_co_owner),
+                                 voided_at: Time.current)
+
+    result = Reports::IncomeService.new(company, range, "month").call
+
+    assert_equal [ { method: "card", label: "Tarjeta", total: 580.0, count: 2 }, { method: "cash", label: "Efectivo", total: 120.0, count: 1 } ],
+                 result[:by_method]
+    bbva = payment_terminals(:pro_bbva)
+    assert_equal [ { terminal: { id: bbva.id, name: "BBVA caja 1", provider: "bbva" }, total: 500.0, count: 1 },
+                   { terminal: nil, total: 80.0, count: 1 } ], result[:by_terminal]
+  end
+
+  test "restaurant check payments count with their terminal" do
+    company = companies(:resto_co)
+    range = Time.utc(2020, 1, 1)..Time.utc(2030, 12, 31)
+    tickets(:resto_paid_ticket).update_columns(paid_at: Time.utc(2026, 3, 10))
+    CheckPayment.where(check: checks(:closed_check)).update_all(payment_method: CheckPayment.payment_methods[:card],
+                                                               terminal_id: payment_terminals(:resto_point).id, reference: "R1")
+
+    result = Reports::IncomeService.new(company, range, "month").call
+
+    assert_equal "card", result[:by_method].first[:method]
+    assert_equal "Point barra", result[:by_terminal].first.dig(:terminal, :name)
+  end
 end

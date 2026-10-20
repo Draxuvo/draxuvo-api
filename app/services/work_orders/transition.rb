@@ -4,7 +4,6 @@ module WorkOrders
   class Transition
     BOSS_ROLES  = Authorizable::BOSS_ROLES
     ADMIN_ROLES = Authorizable::ADMIN_ROLES
-    PAYMENT_METHODS = Ticket.payment_methods.keys.freeze
 
     # Quién actúa: la persona (User), su rol en la empresa y su empleado en esa empresa (si tiene).
     Context = Struct.new(:user, :role, :employee, keyword_init: true) do
@@ -91,44 +90,49 @@ module WorkOrders
       event(:cancelled, { reason: reason })
     end
 
+    # Uno o varios pagos (spec 015); `ChargePayments` valida y reparte, aquí se guarda todo junto.
     def charge
-      method = @params[:payment_method].to_s
-      unless PAYMENT_METHODS.include?(method)
-        raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("ticket.invalid_payment_method"))
-      end
-
       @order.recalculate_total!
       total = @order.total
       if @order.work_order_items.none? { |item| item.unit_price.to_f.positive? } || !total.positive?
         raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("work_order.no_items"), details: { reason: "no_items" })
       end
 
-      received = method == "cash" ? decimal(@params[:amount_received]) : total
-      if received < total
-        raise ApiErrors::UnprocessableEntityError.new(
-          message: I18n.t("ticket.insufficient_cash"),
-          details: { missing: (total - received).to_s("F") }
-        )
-      end
-
+      split = ChargePayments.call(@order.company, total, @params)
       ticket = @order.ticket || @order.build_ticket(company: @order.company)
       ticket.assign_attributes(
-        status: :paid, total: total, payment_method: method, amount_received: received,
-        change_given: received - total, charged_by: @context.user, paid_at: Time.current,
+        status: :paid, total: total, payment_method: split.payment_method, amount_received: split.amount_received,
+        change_given: split.change_given, charged_by: @context.user, paid_at: Time.current,
         voided_at: nil, voided_by: nil, void_reason: nil
       )
       ticket.save!
+      split.payments.each do |attrs|
+        ticket.ticket_payments.create!(attrs.merge(company: @order.company, created_by: @context.user))
+      end
       @order.update!(status: :paid)
-      event(:charged, { ticket_id: ticket.id, folio: ticket.folio, payment_method: method, total: total.to_s("F"),
-                        amount_received: received.to_s("F"), change_given: (received - total).to_s("F") })
+      event(:charged, { ticket_id: ticket.id, folio: ticket.folio, payment_method: split.payment_method, total: total.to_s("F"),
+                        amount_received: split.amount_received.to_s("F"), change_given: split.change_given.to_s("F"),
+                        payments: payments_summary(split.payments) })
     end
 
+    # Los pagos quedan anulados y en la historia; al volver a cobrar se usa el mismo folio (research R6).
     def void_charge
       reason = require_reason!
       ticket = @order.ticket
-      ticket.update!(status: :voided, voided_at: Time.current, voided_by: @context.user, void_reason: reason)
+      now = Time.current
+      voided = ticket.ticket_payments.active.to_a
+      ticket.ticket_payments.active.update_all(voided_at: now, updated_at: now)
+      ticket.update!(status: :voided, voided_at: now, voided_by: @context.user, void_reason: reason)
       @order.update!(status: :done)
-      event(:voided, { ticket_id: ticket.id, reason: reason })
+      event(:voided, { ticket_id: ticket.id, reason: reason, payments: payments_summary(voided) })
+    end
+
+    def payments_summary(payments)
+      payments.map do |payment|
+        method = payment.respond_to?(:payment_method) ? payment.payment_method : payment[:payment_method]
+        amount = payment.respond_to?(:amount) ? payment.amount : payment[:amount]
+        { method: method.to_s, amount: amount.to_s("F") }
+      end
     end
 
     def require_reason!
