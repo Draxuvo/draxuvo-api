@@ -22,56 +22,59 @@ tables: ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Mesa 5", "Mesa 6", "Mesa 7", "
 terminals: []
 
 products:
+  # Platillos (2026-10-20, decisión del dueño): 50 de existencia sin control de inventario (no se agotan) y costo
+  # estimado como 35 % del precio de venta, regla común de costo de comida, hasta tener las recetas.
+
   # --- Tostadas ---
-  - { sku: AMQ-TOS-PUL, name: Tostada de pulpo, category: Tostadas, price: 25, station: Cocina }
-  - { sku: AMQ-TOS-CAM, name: Tostada de camarón, category: Tostadas, price: 30, station: Cocina }
-  - { sku: AMQ-TOS-SUR, name: Tostada de surimi, category: Tostadas, price: 25, station: Cocina }
-  - { sku: AMQ-TOS-CAP, name: Tostada campechana, category: Tostadas, price: 35, station: Cocina }
+  - { sku: AMQ-TOS-PUL, name: Tostada de pulpo, category: Tostadas, price: 25, cost: 9, station: Cocina, stock: 50 }
+  - { sku: AMQ-TOS-CAM, name: Tostada de camarón, category: Tostadas, price: 30, cost: 10, station: Cocina, stock: 50 }
+  - { sku: AMQ-TOS-SUR, name: Tostada de surimi, category: Tostadas, price: 25, cost: 9, station: Cocina, stock: 50 }
+  - { sku: AMQ-TOS-CAP, name: Tostada campechana, category: Tostadas, price: 35, cost: 12, station: Cocina, stock: 50 }
 
   # --- Camarones ---
-  - { sku: AMQ-CAM-MAN, name: Camarones a la mantequilla, category: Camarones, price: 90, station: Cocina }
-  - { sku: AMQ-CAM-MOJ, name: Camarones al mojo de ajo, category: Camarones, price: 90, station: Cocina }
-  - { sku: AMQ-CAM-DIA, name: Camarones a la diabla, category: Camarones, price: 90, station: Cocina }
-  - { sku: AMQ-CAM-AJI, name: Camarones al ajillo, category: Camarones, price: 90, station: Cocina }
+  - { sku: AMQ-CAM-MAN, name: Camarones a la mantequilla, category: Camarones, price: 90, cost: 31, station: Cocina, stock: 50 }
+  - { sku: AMQ-CAM-MOJ, name: Camarones al mojo de ajo, category: Camarones, price: 90, cost: 31, station: Cocina, stock: 50 }
+  - { sku: AMQ-CAM-DIA, name: Camarones a la diabla, category: Camarones, price: 90, cost: 31, station: Cocina, stock: 50 }
+  - { sku: AMQ-CAM-AJI, name: Camarones al ajillo, category: Camarones, price: 90, cost: 31, station: Cocina, stock: 50 }
 
   # --- Filete ---
-  - { sku: AMQ-FIL-PLA, name: Filete a la plancha, category: Filete, price: 100, station: Cocina }
-  - { sku: AMQ-FIL-MAN, name: Filete a la mantequilla, category: Filete, price: 100, station: Cocina }
-  - { sku: AMQ-FIL-MOJ, name: Filete al mojo de ajo, category: Filete, price: 100, station: Cocina }
-  - { sku: AMQ-FIL-AJI, name: Filete al ajillo, category: Filete, price: 100, station: Cocina }
-  - { sku: AMQ-FIL-DIA, name: Filete a la diabla, category: Filete, price: 100, station: Cocina }
-  - { sku: AMQ-FIL-EMP, name: Filete empapelado, category: Filete, price: 110, station: Cocina }
+  - { sku: AMQ-FIL-PLA, name: Filete a la plancha, category: Filete, price: 100, cost: 35, station: Cocina, stock: 50 }
+  - { sku: AMQ-FIL-MAN, name: Filete a la mantequilla, category: Filete, price: 100, cost: 35, station: Cocina, stock: 50 }
+  - { sku: AMQ-FIL-MOJ, name: Filete al mojo de ajo, category: Filete, price: 100, cost: 35, station: Cocina, stock: 50 }
+  - { sku: AMQ-FIL-AJI, name: Filete al ajillo, category: Filete, price: 100, cost: 35, station: Cocina, stock: 50 }
+  - { sku: AMQ-FIL-DIA, name: Filete a la diabla, category: Filete, price: 100, cost: 35, station: Cocina, stock: 50 }
+  - { sku: AMQ-FIL-EMP, name: Filete empapelado, category: Filete, price: 110, cost: 38, station: Cocina, stock: 50 }
 
   # --- Mojarras ---
-  - { sku: AMQ-MOJ-FRI, name: Mojarra frita, category: Mojarras, price: 120, station: Cocina }
-  - { sku: AMQ-MOJ-MOJ, name: Mojarra al mojo de ajo, category: Mojarras, price: 125, station: Cocina }
-  - { sku: AMQ-MOJ-AJI, name: Mojarra al ajillo, category: Mojarras, price: 130, station: Cocina }
-  - { sku: AMQ-MOJ-DIA, name: Mojarra a la diabla, category: Mojarras, price: 130, station: Cocina }
-  - { sku: AMQ-MOJ-VER, name: Mojarra a la veracruzana, category: Mojarras, price: 140, station: Cocina }
+  - { sku: AMQ-MOJ-FRI, name: Mojarra frita, category: Mojarras, price: 120, cost: 42, station: Cocina, stock: 50 }
+  - { sku: AMQ-MOJ-MOJ, name: Mojarra al mojo de ajo, category: Mojarras, price: 125, cost: 44, station: Cocina, stock: 50 }
+  - { sku: AMQ-MOJ-AJI, name: Mojarra al ajillo, category: Mojarras, price: 130, cost: 46, station: Cocina, stock: 50 }
+  - { sku: AMQ-MOJ-DIA, name: Mojarra a la diabla, category: Mojarras, price: 130, cost: 46, station: Cocina, stock: 50 }
+  - { sku: AMQ-MOJ-VER, name: Mojarra a la veracruzana, category: Mojarras, price: 140, cost: 49, station: Cocina, stock: 50 }
 
   # --- Cócteles y caldo (chico / grande) ---
-  - { sku: AMQ-COC-CAM-CH, name: Cóctel de camarón chico, category: Cócteles, price: 50, station: Cocina }
-  - { sku: AMQ-COC-CAM-GR, name: Cóctel de camarón grande, category: Cócteles, price: 80, station: Cocina }
-  - { sku: AMQ-COC-PUL-CH, name: Cóctel de pulpo chico, category: Cócteles, price: 45, station: Cocina }
-  - { sku: AMQ-COC-PUL-GR, name: Cóctel de pulpo grande, category: Cócteles, price: 75, station: Cocina }
-  - { sku: AMQ-COC-CAP-CH, name: Cóctel campechano chico, category: Cócteles, price: 65, station: Cocina }
-  - { sku: AMQ-COC-CAP-GR, name: Cóctel campechano grande, category: Cócteles, price: 100, station: Cocina }
-  - { sku: AMQ-CAL-CAM-CH, name: Caldo de camarón chico, category: Cócteles, price: 40, station: Cocina }
-  - { sku: AMQ-CAL-CAM-GR, name: Caldo de camarón grande, category: Cócteles, price: 70, station: Cocina }
+  - { sku: AMQ-COC-CAM-CH, name: Cóctel de camarón chico, category: Cócteles, price: 50, cost: 18, station: Cocina, stock: 50 }
+  - { sku: AMQ-COC-CAM-GR, name: Cóctel de camarón grande, category: Cócteles, price: 80, cost: 28, station: Cocina, stock: 50 }
+  - { sku: AMQ-COC-PUL-CH, name: Cóctel de pulpo chico, category: Cócteles, price: 45, cost: 16, station: Cocina, stock: 50 }
+  - { sku: AMQ-COC-PUL-GR, name: Cóctel de pulpo grande, category: Cócteles, price: 75, cost: 26, station: Cocina, stock: 50 }
+  - { sku: AMQ-COC-CAP-CH, name: Cóctel campechano chico, category: Cócteles, price: 65, cost: 23, station: Cocina, stock: 50 }
+  - { sku: AMQ-COC-CAP-GR, name: Cóctel campechano grande, category: Cócteles, price: 100, cost: 35, station: Cocina, stock: 50 }
+  - { sku: AMQ-CAL-CAM-CH, name: Caldo de camarón chico, category: Cócteles, price: 40, cost: 14, station: Cocina, stock: 50 }
+  - { sku: AMQ-CAL-CAM-GR, name: Caldo de camarón grande, category: Cócteles, price: 70, cost: 24, station: Cocina, stock: 50 }
 
   # --- Carnes (a la plancha) ---
-  - { sku: AMQ-CAR-ARR, name: Arrachera, category: Carnes, price: 150, station: Cocina }
-  - { sku: AMQ-CAR-COS, name: Costilla de res, category: Carnes, price: 100, station: Cocina }
+  - { sku: AMQ-CAR-ARR, name: Arrachera, category: Carnes, price: 150, cost: 52, station: Cocina, stock: 50 }
+  - { sku: AMQ-CAR-COS, name: Costilla de res, category: Carnes, price: 100, cost: 35, station: Cocina, stock: 50 }
 
   # --- Aguachiles ---
-  - { sku: AMQ-AGU-NEG, name: Aguachile negro, category: Aguachiles, price: 150, station: Cocina }
-  - { sku: AMQ-AGU-VER, name: Aguachile verde, category: Aguachiles, price: 170, station: Cocina }
+  - { sku: AMQ-AGU-NEG, name: Aguachile negro, category: Aguachiles, price: 150, cost: 52, station: Cocina, stock: 50 }
+  - { sku: AMQ-AGU-VER, name: Aguachile verde, category: Aguachiles, price: 170, cost: 59, station: Cocina, stock: 50 }
 
   # --- Snacks ---
-  - { sku: AMQ-SNK-NUG, name: Nuggets de pollo, category: Snacks, price: 50, station: Cocina }
-  - { sku: AMQ-SNK-PAP, name: Papas a la francesa, category: Snacks, price: 30, station: Cocina }
-  - { sku: AMQ-SNK-QUE, name: Quesadilla, category: Snacks, price: 15, station: Cocina }
-  - { sku: AMQ-SNK-HAM, name: Hamburguesa, category: Snacks, price: 45, station: Cocina }
+  - { sku: AMQ-SNK-NUG, name: Nuggets de pollo, category: Snacks, price: 50, cost: 18, station: Cocina, stock: 50 }
+  - { sku: AMQ-SNK-PAP, name: Papas a la francesa, category: Snacks, price: 30, cost: 10, station: Cocina, stock: 50 }
+  - { sku: AMQ-SNK-QUE, name: Quesadilla, category: Snacks, price: 15, cost: 5, station: Cocina, stock: 50 }
+  - { sku: AMQ-SNK-HAM, name: Hamburguesa, category: Snacks, price: 45, cost: 16, station: Cocina, stock: 50 }
 
   # --- Cerveza 1/2 ---
   # Cervezas (2026-10-20, decisión del dueño): costo = precio por pieza en tiendas en línea, venta = costo + $20.
