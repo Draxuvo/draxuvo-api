@@ -48,6 +48,19 @@ class Catalogs::LoaderTest < ActiveSupport::TestCase
     assert_equal 24, corona.stock
   end
 
+  test "stock added later to an already loaded product is entered once" do
+    plain = data("products" => [ { "sku" => "T-3", "name" => "Victoria", "price" => 25, "station" => "Barra" } ])
+    Catalogs::Loader.call(plain, owner_email: @owner.email)
+    tracked = data("products" => [ { "sku" => "T-3", "name" => "Victoria", "price" => 38, "station" => "Barra",
+                                     "tracks_stock" => true, "stock" => 500, "min_stock" => 50 } ])
+    2.times { Catalogs::Loader.call(tracked, owner_email: @owner.email) }
+
+    victoria = @company.products.find_by!(sku: "T-3")
+    assert_equal 500, victoria.stock
+    assert victoria.tracks_stock
+    assert_equal 1, victoria.stock_movements.count
+  end
+
   test "an unknown station or an owner of nothing stops the load" do
     bad = data("products" => [ { "sku" => "X", "name" => "X", "station" => "Terraza" } ])
     assert_raises(ArgumentError) { Catalogs::Loader.call(bad, owner_email: @owner.email) }

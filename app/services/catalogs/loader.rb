@@ -1,6 +1,7 @@
 # Carga el catálogo inicial de un negocio desde un YAML (db/catalogs/*.yml): modo de órdenes, estaciones,
 # mesas, terminales y productos con su inventario inicial. Se puede volver a correr: busca por nombre o SKU,
-# actualiza nombre, precio, categoría y estación, y solo registra la entrada de inventario al crear el producto.
+# actualiza nombre, precio, categoría y estación, y solo registra la entrada de inventario si el producto aún no
+# tiene movimientos (así se puede activar el inventario de un producto ya cargado).
 module Catalogs
   class Loader
     Result = Struct.new(:company, :created, :updated, :warnings, keyword_init: true)
@@ -66,7 +67,6 @@ module Catalogs
     def load_products(company, stations)
       Array(@data["products"]).each do |item|
         product = company.products.find_or_initialize_by(sku: item.fetch("sku"))
-        new_record = product.new_record?
         station = item["station"] && stations.fetch(item["station"]) { raise ArgumentError, "Estación #{item['station']} no está en stations" }
         count(product) do
           product.update!(
@@ -76,7 +76,7 @@ module Catalogs
           )
         end
         stock = item["stock"].to_i
-        next unless new_record && stock.positive?
+        next unless stock.positive? && product.stock_movements.none?
 
         StockMovement.create!(product: product, company: company, movement_type: :entry, qty: stock, note: "Inventario inicial")
       end
