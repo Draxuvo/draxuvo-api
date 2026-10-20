@@ -9,7 +9,7 @@ module Api
           availability = ::Restaurant::Availability.new(current_company)
           render json: {
             results: availability.alerts.map do |p|
-              { id: p.id, name: p.name, stock: p.stock, min_stock: p.min_stock, sold_out: availability.sold_out?(p) }
+              { id: p.id, name: p.name, stock: Product.quantity(p.stock), min_stock: Product.quantity(p.min_stock), sold_out: availability.sold_out?(p) }
             end
           }
         end

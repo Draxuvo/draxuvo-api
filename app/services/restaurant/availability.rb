@@ -26,13 +26,14 @@ module Restaurant
       !qty.nil? && qty <= 0
     end
 
+    # Misma regla que Product.low_stock (spec 016): tipo que se cuenta, mínimo mayor que cero.
     def low?(product)
-      product.tracks_stock? && product.min_stock.present? && product.stock.to_i <= product.min_stock
+      product.low_stock?
     end
 
     # Productos controlados agotados o en su mínimo (alertas del encargado, FR-042).
     def alerts
-      @company.products.tracked.order(:name).select { |p| sold_out?(p) || low?(p) }
+      @company.products.tracked.includes(:product_type).order(:name).select { |p| sold_out?(p) || low?(p) }
     end
   end
 end

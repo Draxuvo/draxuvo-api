@@ -1,0 +1,9 @@
+# Catálogo de unidades (db/seeds.rb y la migración de la spec 016).
+<% [ %w[pza Pieza cantidad 1], %w[hr Hora tiempo 2], %w[kg Kilogramo peso 3], %w[lt Litro volumen 4], %w[mts Metro longitud 5],
+     %w[serv Servicio servicio 6], %w[g Gramo peso 7], %w[ml Mililitro volumen 8], %w[paq Paquete cantidad 9] ].each do |key, name, group, position| %>
+<%= key %>:
+  key: <%= key %>
+  name: <%= name %>
+  group: <%= group %>
+  position: <%= position %>
+<% end %>

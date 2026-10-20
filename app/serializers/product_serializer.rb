@@ -7,6 +7,9 @@ class ProductSerializer
   end
 
   def as_json(*)
+    type = @product.product_type
+    counted = type&.counted
+    unit = @product.unit
     {
       id:          @product.id,
       sku:         @product.sku,
@@ -15,10 +18,13 @@ class ProductSerializer
       category:    @product.category,
       price:       @product.price,
       available:   @product.available,
-      stock:       @product.stock,
-      min_stock:   @product.min_stock,
+      # En tipos que no se cuentan la existencia no aplica (spec 016).
+      stock:       counted ? Product.quantity(@product.stock) : nil,
+      min_stock:   counted ? Product.quantity(@product.min_stock) : nil,
       unit_cost:   @product.unit_cost,
-      low_stock:   @product.min_stock.present? && @product.stock <= @product.min_stock,
+      low_stock:   @product.low_stock?,
+      product_type: type && { id: type.id, name: type.name, sellable: type.sellable, counted: type.counted, fractional: type.fractional },
+      unit:        unit && { key: unit.key, name: unit.name },
       tracks_stock: @product.tracks_stock,
       station_id:  @product.station_id,
       available_qty: @availability.available_qty(@product),

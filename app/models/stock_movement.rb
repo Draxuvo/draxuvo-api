@@ -7,6 +7,7 @@ class StockMovement < ApplicationRecord
 
   validates :qty, presence: true, numericality: { other_than: 0 }
   validate :adjustment_keeps_stock_non_negative, on: :create
+  validate :whole_quantity, unless: -> { product&.fractional? }
 
   scope :search, ->(q) {
     joins(:product).where("products.name ILIKE :q OR stock_movements.note ILIKE :q", q: "%#{q}%") if q.present?
@@ -18,10 +19,15 @@ class StockMovement < ApplicationRecord
 
   # increment! no pasa por las validaciones de Product, así que se revisa aquí.
   def adjustment_keeps_stock_non_negative
-    return unless adjustment? && qty.to_i.negative? && product
-    return if product.stock.to_i + qty >= 0
+    return unless adjustment? && qty.to_d.negative? && product
+    return if product.stock.to_d + qty >= 0
 
-    errors.add(:qty, :greater_than_or_equal_to, count: -product.stock.to_i)
+    errors.add(:qty, :greater_than_or_equal_to, count: -product.stock.to_d)
+  end
+
+  # Solo los tipos con decimales (spec 016) aceptan fracciones.
+  def whole_quantity
+    errors.add(:qty, :integer_only) if qty && qty.to_d != qty.to_d.round
   end
 
   # entry suma y exit resta el valor absoluto; adjustment respeta el signo de qty.

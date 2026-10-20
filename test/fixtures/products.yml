@@ -1,5 +1,6 @@
 one:
   company: one
+  product_type: one_counted
   sku: CON-001
   name: Contacto doble
   stock: 18
@@ -7,9 +8,11 @@ one:
   unit_cost: 45.00
   price: 80.00
   category: Eléctrico
+  tracks_stock: true
 
 two:
   company: two
+  product_type: two_counted
   sku: CIN-001
   name: Cinta aislante
   stock: 10
@@ -17,10 +20,12 @@ two:
   unit_cost: 12.00
   price: 25.00
   category: Eléctrico
+  tracks_stock: true
 
 # Menú del restaurante de prueba. `cola` es controlada y está bajo su mínimo; `tacos` es controlado con existencias.
 resto_tacos:
   company: resto_co
+  product_type: resto_co_counted
   sku: TAC-001
   name: Tacos al pastor
   stock: 10
@@ -33,6 +38,7 @@ resto_tacos:
 
 resto_sopa:
   company: resto_co
+  product_type: resto_co_sold
   sku: SOP-001
   name: Sopa del día
   stock: 0
@@ -45,6 +51,7 @@ resto_sopa:
 
 resto_cola:
   company: resto_co
+  product_type: resto_co_counted
   sku: COL-001
   name: Refresco de cola
   stock: 2
@@ -57,6 +64,7 @@ resto_cola:
 
 resto_agua:
   company: resto_co
+  product_type: resto_co_sold
   sku: AGU-001
   name: Agua de horchata
   stock: 0

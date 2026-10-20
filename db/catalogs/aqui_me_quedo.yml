@@ -99,23 +99,23 @@ products:
   # --- Insumos de cocina (inventario, no salen en el menú: available: false) ---
   # Costo por kilo o por paquete según la búsqueda en la web del 2026-10-20 (mercados y supermercados de México);
   # "estimado" donde no hubo precio publicado. Existencia inicial de 100 y mínimo de 20, por decisión del dueño.
-  - { sku: AMQ-INS-CAM, name: Camarón crudo (kg), category: Insumos, cost: 220, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-PUL, name: Pulpo (kg), category: Insumos, cost: 320, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-FIL, name: Filete de tilapia (kg), category: Insumos, cost: 121, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-MOJ, name: Mojarra (kg), category: Insumos, cost: 120, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-SUR, name: Surimi (kg), category: Insumos, cost: 120, available: false, stock: 100, min_stock: 20, description: Costo estimado }
-  - { sku: AMQ-INS-ARR, name: Arrachera (kg), category: Insumos, cost: 250, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-COS, name: Costilla de res (kg), category: Insumos, cost: 250, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-AGU, name: Aguacate Hass (kg), category: Insumos, cost: 51, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-LIM, name: Limón (kg), category: Insumos, cost: 50, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-JIT, name: Jitomate saladet (kg), category: Insumos, cost: 27, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-CEB, name: Cebolla blanca (kg), category: Insumos, cost: 26, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-PEP, name: Pepino (kg), category: Insumos, cost: 8, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-AJO, name: Ajo (kg), category: Insumos, cost: 89, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-QUE, name: Queso Oaxaca (kg), category: Insumos, cost: 186, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-TOR, name: Tortilla (kg), category: Insumos, cost: 30, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-PAP, name: Papa (kg), category: Insumos, cost: 50, available: false, stock: 100, min_stock: 20 }
-  - { sku: AMQ-INS-NUG, name: Nuggets de pollo congelados (kg), category: Insumos, cost: 150, available: false, stock: 100, min_stock: 20, description: Costo estimado }
-  - { sku: AMQ-INS-MAN, name: Mantequilla (kg), category: Insumos, cost: 200, available: false, stock: 100, min_stock: 20, description: Costo estimado }
-  - { sku: AMQ-INS-PAN, name: Pan para hamburguesa (paquete de 8), category: Insumos, cost: 45, available: false, stock: 100, min_stock: 20, description: Costo estimado }
-  - { sku: AMQ-INS-TOS, name: Tostadas (paquete), category: Insumos, cost: 35, available: false, stock: 100, min_stock: 20, description: Costo estimado }
+  - { sku: AMQ-INS-CAM, name: Camarón crudo (kg), category: Insumos, cost: 220, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-PUL, name: Pulpo (kg), category: Insumos, cost: 320, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-FIL, name: Filete de tilapia (kg), category: Insumos, cost: 121, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-MOJ, name: Mojarra (kg), category: Insumos, cost: 120, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-SUR, name: Surimi (kg), category: Insumos, cost: 120, unit: kg, available: false, stock: 100, min_stock: 20, description: Costo estimado }
+  - { sku: AMQ-INS-ARR, name: Arrachera (kg), category: Insumos, cost: 250, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-COS, name: Costilla de res (kg), category: Insumos, cost: 250, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-AGU, name: Aguacate Hass (kg), category: Insumos, cost: 51, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-LIM, name: Limón (kg), category: Insumos, cost: 50, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-JIT, name: Jitomate saladet (kg), category: Insumos, cost: 27, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-CEB, name: Cebolla blanca (kg), category: Insumos, cost: 26, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-PEP, name: Pepino (kg), category: Insumos, cost: 8, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-AJO, name: Ajo (kg), category: Insumos, cost: 89, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-QUE, name: Queso Oaxaca (kg), category: Insumos, cost: 186, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-TOR, name: Tortilla (kg), category: Insumos, cost: 30, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-PAP, name: Papa (kg), category: Insumos, cost: 50, unit: kg, available: false, stock: 100, min_stock: 20 }
+  - { sku: AMQ-INS-NUG, name: Nuggets de pollo congelados (kg), category: Insumos, cost: 150, unit: kg, available: false, stock: 100, min_stock: 20, description: Costo estimado }
+  - { sku: AMQ-INS-MAN, name: Mantequilla (kg), category: Insumos, cost: 200, unit: kg, available: false, stock: 100, min_stock: 20, description: Costo estimado }
+  - { sku: AMQ-INS-PAN, name: Pan para hamburguesa (paquete de 8), category: Insumos, cost: 45, unit: paq, available: false, stock: 100, min_stock: 20, description: Costo estimado }
+  - { sku: AMQ-INS-TOS, name: Tostadas (paquete), category: Insumos, cost: 35, unit: paq, available: false, stock: 100, min_stock: 20, description: Costo estimado }

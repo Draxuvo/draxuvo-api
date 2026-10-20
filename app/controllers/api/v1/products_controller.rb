@@ -6,20 +6,24 @@ module Api
       before_action :set_product, only: [ :show, :update, :destroy ]
 
       def index
-        products = current_company.products.search(params[:search])
-        products = products.where("stock <= min_stock")  if params[:low_stock]  == "true"
-        products = products.where(stock: 0)              if params[:out_of_stock] == "true"
-        products = products.where(available: true)       if params[:available]  == "true"
+        products = current_company.products.includes(:product_type).search(params[:search])
+        # Bajo inventario y agotado solo en tipos que se cuentan (spec 016, FR-013).
+        products = products.low_stock                                   if params[:low_stock]  == "true"
+        products = products.counted.where(stock: 0)                     if params[:out_of_stock] == "true"
+        products = products.where(available: true)                      if params[:available]  == "true"
+        products = products.sellable                                    if params[:sellable] == "true"
+        products = products.where(product_type_id: params[:product_type_id]) if params[:product_type_id].present?
         products = products.by_category(params[:category]) if params[:category].present?
         products = apply_sort(products, allowed: %i[name sku stock min_stock unit_cost category created_at], default: :name)
         @pagy, @products = pagy(products)
-        render json: paginate_response(@pagy, @products)
+        availability = ::Restaurant::Availability.new(current_company)
+        render json: paginate_response(@pagy, @products.map { |p| ProductSerializer.new(p, availability: availability).as_json })
       end
 
       # GET /api/v1/products/menu
       # Retorna los productos disponibles agrupados por categoría para usar como menú
       def menu
-        products = current_company.products.available.search(params[:search])
+        products = current_company.products.available.sellable.includes(:product_type).search(params[:search])
         products = products.by_category(params[:category]) if params[:category].present?
         products = products.order(:category, :name)
 
@@ -34,18 +38,19 @@ module Api
         render json: { menu: grouped }
       end
 
+      # Con ProductSerializer: tipo, unidad y existencias como números (spec 016).
       def show
-        render json: @product
+        render json: ProductSerializer.new(@product).as_json
       end
 
       def create
         product = current_company.products.create!(product_params)
-        render json: product, status: :created
+        render json: ProductSerializer.new(product).as_json, status: :created
       end
 
       def update
         @product.update!(product_params)
-        render json: @product
+        render json: ProductSerializer.new(@product).as_json
       end
 
       def destroy
@@ -84,7 +89,8 @@ module Api
       end
 
       def product_params
-        params.require(:product).permit(:sku, :name, :description, :category, :price, :available, :stock, :min_stock, :unit_cost, :station_id, :tracks_stock)
+        params.require(:product).permit(:sku, :name, :description, :category, :price, :available, :stock, :min_stock, :unit_cost,
+                                        :station_id, :product_type_id, :unit_key)
       end
     end
   end

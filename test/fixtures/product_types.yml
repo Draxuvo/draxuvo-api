@@ -1,0 +1,33 @@
+# Tipos iniciales (spec 016) de las empresas que tienen productos en fixtures. `resto_co` usa los del restaurante.
+<% { "one" => :service, "two" => :service, "resto_co" => :order }.each do |co, mode| %>
+<% names = mode == :order ? %w[Platillo Bebida Insumo] : %w[Servicio Refacción Material] %>
+<%= co %>_sold:
+  company: <%= co %>
+  name: <%= names[0] %>
+  kind: sold
+  sellable: true
+  counted: false
+  fractional: false
+  default_unit_key: <%= mode == :order ? "pza" : "serv" %>
+  position: 1
+
+<%= co %>_counted:
+  company: <%= co %>
+  name: <%= names[1] %>
+  kind: counted_sold
+  sellable: true
+  counted: true
+  fractional: false
+  default_unit_key: pza
+  position: 2
+
+<%= co %>_supply:
+  company: <%= co %>
+  name: <%= names[2] %>
+  kind: supply
+  sellable: false
+  counted: true
+  fractional: true
+  default_unit_key: <%= mode == :order ? "kg" : "pza" %>
+  position: 3
+<% end %>

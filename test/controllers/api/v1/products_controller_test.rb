@@ -46,8 +46,37 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
+  # --- spec 016 ---
+
+  test "the menu, the sellable filter and the type filter respect the product type" do
+    company = companies(:resto_co)
+    headers = auth_headers(users(:resto_owner), company)
+    company.products.create!(name: "Limón", sku: "LIM", product_type: product_types(:resto_co_supply), stock: 3)
+
+    get "/api/v1/products/menu", headers: headers
+    names = response.parsed_body["menu"].flat_map { |group| group["items"].map { |item| item["name"] } }
+    assert_not_includes names, "Limón"
+    assert_includes names, "Sopa del día"
+
+    get "/api/v1/products", params: { sellable: "true" }, headers: headers
+    assert_not_includes response.parsed_body["results"].map { |p| p["sku"] }, "LIM"
+
+    get "/api/v1/products", params: { product_type_id: product_types(:resto_co_supply).id }, headers: headers
+    assert_equal [ "LIM" ], response.parsed_body["results"].map { |p| p["sku"] }
+  end
+
+  test "a product of a type that is not counted has no stock in the response" do
+    get "/api/v1/products/#{products(:resto_sopa).id}", headers: auth_headers(users(:resto_owner), companies(:resto_co))
+    body = response.parsed_body
+    assert_nil body["stock"]
+    assert_equal false, body["low_stock"]
+    assert_equal "Platillo", body.dig("product_type", "name")
+  end
+
   def create_product(sku, stock:, min_stock:)
-    @company.products.create!(name: "Producto #{sku}", sku: sku, stock: stock, min_stock: min_stock)
+    # Un tipo que se cuenta (spec 016): solo esos tienen existencia, agotado y bajo inventario.
+    counted = ProductTypes::Defaults.create_missing(@company).find_by!(kind: "counted_sold")
+    @company.products.create!(name: "Producto #{sku}", sku: sku, stock: stock, min_stock: min_stock, product_type: counted)
   end
 
   def skus
@@ -70,11 +99,11 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, items.fetch("SOP-001")["sold_out"]
   end
 
-  test "a product can be assigned a station and inventory tracking" do
+  test "a product can be assigned a station and a counted type, which turns on inventory tracking" do
     company = companies(:resto_co)
     product = products(:resto_agua)
 
-    patch "/api/v1/products/#{product.id}", params: { product: { station_id: stations(:bar).id, tracks_stock: true } },
+    patch "/api/v1/products/#{product.id}", params: { product: { station_id: stations(:bar).id, product_type_id: product_types(:resto_co_counted).id } },
                                             headers: auth_headers(users(:resto_owner), company), as: :json
 
     assert_response :ok

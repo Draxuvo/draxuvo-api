@@ -27,6 +27,6 @@ class UnitTest < ActiveSupport::TestCase
     b = create_unit(key: "b", group: "a", position: 1)
     a = create_unit(key: "a", group: "a", position: 1)
     first = create_unit(key: "z", group: "a", position: 0)
-    assert_equal [ first, a, b, c ], Unit.ordered.to_a
+    assert_equal [ first, a, b, c ], Unit.ordered.where(key: %w[a b c z]).to_a
   end
 end

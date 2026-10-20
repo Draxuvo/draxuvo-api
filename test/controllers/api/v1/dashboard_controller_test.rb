@@ -118,8 +118,23 @@ class Api::V1::DashboardControllerTest < ActionDispatch::IntegrationTest
 
   private
 
+  test "inventory adds the products and the value at cost by type (spec 016)" do
+    create_product("BEB-1", stock: 4, min_stock: 0)
+    @company.products.find_by!(sku: "BEB-1").update!(unit_cost: 10)
+    @company.products.create!(name: "Servicio", sku: "SER-1", product_type: @company.product_types.find_by!(kind: "sold"), unit_cost: 99)
+
+    get "/api/v1/dashboard", headers: auth_headers(@owner, @company)
+    by_type = response.parsed_body.dig("inventory", "by_type").index_by { |row| row["name"] }
+    assert_equal 1, by_type["Refacción"]["products"]
+    assert_equal 40.0, by_type["Refacción"]["value"]
+    assert_equal 1, by_type["Servicio"]["products"]
+    assert_nil by_type["Servicio"]["value"]
+  end
+
   def create_product(sku, stock:, min_stock:)
-    @company.products.create!(name: "Producto #{sku}", sku: sku, stock: stock, min_stock: min_stock)
+    # Un tipo que se cuenta (spec 016): solo esos tienen existencia, agotado y bajo inventario.
+    counted = ProductTypes::Defaults.create_missing(@company).find_by!(kind: "counted_sold")
+    @company.products.create!(name: "Producto #{sku}", sku: sku, stock: stock, min_stock: min_stock, product_type: counted)
   end
 
   def record(checkin_at, type)

@@ -31,3 +31,4 @@ past_due_co:
 resto_co:
   name: Restaurante Prueba
   slug: restaurante-prueba
+  order_mode: 1
