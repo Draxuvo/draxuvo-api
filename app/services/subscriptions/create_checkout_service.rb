@@ -24,8 +24,8 @@ module Subscriptions
         cancel_url: @cancel_url,
         metadata: { company_id: @company.id, plan: @plan, billing_cycle: @billing_cycle },
         tax_id_collection: { enabled: true },
-        # Stripe exige que el cliente existente acepte el nombre fiscal capturado en el checkout.
-        customer_update: { name: "auto" },
+        # Stripe exige que el cliente existente acepte el nombre y la dirección fiscal capturados en el checkout.
+        customer_update: { name: "auto", address: "auto" },
         automatic_tax: { enabled: false }
       )
 
