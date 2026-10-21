@@ -77,7 +77,8 @@ module WorkOrders
       fail!(:invalid_card_last4, index: index) if last4 && last4 !~ /\A\d{4}\z/
 
       terminal = nil
-      if payment[:terminal_id].present?
+      # Sin el módulo Terminales el cobro no se frena: la terminal se ignora (spec 030).
+      if payment[:terminal_id].present? && @company.module_active?(:terminals)
         terminal = PaymentTerminal.usable_for(@company, payment[:terminal_id])
         fail!(:invalid_terminal, index: index) unless terminal
       end

@@ -70,6 +70,8 @@ module Restaurant
     # La terminal en que se cobró con tarjeta, opcional (spec 015, FR-022).
     def terminal_attributes(method)
       return {} unless method == "card" && @params[:terminal_id].present?
+      # Sin el módulo Terminales el cobro no se frena: la terminal se ignora (spec 030).
+      return {} unless @check.company.module_active?(:terminals)
 
       terminal = PaymentTerminal.usable_for(@check.company, @params[:terminal_id])
       fail!(:invalid_terminal) unless terminal

@@ -2,7 +2,9 @@ module Api
   module V1
     # Terminales de cobro del negocio (spec 015): las activas las ve cualquiera con sesión para cobrar;
     # las configura el admin o el dueño (FR-018). Son pocas por empresa, así que no se paginan.
+    # Es un módulo del plan (spec 030): fuera de Pro y Empresa, o desactivado por el super admin, todo es 403.
     class PaymentTerminalsController < BaseController
+      requires_module :terminals
       before_action :require_admin!, only: %i[create update destroy]
 
       def index

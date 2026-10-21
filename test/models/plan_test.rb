@@ -10,8 +10,8 @@ class PlanTest < ActiveSupport::TestCase
 
   EXPECTED_MODULES = {
     basic:      %i[employees attendance inventory],
-    pro:        %i[employees attendance inventory work_orders tickets reports restaurant],
-    enterprise: %i[employees attendance inventory work_orders tickets reports restaurant whatsapp multi_company]
+    pro:        %i[employees attendance inventory work_orders tickets reports restaurant terminals],
+    enterprise: %i[employees attendance inventory work_orders tickets reports restaurant terminals whatsapp multi_company]
   }.freeze
 
   test "keys are basic, pro and enterprise in that order" do
@@ -23,8 +23,8 @@ class PlanTest < ActiveSupport::TestCase
     assert_equal Subscription.plans.keys.map(&:to_sym).sort, Plan.keys.sort
   end
 
-  test "MODULES lists the nine modules in order" do
-    assert_equal %i[employees attendance inventory work_orders tickets reports restaurant whatsapp multi_company],
+  test "MODULES lists the ten modules in order" do
+    assert_equal %i[employees attendance inventory work_orders tickets reports restaurant terminals whatsapp multi_company],
                  Plan::MODULES
   end
 

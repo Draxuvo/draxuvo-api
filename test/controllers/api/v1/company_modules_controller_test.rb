@@ -6,7 +6,7 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
   PATH = "/api/v1/company/modules".freeze
 
   BASIC_MODULES = %w[employees attendance inventory].freeze
-  PRO_MODULES = %w[employees attendance inventory work_orders tickets reports restaurant].freeze
+  PRO_MODULES = %w[employees attendance inventory work_orders tickets reports restaurant terminals].freeze
 
   def as_super_admin(company) = auth_headers(users(:super_admin), company)
 
@@ -119,5 +119,29 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
 
   def json
     JSON.parse(response.body)
+  end
+
+  # --- spec 030: Terminales es un módulo de Pro y Empresa ---
+
+  test "the super admin turns Terminales off and on again and each change is recorded" do
+    company = companies(:pro_co)
+
+    assert_difference -> { company.module_changes.where(module: "terminals").count }, 2 do
+      patch PATH, params: { disabled_modules: %w[terminals] }, headers: as_super_admin(company), as: :json
+      assert_response :ok
+      assert_not_includes response.parsed_body["active_modules"], "terminals"
+      patch PATH, params: { disabled_modules: [] }, headers: as_super_admin(company), as: :json
+      assert_includes response.parsed_body["active_modules"], "terminals"
+    end
+  end
+
+  test "Terminales is not active in a basic company even with an empty disabled list" do
+    company = companies(:basic_co)
+
+    patch PATH, params: { disabled_modules: [] }, headers: as_super_admin(company), as: :json
+
+    assert_response :ok
+    assert_equal BASIC_MODULES, response.parsed_body["active_modules"]
+    assert_not_includes response.parsed_body["active_modules"], "terminals"
   end
 end
