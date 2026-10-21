@@ -69,4 +69,24 @@ class WorkOrders::ChargePaymentsTest < ActiveSupport::TestCase
     transfer = WorkOrders::ChargePayments.call(@company, @total, { payment_method: "transfer" })
     assert_equal "transfer", transfer.payment_method
   end
+
+  # --- spec 030: sin el módulo Terminales el cobro no se frena ---
+
+  test "with the terminals module off a card payment is saved without terminal and without error" do
+    @company.update!(disabled_modules: %w[terminals])
+
+    result = split([ { method: "card", amount: "500", terminal_id: payment_terminals(:pro_bbva).id } ])
+
+    card = result.payments.find { |p| p[:payment_method] == :card }
+    assert_nil card[:terminal]
+    assert_equal BigDecimal("500"), card[:amount]
+  end
+
+  test "with the terminals module off even an invalid terminal does not fail the charge" do
+    @company.update!(disabled_modules: %w[terminals])
+
+    result = split([ { method: "card", amount: "500", terminal_id: payment_terminals(:resto_point).id } ])
+
+    assert_nil result.payments.first[:terminal]
+  end
 end

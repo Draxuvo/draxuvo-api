@@ -6,7 +6,8 @@ class Api::V1::ModuleGateTest < ActionDispatch::IntegrationTest
   PRO_ONLY = {
     "work_orders" => "/api/v1/work_orders",
     "tickets" => "/api/v1/tickets",
-    "reports" => "/api/v1/reports/summary"
+    "reports" => "/api/v1/reports/summary",
+    "terminals" => "/api/v1/payment_terminals"
   }.freeze
 
   BASIC = {

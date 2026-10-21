@@ -168,4 +168,16 @@ class Restaurant::AddPaymentTest < ActiveSupport::TestCase
     assert_equal "invalid_terminal", code_of { pay(method: "card", amount: "50", reference: "A1", terminal_id: payment_terminals(:resto_point).id) }
     assert_equal 0, @check.check_payments.count
   end
+
+  # --- spec 030: sin el módulo Terminales el cobro no se frena ---
+
+  test "with the terminals module off a card payment is saved without terminal and without error" do
+    @check.company.update!(disabled_modules: %w[terminals])
+    terminal = payment_terminals(:resto_point)
+
+    result = pay(method: "card", amount: "50", reference: "A1", terminal_id: terminal.id)
+
+    assert_nil result.payment.terminal
+    assert_equal BigDecimal("50"), result.payment.amount
+  end
 end

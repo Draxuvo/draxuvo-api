@@ -3,7 +3,7 @@ require "test_helper"
 # T017 · R13, R16, data-model.md (Company). Activos = módulos del plan menos disabled_modules.
 class CompanyTest < ActiveSupport::TestCase
   BASIC_MODULES = %i[employees attendance inventory].freeze
-  PRO_MODULES = (BASIC_MODULES + %i[work_orders tickets reports restaurant]).freeze
+  PRO_MODULES = (BASIC_MODULES + %i[work_orders tickets reports restaurant terminals]).freeze
   ENTERPRISE_MODULES = (PRO_MODULES + %i[whatsapp multi_company]).freeze
 
   def assert_same_modules(expected, actual)
@@ -112,5 +112,26 @@ class CompanyTest < ActiveSupport::TestCase
     branch.update!(order_mode: :service)
     assert branch.reload.order_mode_service?
     assert main.reload.order_mode_order?
+  end
+
+  test "terminals is a module of Pro and Enterprise and not of Basic" do
+    assert companies(:pro_co).module_active?(:terminals)
+    assert companies(:enterprise_co).module_active?(:terminals)
+    assert_not companies(:basic_co).module_active?(:terminals)
+  end
+
+  test "bajar a Básico y volver a Pro conserva las terminales y sus pagos" do
+    company = companies(:pro_co)
+    names = company.payment_terminals.pluck(:name).sort
+    payments = TicketPayment.where.not(terminal_id: nil).count
+
+    company.subscription.update!(plan: :basic)
+    assert_not company.reload.module_active?(:terminals)
+    assert_equal names, company.payment_terminals.pluck(:name).sort
+
+    company.subscription.update!(plan: :pro)
+    assert company.reload.module_active?(:terminals)
+    assert_equal names, company.payment_terminals.pluck(:name).sort
+    assert_equal payments, TicketPayment.where.not(terminal_id: nil).count
   end
 end

@@ -159,4 +159,17 @@ class Reports::IncomeServiceTest < ActiveSupport::TestCase
 
     assert_equal [ "2026-W01" ], report("week")[:by_period].map { |g| g[:period] }
   end
+
+  test "by_terminal stays in the report when the terminals module is off (the UI decides what to show)" do
+    company = companies(:pro_co)
+    company.update!(disabled_modules: %w[terminals])
+    paid = tickets(:pro_paid_ticket)
+    paid.update_columns(paid_at: Time.utc(2026, 3, 10), payment_method: Ticket.payment_methods[:card])
+    paid.ticket_payments.create!(company: company, payment_method: :card, amount: 80, terminal: payment_terminals(:pro_bbva),
+                                 created_by: users(:pro_co_owner))
+
+    result = Reports::IncomeService.new(company, Time.utc(2020, 1, 1)..Time.utc(2030, 12, 31), "month").call
+
+    assert_equal [ 580.0 ], result[:by_terminal].map { |row| row[:total] } # 500 del fixture + 80
+  end
 end

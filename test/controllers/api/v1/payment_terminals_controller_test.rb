@@ -67,4 +67,59 @@ class Api::V1::PaymentTerminalsControllerTest < ActionDispatch::IntegrationTest
     delete "#{BASE}/#{payment_terminals(:resto_point).id}", headers: @admin
     assert_response :not_found
   end
+
+  # --- spec 030: Terminales es un módulo de Pro y Empresa ---
+
+  test "a basic company gets 403 module_not_in_plan on every terminal route and nothing changes" do
+    headers = auth_headers(users(:basic_co_owner), companies(:basic_co))
+    terminal = payment_terminals(:pro_bbva)
+
+    assert_no_difference -> { PaymentTerminal.count } do
+      get BASE, headers: headers
+      assert_module_blocked
+      post BASE, params: { payment_terminal: { name: "Nueva", provider: "clip" } }, headers: headers, as: :json
+      assert_module_blocked
+      patch "#{BASE}/#{terminal.id}", params: { payment_terminal: { active: false } }, headers: headers, as: :json
+      assert_module_blocked
+      delete "#{BASE}/#{terminal.id}", headers: headers
+      assert_module_blocked
+    end
+    assert terminal.reload.active?
+  end
+
+  test "a pro company with the module turned off by the super admin is blocked, even for the cashier" do
+    @company.update!(disabled_modules: %w[terminals])
+
+    [ @admin, auth_headers(users(:pro_staff), @company) ].each do |headers|
+      get BASE, headers: headers
+      assert_module_blocked
+    end
+  end
+
+  test "the super admin keeps the gate bypass like with every module" do
+    @company.update!(disabled_modules: %w[terminals])
+
+    get BASE, headers: auth_headers(users(:super_admin), @company)
+
+    assert_response :ok
+  end
+
+  test "turning the module off and on again keeps the terminals" do
+    @company.update!(disabled_modules: %w[terminals])
+    @company.update!(disabled_modules: [])
+
+    get BASE, params: { include_inactive: true }, headers: @admin
+
+    assert_response :ok
+    assert_includes response.parsed_body["results"].map { |t| t["name"] }, "BBVA caja 1"
+  end
+
+  private
+
+  def assert_module_blocked
+    assert_response :forbidden
+    details = response.parsed_body.dig("error", "details")
+    assert_equal "module_not_in_plan", details["code"]
+    assert_equal "terminals", details["module"]
+  end
 end
