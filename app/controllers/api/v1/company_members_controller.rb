@@ -2,7 +2,7 @@
 # Personas de la empresa activa, para owner y admin. Reglas:
 # - nadie asigna un rol mayor al suyo ni super_admin (403 role_not_allowed);
 # - solo un owner asigna o quita owner, y nadie toca a alguien de rango mayor (403);
-# - no se quita ni se baja al último owner (422 last_owner).
+# - no se quita ni se baja al último owner (422 last_owner), salvo el super admin (spec 029).
 module Api
   module V1
     class CompanyMembersController < BaseController
@@ -96,6 +96,7 @@ module Api
       end
 
       def ensure_another_owner!
+        return if current_role == "super_admin"
         return if current_company.user_companies.owner.where.not(id: @membership.id).exists?
 
         raise ApiErrors::UnprocessableEntityError.new(
