@@ -34,4 +34,16 @@ class ProductTypeTest < ActiveSupport::TestCase
     assert_not product_types(:resto_co_counted).destroy
     assert product_types(:resto_co_supply).destroy
   end
+
+  test "icon must be a catalog key; blank becomes nil" do
+    type = product_types(:resto_co_sold)
+    type.icon = "pizza"
+    assert type.valid?
+    type.icon = "nope"
+    assert_not type.valid?
+    type.icon = " "
+    type.icon = ""
+    assert type.valid?
+    assert_nil type.icon
+  end
 end

@@ -1,12 +1,14 @@
 module Products
   class ImportService
-    HEADER_KEYS = %w[sku name description category price unit_cost stock min_stock available product_type unit].freeze
+    HEADER_KEYS = %w[sku name description category price unit_cost stock min_stock available product_type unit icon].freeze
 
     Result = Struct.new(:created, :updated, :errors, keyword_init: true)
 
-    def initialize(company, file)
+    # `allow_icon`: solo administrador y dueño asignan iconos; con otro rol la columna `icon` se ignora (spec 026).
+    def initialize(company, file, allow_icon: false)
       @company = company
       @file    = file
+      @allow_icon = allow_icon
     end
 
     def call
@@ -46,6 +48,7 @@ module Products
           available:   parse_boolean(attrs["available"])
         )
         assign_type_and_unit(product, attrs)
+        assign_icon(product, attrs)
 
         if product.save
           was_new ? created += 1 : updated += 1
@@ -94,7 +97,7 @@ module Products
           sheet.add_row [], style: note_style
           sheet.add_row [ "# #{t.call('hint')}" ], style: note_style
 
-          sheet.column_widths 15, 30, 35, 20, 12, 12, 10, 12, 12, 16, 12
+          sheet.column_widths 15, 30, 35, 20, 12, 12, 10, 12, 12, 16, 12, 12
         end
       end
 
@@ -116,6 +119,12 @@ module Products
 
       found = Unit.where("lower(key) = :u OR lower(name) = :u", u: unit.downcase).first
       product.unit_key = found&.key
+    end
+
+    # Clave inválida o sin permiso: se deja el icono como estaba (sin error de fila).
+    def assign_icon(product, attrs)
+      key = attrs["icon"].to_s.strip.downcase
+      product.icon = key if @allow_icon && ProductIcons.valid?(key)
     end
 
     def open_spreadsheet

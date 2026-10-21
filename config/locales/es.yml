@@ -101,6 +101,7 @@ es:
         available:   "DISPONIBLE"
         product_type: "TIPO"
         unit: "UNIDAD"
+        icon: "ICONO"
       sample:
         sku:         "PROD-001"
         name:        "Producto Ejemplo"
@@ -113,7 +114,8 @@ es:
         available:   "TRUE"
         product_type: ""
         unit: "pza"
-      hint: "SKU y Nombre son obligatorios. DISPONIBLE: TRUE o FALSE."
+        icon: ""
+      hint: "SKU y Nombre son obligatorios. DISPONIBLE: TRUE o FALSE. ICONO (opcional, solo administrador y dueño): clave como taco, coffee o wrench."
 
   users:
     not_found: "Usuario no encontrado"

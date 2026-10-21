@@ -67,7 +67,7 @@ module Api
       end
 
       def type_params
-        params.require(:product_type).permit(:name, :sellable, :counted, :fractional, :default_unit_key, :active, :position)
+        params.require(:product_type).permit(:name, :sellable, :counted, :fractional, :default_unit_key, :active, :position, :icon)
       end
     end
   end

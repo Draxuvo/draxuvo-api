@@ -79,4 +79,16 @@ class ProductTest < ActiveSupport::TestCase
   test "a type from another company is rejected" do
     assert_not companies(:resto_co).products.new(name: "X", sku: "X", product_type: product_types(:one_sold)).valid?
   end
+
+  test "icon must be a catalog key; blank becomes nil" do
+    product = companies(:resto_co).products.new(name: "X", sku: "X", product_type: product_types(:resto_co_sold))
+    product.icon = "taco"
+    assert product.valid?
+    product.icon = "nope"
+    assert_not product.valid?
+    assert product.errors.key?(:icon)
+    product.icon = ""
+    assert product.valid?
+    assert_nil product.icon
+  end
 end

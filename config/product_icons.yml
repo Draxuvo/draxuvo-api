@@ -1,0 +1,7 @@
+# Catálogo cerrado de iconos de producto (spec 026). Las claves se copian en ui y app (scripts/icons-parity del padre).
+comida: [taco, burger, torta, tamal, corn, pizza, soup, salad, chicken, beef, fish, egg, bread, fruit, utensils]
+bebida: [soda, coffee, beer, wine, cocktail, water, juice, cup]
+postre: [cake, ice_cream, cookie]
+plomeria_y_oficios: [pipe, faucet, valve, drain, heater, pliers, ptfe_tape, wrench, hammer, screwdriver, paint, bolt, plug]
+refacciones_y_materiales: [filter, hose, screws, gear, battery, cable, bulb, key, box]
+general: [package, tag, star, tools, truck, gift]

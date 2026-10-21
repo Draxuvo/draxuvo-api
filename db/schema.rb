@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_21_100300) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_040100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -225,6 +225,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_100300) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "icon"
     t.index "company_id, lower((name)::text)", name: "index_product_types_on_company_and_lower_name", unique: true
     t.index ["company_id"], name: "index_product_types_on_company_id"
   end
@@ -246,6 +247,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_21_100300) do
     t.bigint "station_id"
     t.bigint "product_type_id", null: false
     t.string "unit_key"
+    t.string "icon"
     t.index ["available"], name: "index_products_on_available"
     t.index ["category"], name: "index_products_on_category"
     t.index ["company_id"], name: "index_products_on_company_id"

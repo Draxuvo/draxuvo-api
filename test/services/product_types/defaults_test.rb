@@ -34,4 +34,12 @@ class ProductTypes::DefaultsTest < ActiveSupport::TestCase
     # En restaurante la existencia sola no lo vuelve contado: decide "controla inventario".
     assert_equal "sold", ProductTypes::Defaults.classify(companies(:resto_co), Product.new(company: companies(:resto_co), stock: 50)).kind
   end
+
+  test "initial types come with the suggested icon of their mode" do
+    restaurant = Company.create!(name: "Mariscos Dos", order_mode: :order)
+    assert_equal %w[utensils cup box], restaurant.product_types.ordered.pluck(:icon)
+
+    service = Company.create!(name: "Taller Dos")
+    assert_equal %w[wrench gear box], service.product_types.ordered.pluck(:icon)
+  end
 end

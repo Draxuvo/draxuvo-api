@@ -7,6 +7,8 @@ class ProductType < ApplicationRecord
   normalizes :name, with: ->(name) { name.strip }
 
   validates :name, presence: true, length: { maximum: 40 }, uniqueness: { scope: :company_id, case_sensitive: false }
+  before_validation { self.icon = icon.presence }
+  validates :icon, inclusion: { in: ->(_) { ProductIcons.keys } }, allow_nil: true
   validate :fractional_requires_counted
   validate :default_unit_exists
   validate :fractions_fit, if: -> { will_save_change_to_fractional?(to: false) }

@@ -69,4 +69,20 @@ class Api::V1::ProductTypesControllerTest < ActionDispatch::IntegrationTest
     post "#{BASE}/#{product_types(:resto_co_sold).id}/move_products", params: { to_id: product_types(:one_counted).id }, headers: @admin, as: :json
     assert_response :unprocessable_entity
   end
+
+  test "an admin sets the suggested icon of a type; a manager cannot; invalid keys are rejected" do
+    type = product_types(:resto_co_counted)
+
+    patch "#{BASE}/#{type.id}", params: { product_type: { icon: "beer" } }, headers: @admin, as: :json
+    assert_response :ok
+    assert_equal "beer", response.parsed_body["icon"]
+
+    patch "#{BASE}/#{type.id}", params: { product_type: { icon: "nope" } }, headers: @admin, as: :json
+    assert_response :unprocessable_entity
+
+    patch "#{BASE}/#{type.id}", params: { product_type: { icon: "wine" } },
+                                headers: auth_headers(users(:resto_manager), @company), as: :json
+    assert_response :forbidden
+    assert_equal "beer", type.reload.icon
+  end
 end

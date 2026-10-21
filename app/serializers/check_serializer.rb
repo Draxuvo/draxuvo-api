@@ -46,12 +46,13 @@ class CheckSerializer
   private
 
   def items
-    @check.check_items.includes(:station, :kitchen_order, :check).order(:id)
+    @check.check_items.includes(:station, :kitchen_order, :check, product: :product_type).order(:id)
   end
 
   def item_json(item)
     {
-      id: item.id, name: item.name, quantity: item.quantity, unit_price: self.class.money(item.unit_price),
+      id: item.id, name: item.name, product_id: item.product_id, icon: item.product&.icon,
+      type_icon: item.product&.product_type&.icon, quantity: item.quantity, unit_price: self.class.money(item.unit_price),
       note: item.note, status: item.status, station: item.station && { id: item.station.id, name: item.station.name },
       kitchen_order_number: item.kitchen_order&.number, sent_at: item.kitchen_order&.sent_at,
       ready_at: item.ready_at, allowed_actions: Restaurant::Permissions.item_actions(item, @context)

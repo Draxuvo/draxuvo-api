@@ -4,6 +4,7 @@ module Api
     class ProductsController < BaseController
       requires_module :inventory
       before_action :set_product, only: [ :show, :update, :destroy ]
+      before_action :require_icon_permission!, only: [ :create, :update ]
 
       def index
         products = current_company.products.includes(:product_type).search(params[:search])
@@ -62,7 +63,7 @@ module Api
       def import
         raise ApiErrors::BadRequestError.new(message: I18n.t("products.import.file_required")) unless params[:file].present?
 
-        result = Products::ImportService.new(current_company, params[:file]).call
+        result = Products::ImportService.new(current_company, params[:file], allow_icon: admin?).call
 
         status = result.errors.any? && result.created.zero? && result.updated.zero? ? :unprocessable_entity : :ok
         render json: {
@@ -88,9 +89,24 @@ module Api
         @product = current_company.products.find(params[:id])
       end
 
+      def admin?
+        Authorizable::ADMIN_ROLES.include?(current_role)
+      end
+
+      # El icono lo cambian solo administrador y dueño; el encargado edita el resto del producto (spec 026).
+      def require_icon_permission!
+        attrs = params[:product]
+        return unless attrs.respond_to?(:key?) && attrs.key?(:icon)
+        return if admin?
+        return if attrs[:icon].presence == @product&.icon
+
+        forbid!
+      end
+
       def product_params
-        params.require(:product).permit(:sku, :name, :description, :category, :price, :available, :stock, :min_stock, :unit_cost,
-                                        :station_id, :product_type_id, :unit_key)
+        permitted = %i[sku name description category price available stock min_stock unit_cost station_id product_type_id unit_key]
+        permitted << :icon if admin?
+        params.require(:product).permit(*permitted)
       end
     end
   end

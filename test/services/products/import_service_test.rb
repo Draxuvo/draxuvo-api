@@ -174,4 +174,22 @@ class Products::ImportServiceTest < ActiveSupport::TestCase
     assert_equal "category", lookup["categoria"]
     assert_equal "unit_cost", lookup["unit_cost"]
   end
+
+  test "the icon column is applied for admins, ignored for others and for invalid keys" do
+    csv = "sku,name,icon\nI-1,Taco,taco\nI-2,Raro,nope\nI-3,Tubo,Pipe\n"
+    run = lambda do |allow|
+      Tempfile.create([ "productos", ".csv" ]) do |file|
+        file.write(csv)
+        file.flush
+        Products::ImportService.new(companies(:one), file, allow_icon: allow).call
+      end
+    end
+
+    run.call(false)
+    assert_equal [ nil, nil, nil ], companies(:one).products.where(sku: %w[I-1 I-2 I-3]).order(:sku).map(&:icon)
+
+    result = run.call(true)
+    assert_empty result.errors
+    assert_equal [ "taco", nil, "pipe" ], companies(:one).products.where(sku: %w[I-1 I-2 I-3]).order(:sku).map(&:icon)
+  end
 end
