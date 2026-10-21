@@ -29,6 +29,36 @@ class Reports::SummaryServiceTest < ActiveSupport::TestCase
     assert_equal({ type: "month", from: RANGE.first, to: RANGE.last }, result[:period])
   end
 
+  test "without compare there is no previous block" do
+    assert_not summary.key?(:previous)
+  end
+
+  test "compare adds income and expenses of the previous range of the same length" do
+    ticket(order, status: :paid, total: 300, payment_method: :cash, amount_received: 300, charged_by: @owner,
+                  paid_at: Time.utc(2026, 3, 12))
+    ticket(order, status: :paid, total: 200, payment_method: :cash, amount_received: 200, charged_by: @owner,
+                  paid_at: Time.utc(2026, 2, 5))
+    ticket(order, status: :pending, total: 70, created_at: Time.utc(2026, 2, 6))
+    StockMovement.create!(company: @company, product: @product, movement_type: :entry, qty: 5, created_at: Time.utc(2026, 2, 7))
+
+    result = Reports::SummaryService.new(@company, RANGE, "custom", compare: true).call
+    previous = result[:previous]
+
+    assert_equal 300.0, result[:income][:total_revenue]
+    assert_equal 200.0, previous[:income][:total_revenue]
+    assert_equal 70.0, previous[:income][:pending_revenue]
+    assert_equal 50.0, previous[:expenses][:inventory_cost]
+    assert_equal 10_000.0, previous[:expenses][:payroll]
+    assert_equal %i[period income expenses], previous.keys
+  end
+
+  test "compare with nothing in the previous range reports zeros" do
+    previous = Reports::SummaryService.new(@company, RANGE, "custom", compare: true).call[:previous]
+
+    assert_equal 0.0, previous[:income][:total_revenue]
+    assert_equal 0.0, previous[:expenses][:inventory_cost]
+  end
+
   test "income separates paid by paid_at from pending by created_at" do
     ticket(order, status: :paid, total: 300, payment_method: :cash, amount_received: 300, charged_by: @owner,
                   paid_at: Time.utc(2026, 3, 12))

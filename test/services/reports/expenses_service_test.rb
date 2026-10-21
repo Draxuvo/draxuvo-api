@@ -77,4 +77,14 @@ class Reports::ExpensesServiceTest < ActiveSupport::TestCase
   test "the period echoes the range" do
     assert_equal({ from: RANGE.first, to: RANGE.last }, report[:period])
   end
+
+  test "groups inventory cost by day" do
+    movement(@cable, :entry, 2, Time.utc(2026, 3, 10, 18))
+    movement(@cable, :entry, 4, Time.utc(2026, 3, 10, 19))
+    movement(@cable, :entry, 1, Time.utc(2026, 3, 12, 18))
+    groups = report("day")[:inventory_cost][:by_period]
+
+    assert_equal %w[2026-03-10 2026-03-12], groups.map { |g| g[:period] }
+    assert_equal [ 63.0, 10.5 ], groups.map { |g| g[:cost] }
+  end
 end
