@@ -12,6 +12,8 @@ class AttendanceSerializer
       attendance_type: @attendance.attendance_type,
       checkin_at:      @attendance.checkin_at,
       checkout_at:     @attendance.checkout_at,
+      open:            @attendance.open?,
+      duration_minutes: @attendance.duration_minutes,
       lat:             @attendance.lat,
       lng:             @attendance.lng,
       created_at:      @attendance.created_at,

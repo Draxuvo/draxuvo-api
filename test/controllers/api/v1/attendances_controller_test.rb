@@ -94,7 +94,7 @@ class Api::V1::AttendancesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     results = response.parsed_body["results"]
     row = results.find { |r| r["id"] == attendance.id }
-    assert_equal %w[attendance_type checkin_at checkout_at company_id created_at employee employee_id id lat lng updated_at],
+    assert_equal %w[attendance_type checkin_at checkout_at company_id created_at duration_minutes employee employee_id id lat lng open updated_at],
                  row.keys.sort
     assert_equal @luis.id, row["employee_id"]
     assert_equal @company.id, row["company_id"]

@@ -78,6 +78,13 @@ Rails.application.routes.draw do
       # Asistencias (con filtros por employee, from, to)
       resources :attendances, only: [ :index ]
 
+      # Marca propia de entrada y salida (spec 026)
+      scope :my_attendance, controller: :my_attendance, as: :my_attendance do
+        get  :today
+        post :check_in
+        post :check_out
+      end
+
       # Inventario / Menú
       resources :products do
         collection do

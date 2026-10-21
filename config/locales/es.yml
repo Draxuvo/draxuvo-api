@@ -69,6 +69,10 @@ es:
     not_authorized: "No tienes autorización para realizar esta acción"
     no_company: "Usuario sin empresa asignada"
 
+  attendance:
+    no_open: "No tienes una entrada abierta"
+    not_eligible: "Tu usuario no está ligado a un empleado de esta empresa"
+
   employees:
     deactivated: "Empleado desactivado"
     deleted:     "Empleado eliminado"
