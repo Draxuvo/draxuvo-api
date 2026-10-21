@@ -193,4 +193,35 @@ class Api::V1::CompanyMembersControllerTest < ActionDispatch::IntegrationTest
   def json
     JSON.parse(response.body)
   end
+
+  # --- super admin (spec 029) ------------------------------------------------------------------
+
+  test "a super admin can demote the last owner" do
+    patch "#{BASE}/#{users(:pro_co_owner).id}", params: { member: { role: "admin" } },
+                                                 headers: auth_headers(users(:super_admin), @company), as: :json
+
+    assert_response :ok
+    assert_equal "admin", users(:pro_co_owner).user_companies.find_by!(company: @company).role
+  end
+
+  test "a super admin can remove the last owner" do
+    assert_difference -> { @company.user_companies.count }, -1 do
+      delete "#{BASE}/#{users(:pro_co_owner).id}", headers: auth_headers(users(:super_admin), @company)
+    end
+
+    assert_response :ok
+    assert_not @company.user_companies.owner.exists?
+  end
+
+  test "a super admin can assign the owner role but never super_admin" do
+    patch "#{BASE}/#{@admin.id}", params: { member: { role: "owner" } },
+                                   headers: auth_headers(users(:super_admin), @company), as: :json
+    assert_response :ok
+    assert_equal "owner", json["role"]
+
+    patch "#{BASE}/#{@admin.id}", params: { member: { role: "super_admin" } },
+                                   headers: auth_headers(users(:super_admin), @company), as: :json
+    assert_response :forbidden
+    assert_equal "role_not_allowed", json.dig("error", "details", "code")
+  end
 end
