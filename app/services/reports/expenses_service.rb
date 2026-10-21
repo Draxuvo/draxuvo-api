@@ -67,7 +67,7 @@ module Reports
     end
 
     def group_movements(movements)
-      movements.group_by { |m| period_key(m.created_at) }.map do |period, group|
+      movements.group_by { |m| Reports::PeriodKey.call(m.created_at, @group_by) }.map do |period, group|
         cost = group.sum { |m| m.qty.to_f * m.product.unit_cost.to_f }
         {
           period: period,
@@ -75,14 +75,6 @@ module Reports
           count:  group.size
         }
       end.sort_by { |g| g[:period] }
-    end
-
-    def period_key(datetime)
-      case @group_by
-      when "week"  then datetime.strftime("%Y-W%V")
-      when "year"  then datetime.strftime("%Y")
-      else              datetime.strftime("%Y-%m")
-      end
     end
   end
 end

@@ -47,7 +47,7 @@ module Reports
     end
 
     def group_tickets(tickets)
-      tickets.group_by { |t| period_key(t.paid_at) }.map do |period, group|
+      tickets.group_by { |t| Reports::PeriodKey.call(t.paid_at, @group_by) }.map do |period, group|
         {
           period:  period,
           revenue: group.sum { |t| t.total.to_f },
@@ -76,14 +76,6 @@ module Reports
       check = ticket.check
       title = check.dining_table ? "Mesa #{check.dining_table.name}" : "Para llevar: #{check.takeout_name}"
       { id: nil, title: title, employee: check.waiter.full_name }
-    end
-
-    def period_key(datetime)
-      case @group_by
-      when "week"  then datetime.strftime("%Y-W%V")
-      when "year"  then datetime.strftime("%Y")
-      else              datetime.strftime("%Y-%m")
-      end
     end
   end
 end

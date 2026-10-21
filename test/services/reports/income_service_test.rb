@@ -142,4 +142,21 @@ class Reports::IncomeServiceTest < ActiveSupport::TestCase
     assert_equal "card", result[:by_method].first[:method]
     assert_equal "Point barra", result[:by_terminal].first.dig(:terminal, :name)
   end
+
+  test "groups the revenue by day" do
+    ticket(total: 100, paid_at: Time.utc(2026, 3, 10, 18))
+    ticket(total: 50, paid_at: Time.utc(2026, 3, 10, 19))
+    ticket(total: 25, paid_at: Time.utc(2026, 3, 11, 18))
+    groups = report("day")[:by_period]
+
+    assert_equal %w[2026-03-10 2026-03-11], groups.map { |g| g[:period] }
+    assert_equal [ 150.0, 25.0 ], groups.map { |g| g[:revenue] }
+  end
+
+  test "groups by ISO week across a new year" do
+    ticket(total: 10, paid_at: Time.utc(2025, 12, 29, 18))
+    ticket(total: 20, paid_at: Time.utc(2026, 1, 2, 18))
+
+    assert_equal [ "2026-W01" ], report("week")[:by_period].map { |g| g[:period] }
+  end
 end

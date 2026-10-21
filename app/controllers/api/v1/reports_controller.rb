@@ -4,27 +4,33 @@ module Api
       requires_module :reports
       before_action :require_admin!
 
-      # GET /api/v1/reports/summary?period=weekly|monthly|annual&date=2026-04-01
+      # GET /api/v1/reports/summary?from=2026-04-01&to=2026-04-30[&compare=true]
+      # También acepta period=weekly|monthly|annual&date=2026-04-01 (si llegan from/to, mandan estos).
       def summary
-        period = params[:period].presence&.downcase || "monthly"
-        date   = parse_date(params[:date]) || Date.current
-        range  = period_range(period, date)
+        compare = params[:compare].to_s == "true"
+        if params[:from].present? || params[:to].present?
+          period = "custom"
+          range  = from_to_range
+        else
+          period = params[:period].presence&.downcase || "monthly"
+          range  = period_range(period, parse_date(params[:date]) || Date.current)
+        end
 
-        render json: Reports::SummaryService.new(current_company, range, period).call
+        render json: Reports::SummaryService.new(current_company, range, period, compare: compare).call
       end
 
-      # GET /api/v1/reports/income?from=2026-01-01&to=2026-04-30&group_by=week|month|year
+      # GET /api/v1/reports/income?from=2026-01-01&to=2026-04-30&group_by=day|week|month|year
       def income
         range    = from_to_range
-        group_by = params[:group_by].presence&.downcase || "month"
+        group_by = group_by_param
 
         render json: Reports::IncomeService.new(current_company, range, group_by).call
       end
 
-      # GET /api/v1/reports/expenses?from=2026-01-01&to=2026-04-30&group_by=week|month|year
+      # GET /api/v1/reports/expenses?from=2026-01-01&to=2026-04-30&group_by=day|week|month|year
       def expenses
         range    = from_to_range
-        group_by = params[:group_by].presence&.downcase || "month"
+        group_by = group_by_param
 
         render json: Reports::ExpensesService.new(current_company, range, group_by).call
       end
@@ -36,6 +42,11 @@ module Api
       end
 
       private
+
+      def group_by_param
+        value = params[:group_by].to_s.downcase
+        Reports::PeriodKey::GROUPS.include?(value) ? value : "month"
+      end
 
       def period_range(period, date)
         case period

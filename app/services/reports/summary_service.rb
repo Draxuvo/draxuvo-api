@@ -1,26 +1,41 @@
 module Reports
   class SummaryService
-    def initialize(company, range, period)
+    def initialize(company, range, period, compare: false)
       @company = company
       @range   = range
       @period  = period
+      @compare = compare
     end
 
     def call
-      {
+      result = {
         period:      { type: @period, from: @range.first, to: @range.last },
         income:      income_data,
         work_orders: work_orders_data,
         expenses:    expenses_data,
         attendance:  attendance_data
       }
+      result[:previous] = previous_data if @compare
+      result
     end
 
     private
 
-    def income_data
-      paid    = @company.tickets.where(status: :paid, paid_at: @range)
-      pending = @company.tickets.where(status: :pending, created_at: @range)
+    # Mismo cálculo de ingresos y gastos sobre el periodo anterior de igual duración.
+    def previous_data
+      range = Comparison.previous_range(@range)
+      income = income_data(range)
+      expenses = expenses_data(range)
+      {
+        period:   { from: range.first, to: range.last },
+        income:   income.slice(:total_revenue, :pending_revenue),
+        expenses: expenses
+      }
+    end
+
+    def income_data(range = @range)
+      paid    = @company.tickets.where(status: :paid, paid_at: range)
+      pending = @company.tickets.where(status: :pending, created_at: range)
 
       {
         total_revenue:   paid.sum(:total).to_f,
@@ -47,10 +62,10 @@ module Reports
       }
     end
 
-    def expenses_data
+    def expenses_data(range = @range)
       payroll_total  = @company.employees.where(status: :active).sum("COALESCE(salary, 0)").to_f
       inventory_cost = @company.stock_movements
-                               .where(movement_type: :entry, created_at: @range)
+                               .where(movement_type: :entry, created_at: range)
                                .joins(:product)
                                .sum("stock_movements.qty * COALESCE(products.unit_cost, 0)").to_f
 
