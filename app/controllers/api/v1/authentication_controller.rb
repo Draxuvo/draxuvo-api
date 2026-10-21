@@ -31,20 +31,6 @@ module Api::V1
 
       token = jwt_encode(user_id: user.id, email: user.email, full_name: user.full_name)
 
-      if user.employee.present?
-        employee = user.employee
-        today_open = employee.attendances
-                            .where("DATE(checkin_at) = ?", Date.current)
-                            .where(checkout_at: nil)
-                            .exists?
-        unless today_open
-          employee.attendances.create!(
-            company:         employee.company,
-            checkin_at:      Time.current,
-            attendance_type: :normal
-          )
-        end
-      end
       render json: { token: token, user: UserSerializer.new(user) }, status: :ok
     end
 

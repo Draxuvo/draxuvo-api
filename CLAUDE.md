@@ -43,7 +43,7 @@ The `Authenticable` and `Authorizable` concerns live in `app/controllers/concern
 - `require_super_admin!` — super_admin only
 - `require_admin!` — admin, owner, or super_admin
 
-`AuthenticationController` inherits `ApplicationController` directly (not `BaseController`) since login is public. Login auto-creates an attendance checkin for the day if the user has an associated `Employee` and hasn't checked in yet.
+`AuthenticationController` inherits `ApplicationController` directly (not `BaseController`) since login is public. Login no longer creates attendance (spec 026): the user marks it with `Api::V1::MyAttendanceController` (`/my_attendance/today|check_in|check_out`, logic in `Attendances::Mark`).
 
 `UploadsController` also inherits `ApplicationController` directly (skips auth); it manages Active Storage blobs for images (max 10 MB, jpeg/png/gif/webp/svg).
 

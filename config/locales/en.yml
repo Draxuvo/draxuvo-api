@@ -69,6 +69,10 @@ en:
     not_authorized: "You are not authorized to perform this action"
     no_company: "User has no company assigned"
 
+  attendance:
+    no_open: "You have no open check-in"
+    not_eligible: "Your user is not linked to an employee in this company"
+
   employees:
     deactivated: "Employee deactivated"
     deleted:     "Employee deleted"
