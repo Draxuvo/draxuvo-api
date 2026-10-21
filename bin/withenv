@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Corre un comando con las variables de .env.<ambiente>.
+# Uso: bin/withenv prod bin/rails console --sandbox
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+amb="${1:?falta el ambiente (prod, staging...)}"; shift
+[ "$#" -gt 0 ] || { echo "falta el comando a correr" >&2; exit 1; }
+archivo=".env.$amb"
+[ -f "$archivo" ] || { echo "No existe $archivo" >&2; exit 1; }
+
+set -a; source "$archivo"; set +a
+
+if [ "$amb" = "prod" ]; then
+  read -r -p "Vas a conectarte a PRODUCCIÓN. Escribe 'prod' para continuar: " ok
+  [ "$ok" = "prod" ] || exit 1
+fi
+exec "$@"
