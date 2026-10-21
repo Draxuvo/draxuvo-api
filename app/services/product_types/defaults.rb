@@ -23,7 +23,8 @@ module ProductTypes
 
         name = definition[:name]
         name = "#{name} (#{definition[:kind]})" if company.product_types.where("lower(name) = ?", name.downcase).exists?
-        company.product_types.create!(definition.merge(name: name, position: index + 1))
+        company.product_types.create!(definition.merge(name: name, position: index + 1,
+                                                      icon: ProductIcons.default_for(definition[:kind], company.order_mode)))
       end
       company.product_types
     end

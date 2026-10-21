@@ -128,4 +128,16 @@ class Api::V1::Restaurant::ChecksControllerTest < ActionDispatch::IntegrationTes
     assert_response :ok
     assert_equal 0, check.check_items.count
   end
+
+  test "items carry the product id and its icons" do
+    products(:resto_tacos).update!(icon: "taco")
+    products(:resto_tacos).product_type.update!(icon: "utensils")
+
+    get "/api/v1/restaurant/checks/#{checks(:open_check).id}", headers: headers_for(users(:resto_waiter))
+
+    taco = response.parsed_body["items"].find { |i| i["name"] == "Tacos al pastor" }
+    assert_equal products(:resto_tacos).id, taco["product_id"]
+    assert_equal "taco", taco["icon"]
+    assert_equal "utensils", taco["type_icon"]
+  end
 end

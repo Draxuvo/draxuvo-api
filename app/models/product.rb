@@ -17,6 +17,8 @@ class Product < ApplicationRecord
 
   delegate :sellable?, :counted?, :fractional?, to: :product_type, allow_nil: true
 
+  before_validation { self.icon = icon.presence }
+  validates :icon, inclusion: { in: ->(_) { ProductIcons.keys } }, allow_nil: true
   validates :name, :sku, presence: true
   validates :sku, uniqueness: { scope: :company_id }
   validates :stock, numericality: { greater_than_or_equal_to: 0 }

@@ -299,6 +299,16 @@ barra = sazon.stations.find_or_create_by!(name: "Barra") { |st| st.position = 2 
 end
 puts "  [ok] #{sazon.name}: estaciones Cocina y Barra, 6 mesas y menú de restaurante"
 
+# Iconos de producto (spec 026) en algunos productos de demo; el resto usa el icono sugerido de su tipo.
+{
+  "SZN-TAC" => "taco", "SZN-ENS" => "salad", "SZN-SOP" => "soup", "SZN-POS" => "cake", "SZN-AGU" => "juice",
+  "SZN-CER" => "beer", "SZN-COL" => "soda", "CAB-12" => "cable", "APA-01" => "bolt", "CON-02" => "plug",
+  "TUB-34" => "pipe", "LLA-01" => "faucet", "FOC-09" => "bulb", "CAF-01" => "coffee", "REF-60" => "soda"
+}.each do |sku, icon|
+  Product.where(sku: sku, icon: nil).update_all(icon: icon)
+end
+puts "  [ok] iconos de producto de demo"
+
 # Terminales de cobro (spec 015): el operador elige en cuál se pasó la tarjeta.
 aroma = Company.find_by!(slug: "cafe-aroma")
 [ [ aroma, "BBVA caja 1", "bbva" ], [ aroma, "Point barra", "mercado_pago" ], [ sazon, "Clip mesas", "clip" ] ].each do |company, name, provider|

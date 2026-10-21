@@ -303,4 +303,16 @@ class Api::V1::WorkOrdersFlowTest < ActionDispatch::IntegrationTest
   def json
     response.parsed_body
   end
+
+  test "order items return the product icons" do
+    products(:one).update!(icon: "plug")
+    products(:one).product_type.update!(icon: "gear")
+
+    get "/api/v1/work_orders/#{work_orders(:pro_open).id}", headers: auth_headers(@owner, @company)
+
+    assert_response :ok
+    product = response.parsed_body["items"].filter_map { |i| i["product"] }.first
+    assert_equal "plug", product["icon"]
+    assert_equal "gear", product["type_icon"]
+  end
 end

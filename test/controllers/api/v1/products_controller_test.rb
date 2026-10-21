@@ -119,4 +119,76 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
   end
+
+  # --- spec 026: iconos ---
+
+  test "admins and owners set, change and clear a product icon" do
+    resto = companies(:resto_co)
+    product = products(:resto_tacos)
+    owner = auth_headers(users(:resto_owner), resto)
+
+    patch "/api/v1/products/#{product.id}", params: { product: { icon: "taco" } }, headers: owner, as: :json
+    assert_response :ok
+    assert_equal "taco", response.parsed_body["icon"]
+    assert_equal "taco", product.reload.icon
+
+    patch "/api/v1/products/#{product.id}", params: { product: { icon: "" } }, headers: owner, as: :json
+    assert_response :ok
+    assert_nil response.parsed_body["icon"]
+  end
+
+  test "a manager cannot change the icon but still edits the other fields" do
+    resto = companies(:resto_co)
+    product = products(:resto_tacos)
+    product.update!(icon: "taco")
+    manager = auth_headers(users(:resto_manager), resto)
+
+    patch "/api/v1/products/#{product.id}", params: { product: { icon: "pizza" } }, headers: manager, as: :json
+    assert_response :forbidden
+    assert_equal "taco", product.reload.icon
+
+    patch "/api/v1/products/#{product.id}", params: { product: { description: "Con piña" } }, headers: manager, as: :json
+    assert_response :ok
+    assert_equal "Con piña", product.reload.description
+
+    patch "/api/v1/products/#{product.id}", params: { product: { icon: "taco", description: "Sin piña" } }, headers: manager, as: :json
+    assert_response :ok
+    assert_equal "taco", product.reload.icon
+  end
+
+  test "a manager cannot create a product with an icon, an admin can" do
+    resto = companies(:resto_co)
+    type = product_types(:resto_co_sold)
+    post "/api/v1/products", params: { product: { sku: "M-1", name: "Mole", product_type_id: type.id, icon: "soup" } },
+                             headers: auth_headers(users(:resto_manager), resto), as: :json
+    assert_response :forbidden
+
+    post "/api/v1/products", params: { product: { sku: "M-1", name: "Mole", product_type_id: type.id, icon: "soup" } },
+                             headers: auth_headers(users(:resto_owner), resto), as: :json
+    assert_response :created
+    assert_equal "soup", response.parsed_body["icon"]
+  end
+
+  test "an icon outside the catalog is rejected" do
+    patch "/api/v1/products/#{products(:resto_tacos).id}", params: { product: { icon: "nope" } },
+                                                           headers: auth_headers(users(:resto_owner), companies(:resto_co)), as: :json
+    assert_response :unprocessable_entity
+  end
+
+  test "the list, the menu and the detail return the product icon and the type icon" do
+    resto = companies(:resto_co)
+    headers = auth_headers(users(:resto_waiter), resto)
+    products(:resto_tacos).update!(icon: "taco")
+    products(:resto_tacos).product_type.update!(icon: "utensils")
+    products(:resto_sopa).product_type.update!(icon: "utensils")
+
+    get "/api/v1/products/menu", headers: headers
+    item = response.parsed_body["menu"].flat_map { |g| g["items"] }.find { |i| i["name"] == products(:resto_tacos).name }
+    assert_equal "taco", item["icon"]
+    assert_equal "utensils", item.dig("product_type", "icon")
+
+    get "/api/v1/products/#{products(:resto_sopa).id}", headers: headers
+    assert_nil response.parsed_body["icon"]
+    assert_equal "utensils", response.parsed_body.dig("product_type", "icon")
+  end
 end

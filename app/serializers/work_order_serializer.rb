@@ -57,7 +57,8 @@ class WorkOrderSerializer
       id: item.id, description: item.description, quantity: item.quantity, unit: item.unit,
       unit_price: item.unit_price, subtotal: item.subtotal, position: item.position,
       product: item.product ? { id: item.product.id, sku: item.product.sku, name: item.product.name,
-                                category: item.product.category } : nil
+                                category: item.product.category, icon: item.product.icon,
+                                type_icon: item.product.product_type&.icon } : nil
     }
   end
 

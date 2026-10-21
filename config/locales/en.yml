@@ -101,6 +101,7 @@ en:
         available:   "AVAILABLE"
         product_type: "TYPE"
         unit: "UNIT"
+        icon: "ICON"
       sample:
         sku:         "PROD-001"
         name:        "Sample Product"
@@ -113,7 +114,8 @@ en:
         available:   "TRUE"
         product_type: ""
         unit: "pza"
-      hint: "SKU and Name are required. AVAILABLE: TRUE or FALSE."
+        icon: ""
+      hint: "SKU and Name are required. AVAILABLE: TRUE or FALSE. ICON (optional, admins and owners only): a key such as taco, coffee or wrench."
 
   users:
     not_found: "User not found"
