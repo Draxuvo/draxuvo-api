@@ -15,4 +15,13 @@ class Subscriptions::CheckExpiredJobTest < ActiveJob::TestCase
     assert subscriptions(:basic_co).reload.active?
     assert subscriptions(:past_due_co).reload.past_due?
   end
+
+  test "leaves alone a trial that already has a Stripe subscription: Stripe converts it (spec 031)" do
+    paid_early = subscriptions(:one)
+    paid_early.update_columns(trial_ends_at: 1.hour.ago, stripe_subscription_id: "sub_early")
+
+    Subscriptions::CheckExpiredJob.perform_now
+
+    assert paid_early.reload.trialing?
+  end
 end

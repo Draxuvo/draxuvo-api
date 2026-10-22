@@ -73,3 +73,8 @@ un cambio de claves y de IDs; no cambia código. Hazlo solo tras el recorrido de
 8. El webhook y las claves de prueba siguen existiendo en el sandbox; no estorban. Para volver a probar sin riesgo,
    vuelve a poner las claves de prueba en Render.
 
+## Suspensión por falta de pago (spec 031)
+
+- **Cambio de plan facturado al momento**: en *Settings → Billing → Customer portal → Subscriptions → Update*, usa `Always invoice` como prorrateo. Así un cambio de plan genera al instante una factura con `billing_reason = subscription_update`; si no se paga, `invoice.payment_failed` suspende a la empresa de inmediato. Un cobro de renovación fallido (`subscription_cycle`) deja `past_due` con 7 días de gracia.
+- **Portal sin cambio de plan para la prueba**: crea una segunda configuración del portal con *Update subscriptions* apagado y pon su id (`bpc_…`) en `STRIPE_PORTAL_TRIAL_CONFIGURATION`. Una empresa en prueba con suscripción de Stripe (pagó por adelantado) abre el portal con esa configuración; sin ella el portal responde 422.
+- **Reloj**: `Subscriptions::EnforceJob` (cada hora, `config/recurring.yml`) suspende las `past_due` con más de 7 días, avisa a los 23 días de suspendida y cancela (Stripe y local) a los 30 días.

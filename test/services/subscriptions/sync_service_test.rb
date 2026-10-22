@@ -105,4 +105,54 @@ class Subscriptions::SyncServiceTest < ActiveSupport::TestCase
       assert_nil Subscriptions::SyncService.new(stripe_subscription: nil).call
     end
   end
+
+  # --- spec 031 ---
+
+  test "a suspended subscription stays suspended while Stripe still says past_due" do
+    subscription = subscriptions(:pro_co)
+    subscription.update!(status: :suspended, suspended_at: Time.current, suspension_reason: "plan_change")
+
+    sync(stripe_sub(id: "sub_pro", status: "past_due", lookup_key: "draxuvo_pro_monthly"))
+
+    assert subscription.reload.suspended?
+  end
+
+  test "a suspended subscription is reactivated when Stripe says active" do
+    subscription = subscriptions(:pro_co)
+    subscription.update!(status: :suspended, suspended_at: Time.current, suspension_reason: "plan_change",
+                         pending_invoice_url: "https://invoice.test/1")
+
+    sync(stripe_sub(id: "sub_pro", status: "active", lookup_key: "draxuvo_pro_monthly"))
+
+    subscription.reload
+    assert subscription.active?
+    assert_nil subscription.suspended_at
+    assert_nil subscription.pending_invoice_url
+    assert_equal "reactivated", subscription.subscription_changes.last.kind
+  end
+
+  test "a suspended subscription cancelled in Stripe becomes cancelled" do
+    subscription = subscriptions(:pro_co)
+    subscription.update!(status: :suspended, suspended_at: Time.current, suspension_reason: "payment_overdue")
+
+    sync(stripe_sub(id: "sub_pro", status: "canceled", lookup_key: "draxuvo_pro_monthly"))
+
+    assert subscription.reload.cancelled?
+  end
+
+  test "past_due_since is set on the first past_due, kept on the next syncs and cleared when it is paid" do
+    subscription = subscriptions(:pro_co)
+
+    sync(stripe_sub(id: "sub_pro", status: "past_due", lookup_key: "draxuvo_pro_monthly"))
+    first = subscription.reload.past_due_since
+    assert_not_nil first
+
+    travel 2.days do
+      sync(stripe_sub(id: "sub_pro", status: "past_due", lookup_key: "draxuvo_pro_monthly"))
+    end
+    assert_equal first.to_i, subscription.reload.past_due_since.to_i
+
+    sync(stripe_sub(id: "sub_pro", status: "active", lookup_key: "draxuvo_pro_monthly"))
+    assert_nil subscription.reload.past_due_since
+  end
 end

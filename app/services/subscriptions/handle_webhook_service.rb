@@ -74,7 +74,21 @@ module Subscriptions
       stripe_subscription_id = stripe_subscription_id["id"] if stripe_subscription_id.respond_to?(:keys)
       return if stripe_subscription_id.blank?
 
-      SyncService.new(stripe_subscription: stripe_subscription_id).call
+      subscription = SyncService.new(stripe_subscription: stripe_subscription_id).call
+      handle_failed_payment(subscription, invoice) if @event.type == "invoice.payment_failed" && subscription
+    end
+
+    # Un cambio de plan sin pago suspende al instante (billing_reason subscription_update); un cobro normal
+    # fallido deja past_due con gracia de 7 días y un aviso (spec 031, R2).
+    def handle_failed_payment(subscription, invoice)
+      subscription.reload
+      url = invoice["hosted_invoice_url"]
+      if invoice["billing_reason"].to_s == "subscription_update"
+        SuspendService.new(subscription, reason: "plan_change", invoice_url: url).call
+      elsif subscription.past_due?
+        subscription.update!(pending_invoice_url: url) if url.present?
+        NotifyService.new(subscription, "past_due").call
+      end
     end
   end
 end

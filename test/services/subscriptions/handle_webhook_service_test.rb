@@ -105,4 +105,54 @@ class Subscriptions::HandleWebhookServiceTest < ActiveSupport::TestCase
     assert handle(ev, stripe_sub(id: "sub_pro", status: "active", lookup_key: "draxuvo_pro_monthly"))
     assert StripeEvent.exists?(stripe_event_id: "evt_retry")
   end
+
+  # --- spec 031: pagos fallidos ---
+
+  def invoice(reason, subscription: "sub_pro", url: "https://invoice.stripe.com/i/x")
+    { "id" => "in_#{SecureRandom.hex(4)}", "subscription" => subscription, "billing_reason" => reason, "hosted_invoice_url" => url }
+  end
+
+  test "a failed plan change invoice suspends the company at once with the invoice url" do
+    ResendMailer.stub(:subscription_notice, { "id" => "email_1" }) do
+      handle(event("invoice.payment_failed", invoice("subscription_update")),
+             stripe_sub(id: "sub_pro", status: "past_due", lookup_key: "draxuvo_enterprise_monthly"))
+    end
+
+    subscription = subscriptions(:pro_co).reload
+    assert subscription.suspended?
+    assert_equal "plan_change", subscription.suspension_reason
+    assert_equal "https://invoice.stripe.com/i/x", subscription.pending_invoice_url
+    assert subscription.enterprise?
+    assert_equal "suspended", subscription.subscription_changes.last.kind
+  end
+
+  test "a failed renewal invoice leaves past_due with the grace period and does not suspend" do
+    ResendMailer.stub(:subscription_notice, { "id" => "email_1" }) do
+      handle(event("invoice.payment_failed", invoice("subscription_cycle")),
+             stripe_sub(id: "sub_pro", status: "past_due", lookup_key: "draxuvo_pro_monthly"))
+    end
+
+    subscription = subscriptions(:pro_co).reload
+    assert subscription.past_due?
+    assert subscription.active_access?
+    assert_in_delta Time.current.to_f, subscription.past_due_since.to_f, 5
+    assert_not_nil subscription.past_due_notice_sent_at
+  end
+
+  test "paying the pending invoice reactivates a suspended company" do
+    ResendMailer.stub(:subscription_notice, { "id" => "email_1" }) do
+      handle(event("invoice.payment_failed", invoice("subscription_update")),
+             stripe_sub(id: "sub_pro", status: "past_due", lookup_key: "draxuvo_enterprise_monthly"))
+    end
+    assert subscriptions(:pro_co).reload.suspended?
+
+    handle(event("invoice.paid", invoice("subscription_update")),
+           stripe_sub(id: "sub_pro", status: "active", lookup_key: "draxuvo_enterprise_monthly"))
+
+    subscription = subscriptions(:pro_co).reload
+    assert subscription.active?
+    assert subscription.enterprise?
+    assert_nil subscription.suspended_at
+    assert_equal "reactivated", subscription.subscription_changes.last.kind
+  end
 end

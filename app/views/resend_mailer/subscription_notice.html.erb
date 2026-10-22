@@ -1,0 +1,35 @@
+<%
+  months = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre]
+  date_label = ->(time) { time ? "#{time.to_date.day} de #{months[time.to_date.month - 1]} de #{time.to_date.year}" : nil }
+  panel_url = "#{ENV.fetch("FRONTEND_URL", "http://localhost:4200").chomp("/")}/es/suscripcion"
+  action_url = pay_url.presence || panel_url
+  copy = {
+    "past_due" => {
+      title: "Tu pago está pendiente",
+      body: "No pudimos cobrar la suscripción de #{company_name}. Tienes hasta el #{date_label.call(grace_ends_at)} para pagar sin interrupciones; después se suspenderá y no podrán operar el panel ni la app."
+    },
+    "suspended" => {
+      title: "Tu suscripción está suspendida",
+      body: "La suscripción de #{company_name} quedó suspendida por falta de pago (plan #{plan}). Nadie de la empresa puede operar el panel ni la app hasta que se pague. Si no se paga antes del #{date_label.call(cancels_at)}, la suscripción se cancelará."
+    },
+    "cancel_warning" => {
+      title: "Tu suscripción se cancelará pronto",
+      body: "La suscripción de #{company_name} sigue suspendida y se cancelará el #{date_label.call(cancels_at)} si no se paga. Tus datos se conservan, pero la empresa no podrá operar."
+    }
+  }.fetch(kind)
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title><%= copy[:title] %></title></head>
+<body style="margin:0; padding:24px 16px; background-color:#f0f2f5; font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:16px; padding:32px;">
+        <tr><td style="font-size:22px; font-weight:700; color:#141414; padding-bottom:12px;"><%= copy[:title] %></td></tr>
+        <tr><td style="font-size:15px; line-height:1.6; color:#4a4f55; padding-bottom:24px;">Hola <%= user.first_name %>: <%= copy[:body] %></td></tr>
+        <tr><td><a href="<%= action_url %>" style="display:inline-block; background:#ff5a1f; color:#141414; font-weight:700; text-decoration:none; padding:14px 28px; border-radius:6px;">Pagar ahora</a></td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -29,4 +29,32 @@ class Subscriptions::PortalServiceTest < ActiveSupport::TestCase
       Subscriptions::PortalService.new(company: company, return_url: "https://app.test").call
     end
   end
+
+  # --- spec 031: el portal no abre el cambio de plan durante la prueba ---
+
+  test "during the trial the portal opens with the configuration without plan changes" do
+    company = companies(:one)
+    company.update_column(:stripe_id, "cus_one")
+    captured = nil
+    session = Stripe::StripeObject.construct_from(url: "https://billing.stripe.com/p/session/trial")
+    with_env("STRIPE_PORTAL_TRIAL_CONFIGURATION" => "bpc_trial") do
+      Stripe::BillingPortal::Session.stub(:create, ->(params, *) { captured = params; session }) do
+        Subscriptions::PortalService.new(company: company, return_url: "https://app.test").call
+      end
+    end
+    assert_equal "bpc_trial", captured[:configuration]
+  end
+
+  test "during the trial without that configuration the portal is refused" do
+    company = companies(:one)
+    company.update_column(:stripe_id, "cus_one")
+    with_env("STRIPE_PORTAL_TRIAL_CONFIGURATION" => nil) do
+      Stripe::BillingPortal::Session.stub(:create, ->(*) { flunk "should not call Stripe" }) do
+        error = assert_raises(ApiErrors::UnprocessableEntityError) do
+          Subscriptions::PortalService.new(company: company, return_url: "https://app.test").call
+        end
+        assert_equal "portal_unavailable_in_trial", error.details[:code]
+      end
+    end
+  end
 end

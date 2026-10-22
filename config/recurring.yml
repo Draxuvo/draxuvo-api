@@ -14,3 +14,7 @@ production:
     class: Subscriptions::CheckExpiredJob
     queue: default
     schedule: every hour
+  enforce_subscription_payments:
+    class: Subscriptions::EnforceJob
+    queue: default
+    schedule: every hour

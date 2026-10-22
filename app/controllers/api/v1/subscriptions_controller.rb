@@ -15,7 +15,8 @@ module Api
         render json: serialize(subscription!)
       end
 
-      # PATCH /api/v1/subscription — cambio de plan solo durante la prueba (FR-028).
+      # PATCH /api/v1/subscription — cambio de plan solo durante la prueba (FR-028) y solo por el super admin
+      # (spec 031, FR-001): el dueño y el administrador reciben 403 trial_plan_locked.
       def update
         subscription = subscription!
         plan = valid_plan!(params[:plan])
@@ -27,7 +28,16 @@ module Api
           )
         end
 
+        unless current_user.super_admin?
+          raise ApiErrors::ForbiddenError.new(
+            message: I18n.t("errors.subscription.trial_plan_locked"),
+            details: { code: "trial_plan_locked" }
+          )
+        end
+
+        from_plan = subscription.plan
         subscription.update!(plan: plan)
+        subscription.log_change!("trial_plan_changed", actor: current_user, from_plan: from_plan, to_plan: plan) if from_plan != plan
         render json: serialize(subscription)
       end
 
@@ -36,6 +46,7 @@ module Api
         result = Subscriptions::CreateCheckoutService.new(
           company: current_company,
           plan: required_param!(:plan),
+          actor: current_user,
           billing_cycle: params[:billing_cycle],
           success_url: required_param!(:success_url),
           cancel_url: required_param!(:cancel_url)

@@ -27,7 +27,9 @@ module Subscriptions
       return unless subscription
 
       stripe_sub = Stripe::Subscription.retrieve({ id: @stripe_subscription_id, expand: [ "items.data.price" ] })
+      was_suspended = subscription.suspended?
       subscription.update!(attributes_from(stripe_sub, subscription))
+      finish_suspension(subscription, was_suspended)
       subscription
     end
 
@@ -48,8 +50,11 @@ module Subscriptions
     def status_attributes(stripe_sub, subscription)
       status = STATUS_MAP[stripe_sub.status.to_s]
       return {} unless status
+      # Suspendida (spec 031) sigue así mientras Stripe no confirme el pago: no la baja a past_due.
+      return {} if subscription.suspended? && status == :past_due
 
       attrs = { status: status }
+      attrs.merge!(past_due_attributes(status, subscription))
       if status == :cancelled
         attrs[:cancelled_at] = subscription.cancelled_at || timestamp(stripe_sub["canceled_at"]) || Time.current
       else
@@ -57,6 +62,21 @@ module Subscriptions
       end
       attrs[:trial_ends_at] = nil if status == :active
       attrs
+    end
+
+    # La gracia de 7 días de un cobro normal fallido corre desde el primer past_due (spec 031).
+    def past_due_attributes(status, subscription)
+      return { past_due_since: nil } unless status == :past_due
+
+      { past_due_since: subscription.past_due_since || Time.current }
+    end
+
+    # Al pagar, Stripe vuelve a decir active: se levanta la suspensión; si canceló, se registra el estado final.
+    def finish_suspension(subscription, was_suspended)
+      return unless was_suspended
+      return ReactivateService.new(subscription, already_active: true).call if subscription.active?
+
+      subscription.update!(suspended_at: nil, suspension_reason: nil, pending_invoice_url: nil) if subscription.cancelled?
     end
 
     # Un lookup_key desconocido no toca plan, ciclo ni monto.

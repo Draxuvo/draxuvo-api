@@ -33,7 +33,13 @@ class SubscriptionSerializer
       current_period_start: @s.current_period_start,
       active_access: @s.active_access?,
       cancelled_at: @s.cancelled_at,
-      created_at: @s.created_at
+      created_at: @s.created_at,
+      suspended_at: @s.suspended_at,
+      suspension_reason: @s.suspension_reason,
+      cancels_at: @s.cancels_at,
+      pay_url: @s.suspended? ? @s.pending_invoice_url : nil,
+      past_due_since: @s.past_due_since,
+      grace_ends_at: @s.grace_ends_at
     }
   end
 end

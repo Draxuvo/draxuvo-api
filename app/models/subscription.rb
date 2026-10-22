@@ -3,15 +3,23 @@ class Subscription < ApplicationRecord
 
   TRIAL_DAYS = 30
   IVA_RATE = 0.16
+  # Cobro normal fallido: gracia con acceso y luego suspensión; suspendida: cancelación automática (spec 031).
+  GRACE_DAYS = 7
+  CANCEL_AFTER_DAYS = 30
+  CANCEL_WARNING_DAYS = 23
+  SUSPENSION_REASONS = %w[plan_change payment_overdue].freeze
 
   # Precios en Plan (app/models/plan.rb). amount_cents es el precio base SIN IVA, en centavos de MXN.
   enum :plan, { basic: 0, pro: 1, enterprise: 2 }
-  enum :status, { trialing: 0, active: 1, past_due: 2, cancelled: 3, expired: 4 }
+  enum :status, { trialing: 0, active: 1, past_due: 2, cancelled: 3, expired: 4, suspended: 5 }
   enum :billing_cycle, { monthly: 0, annual: 1 }
 
   validates :plan, :status, :billing_cycle, presence: true
   validates :amount_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :company_id, uniqueness: true
+  validates :suspension_reason, inclusion: { in: SUSPENSION_REASONS }, allow_nil: true
+
+  has_many :subscription_changes, dependent: :destroy
 
   def self.start_trial!(company, plan:)
     create!(
@@ -26,8 +34,24 @@ class Subscription < ApplicationRecord
   end
 
   # Una cancelación programada (cancel_at_period_end) conserva el acceso hasta el fin del periodo.
+  # Suspendida (spec 031) no tiene acceso: solo se puede ver el estado y pagar.
   def active_access?
     (trialing? && trial_ends_at&.future?) || active? || past_due?
+  end
+
+  # Fin de la gracia de un cobro normal fallido.
+  def grace_ends_at
+    past_due_since && past_due_since + GRACE_DAYS.days
+  end
+
+  # Cuándo se cancela sola una suscripción suspendida.
+  def cancels_at
+    suspended_at && suspended_at + CANCEL_AFTER_DAYS.days
+  end
+
+  # Registra un cambio de suscripción (quién, cuándo y qué).
+  def log_change!(kind, actor: nil, from_plan: nil, to_plan: nil, reason: nil)
+    subscription_changes.create!(company: company, actor: actor, kind: kind, from_plan: from_plan, to_plan: to_plan, reason: reason)
   end
 
   def trial_days_remaining

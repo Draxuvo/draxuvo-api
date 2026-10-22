@@ -51,11 +51,24 @@ class Api::V1::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
   # --- PATCH /subscription ----------------------------------------------------------------------
 
-  test "update changes the plan during the trial without moving trial_ends_at" do
+  test "update is refused to the owner and the admin during the trial: only the super admin changes the plan" do
+    subscription = subscriptions(:one)
+
+    [ users(:one_owner) ].each do |user|
+      patch BASE, params: { plan: "basic" }, headers: auth_headers(user), as: :json
+
+      assert_response :forbidden
+      assert_equal "trial_plan_locked", json.dig("error", "details", "code")
+      assert_equal "pro", subscription.reload.plan
+    end
+    assert_equal 0, subscription.subscription_changes.count
+  end
+
+  test "update by the super admin changes the plan during the trial without moving trial_ends_at and logs it" do
     subscription = subscriptions(:one)
     trial_ends_at = subscription.trial_ends_at
 
-    patch BASE, params: { plan: "basic" }, headers: auth_headers(users(:one_owner)), as: :json
+    patch BASE, params: { plan: "basic" }, headers: auth_headers(users(:super_admin), companies(:one)), as: :json
 
     assert_response :ok
     assert_equal "basic", json["plan"]
@@ -66,6 +79,10 @@ class Api::V1::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "basic", subscription.plan
     assert_equal "trialing", subscription.status
     assert_equal trial_ends_at.to_i, subscription.trial_ends_at.to_i
+
+    change = subscription.subscription_changes.last
+    assert_equal "trial_plan_changed", change.kind
+    assert_equal [ "pro", "basic", users(:super_admin).id ], [ change.from_plan, change.to_plan, change.actor_id ]
   end
 
   test "update rejects a paid subscription with not_trialing" do
@@ -114,23 +131,91 @@ class Api::V1::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
   test "checkout defaults the billing cycle to monthly" do
     captured = with_checkout_stubs do
-      post "#{BASE}/checkout", params: checkout_params(plan: "basic"),
+      post "#{BASE}/checkout", params: checkout_params(plan: "pro"),
                                headers: auth_headers(users(:one_owner)), as: :json
     end
 
     assert_response :ok
-    assert_equal "price_draxuvo_basic_monthly", captured.dig(:line_items, 0, :price)
+    assert_equal "price_draxuvo_pro_monthly", captured.dig(:line_items, 0, :price)
   end
 
-  test "checkout accepts the enterprise plan for an owner" do
+  test "checkout accepts the enterprise plan for an owner without a trial" do
     captured = with_checkout_stubs do
       post "#{BASE}/checkout",
            params: checkout_params(plan: "enterprise", billing_cycle: "monthly"),
-           headers: auth_headers(users(:one_owner)), as: :json
+           headers: auth_headers(users(:expired_co_owner)), as: :json
     end
 
     assert_response :ok
     assert_equal "price_draxuvo_enterprise_monthly", captured.dig(:line_items, 0, :price)
+  end
+
+  # --- spec 031: la prueba -------------------------------------------------------------------
+
+  test "checkout during the trial for another plan is refused to the owner and allowed to the super admin" do
+    with_checkout_stubs do
+      post "#{BASE}/checkout", params: checkout_params(plan: "enterprise"),
+                               headers: auth_headers(users(:one_owner)), as: :json
+    end
+    assert_response :forbidden
+    assert_equal "trial_plan_locked", json.dig("error", "details", "code")
+
+    captured = with_checkout_stubs do
+      post "#{BASE}/checkout", params: checkout_params(plan: "enterprise"),
+                               headers: auth_headers(users(:super_admin), companies(:one)), as: :json
+    end
+    assert_response :ok
+    assert_equal "price_draxuvo_enterprise_monthly", captured.dig(:line_items, 0, :price)
+  end
+
+  test "checkout of the assigned plan during the trial keeps the remaining trial days" do
+    ends_at = subscriptions(:one).trial_ends_at
+
+    captured = with_checkout_stubs do
+      post "#{BASE}/checkout", params: checkout_params(plan: "pro"),
+                               headers: auth_headers(users(:one_owner)), as: :json
+    end
+
+    assert_response :ok
+    assert_equal ends_at.to_i, captured.dig(:subscription_data, :trial_end)
+  end
+
+  test "checkout with less than two days of trial left charges right away" do
+    subscriptions(:one).update!(trial_ends_at: 1.day.from_now)
+
+    captured = with_checkout_stubs do
+      post "#{BASE}/checkout", params: checkout_params(plan: "pro"),
+                               headers: auth_headers(users(:one_owner)), as: :json
+    end
+
+    assert_response :ok
+    assert_nil captured[:subscription_data]
+  end
+
+  test "a suspended company cannot start another checkout" do
+    subscriptions(:pro_co).update!(status: :suspended, suspended_at: Time.current, suspension_reason: "plan_change")
+
+    with_checkout_stubs do
+      post "#{BASE}/checkout", params: checkout_params(plan: "enterprise"),
+                               headers: auth_headers(users(:pro_co_owner)), as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "subscription_suspended", json.dig("error", "details", "code")
+  end
+
+  test "a suspended company still reads its subscription with the pay url and the reason" do
+    subscriptions(:pro_co).update!(status: :suspended, suspended_at: Time.current, suspension_reason: "plan_change",
+                                   pending_invoice_url: "https://invoice.stripe.com/i/test")
+
+    get BASE, headers: auth_headers(users(:pro_co_owner))
+
+    assert_response :ok
+    assert_equal "suspended", json["status"]
+    assert_equal false, json["active_access"]
+    assert_equal "plan_change", json["suspension_reason"]
+    assert_equal "https://invoice.stripe.com/i/test", json["pay_url"]
+    assert json["cancels_at"].present?
   end
 
   test "checkout does not change the subscription before the webhook" do
