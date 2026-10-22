@@ -26,6 +26,10 @@ services:
       # Corre Solid Queue dentro de Puma (config/puma.rb): sin esto los jobs se encolan y nadie los ejecuta.
       - key: SOLID_QUEUE_IN_PUMA
         value: "true"
+      # Puma en modo single (sin workers): en 512 MB el worker extra agotaba la memoria y Render mataba
+      # la instancia (oomKilled, health check con timeout). Con 0 la API usa ~350 MB.
+      - key: WEB_CONCURRENCY
+        value: "0"
       - key: DATABASE_URL        # URL interna de draxuvo-db (misma región, red privada)
         sync: false
       - key: SECRET_KEY_BASE
