@@ -6,7 +6,7 @@ class Api::V1::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
   BASE = "/api/v1/subscription".freeze
 
   PRO_MODULES = %w[employees attendance inventory work_orders tickets reports restaurant terminals].freeze
-  BASIC_MODULES = %w[employees attendance inventory].freeze
+  BASIC_MODULES = %w[employees attendance inventory reports].freeze
 
   # --- GET /subscription ------------------------------------------------------------------------
 

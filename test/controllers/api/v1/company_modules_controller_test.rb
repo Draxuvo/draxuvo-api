@@ -5,7 +5,7 @@ require "test_helper"
 class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
   PATH = "/api/v1/company/modules".freeze
 
-  BASIC_MODULES = %w[employees attendance inventory].freeze
+  BASIC_MODULES = %w[employees attendance inventory reports].freeze
   PRO_MODULES = %w[employees attendance inventory work_orders tickets reports restaurant terminals].freeze
 
   def as_super_admin(company) = auth_headers(users(:super_admin), company)
@@ -14,7 +14,7 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
     patch PATH, params: { disabled_modules: [ "inventory" ] }, headers: as_super_admin(companies(:basic_co)), as: :json
 
     assert_response :ok
-    assert_equal %w[employees attendance], json["active_modules"]
+    assert_equal %w[employees attendance reports], json["active_modules"]
     assert_equal BASIC_MODULES, json["available_modules"]
     assert_equal %w[inventory], json["disabled_modules"]
     assert_equal %w[inventory], companies(:basic_co).reload.disabled_modules
@@ -65,12 +65,12 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
 
   test "rejects a module outside the plan with 422 and leaves no record" do
     assert_no_difference -> { ModuleChange.count } do
-      patch PATH, params: { disabled_modules: [ "reports" ] }, headers: as_super_admin(companies(:basic_co)), as: :json
+      patch PATH, params: { disabled_modules: [ "work_orders" ] }, headers: as_super_admin(companies(:basic_co)), as: :json
     end
 
     assert_response :unprocessable_entity
     assert_equal "module_not_in_plan", json.dig("error", "details", "code")
-    assert_equal "reports", json.dig("error", "details", "module")
+    assert_equal "work_orders", json.dig("error", "details", "module")
     assert_equal [], companies(:basic_co).reload.disabled_modules
   end
 

@@ -3,6 +3,11 @@ module Api
     class ReportsController < BaseController
       requires_module :reports
       before_action :require_admin!
+      # Reportes completos fuera del plan dan 403 module_not_in_plan (spec 033, FR-007); el Resumen no falla, omite bloques.
+      before_action(only: :income) { gate_reports!(:tickets, report_modules.income?) }
+      before_action(only: :expenses) { gate_reports!(report_modules.payroll? ? :inventory : :employees, report_modules.expenses?) }
+      before_action(only: :payroll) { gate_reports!(report_modules.payroll? ? :attendance : :employees, report_modules.attendance?) }
+      before_action(only: :inventory) { gate_reports!(:inventory, report_modules.inventory?) }
 
       # GET /api/v1/reports/summary?from=2026-04-01&to=2026-04-30[&compare=true]
       # También acepta period=weekly|monthly|annual&date=2026-04-01 (si llegan from/to, mandan estos).
@@ -41,7 +46,21 @@ module Api
         render json: Reports::PayrollService.new(current_company, range).call
       end
 
+      # GET /api/v1/reports/inventory?from=2026-04-01&to=2026-04-30
+      # Existencias y valor son de hoy; solo los movimientos usan el rango.
+      def inventory
+        render json: Reports::InventoryService.new(current_company, from_to_range).call
+      end
+
       private
+
+      def report_modules = @report_modules ||= Reports::Modules.new(current_company)
+
+      def gate_reports!(key, allowed)
+        return if allowed || current_user&.super_admin?
+
+        raise_module_not_in_plan!(key)
+      end
 
       def group_by_param
         value = params[:group_by].to_s.downcase

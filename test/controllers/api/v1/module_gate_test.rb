@@ -6,7 +6,6 @@ class Api::V1::ModuleGateTest < ActionDispatch::IntegrationTest
   PRO_ONLY = {
     "work_orders" => "/api/v1/work_orders",
     "tickets" => "/api/v1/tickets",
-    "reports" => "/api/v1/reports/summary",
     "terminals" => "/api/v1/payment_terminals"
   }.freeze
 
@@ -16,7 +15,7 @@ class Api::V1::ModuleGateTest < ActionDispatch::IntegrationTest
     "inventory" => "/api/v1/products"
   }.freeze
 
-  test "a basic company gets 403 module_not_in_plan on work orders, tickets and reports" do
+  test "a basic company gets 403 module_not_in_plan on work orders, tickets and terminals" do
     PRO_ONLY.each do |module_key, path|
       get path, headers: auth_headers(users(:basic_co_owner))
 
@@ -136,7 +135,7 @@ class Api::V1::ModuleGateTest < ActionDispatch::IntegrationTest
     assert_equal 0.0, body["work_orders"]["to_charge_total"]
     assert_equal 0, body["tickets"]["total"]
     assert_equal 1, body["inventory"]["total"]
-    assert_equal %w[employees attendance inventory], body["active_modules"]
+    assert_equal %w[employees attendance inventory reports], body["active_modules"]
   end
 
   test "the dashboard includes every section for pro" do

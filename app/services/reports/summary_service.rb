@@ -5,17 +5,18 @@ module Reports
       @range   = range
       @period  = period
       @compare = compare
+      @modules = Modules.new(company)
     end
 
+    # Cada bloque sale solo si su módulo está activo (spec 033, FR-007): no se devuelven en cero.
     def call
-      result = {
-        period:      { type: @period, from: @range.first, to: @range.last },
-        income:      income_data,
-        work_orders: work_orders_data,
-        expenses:    expenses_data,
-        attendance:  attendance_data
-      }
-      result[:previous] = previous_data if @compare
+      result = { period: { type: @period, from: @range.first, to: @range.last } }
+      result[:income]      = income_data if @modules.income?
+      result[:work_orders] = work_orders_data if @modules.work_orders?
+      result[:expenses]    = expenses_data if @modules.expenses?
+      result[:attendance]  = attendance_data if @modules.attendance?
+      result[:inventory]   = inventory_data if @modules.inventory?
+      result[:previous]    = previous_data if @compare
       result
     end
 
@@ -24,13 +25,16 @@ module Reports
     # Mismo cálculo de ingresos y gastos sobre el periodo anterior de igual duración.
     def previous_data
       range = Comparison.previous_range(@range)
-      income = income_data(range)
-      expenses = expenses_data(range)
-      {
-        period:   { from: range.first, to: range.last },
-        income:   income.slice(:total_revenue, :pending_revenue),
-        expenses: expenses
-      }
+      result = { period: { from: range.first, to: range.last } }
+      result[:income] = income_data(range).slice(:total_revenue, :pending_revenue) if @modules.income?
+      result[:expenses] = expenses_data(range) if @modules.expenses?
+      result
+    end
+
+    # Foto de hoy, igual que el reporte de inventario (no depende del periodo).
+    def inventory_data
+      stock = InventoryService.new(@company, @range).stock_summary
+      { value: stock[:value], counted_products: stock[:counted_products], low_stock: stock[:low_stock_count] }
     end
 
     def income_data(range = @range)
@@ -63,11 +67,15 @@ module Reports
     end
 
     def expenses_data(range = @range)
-      payroll_total  = @company.employees.where(status: :active).sum("COALESCE(salary, 0)").to_f
-      inventory_cost = @company.stock_movements
-                               .where(movement_type: :entry, created_at: range)
-                               .joins(:product)
-                               .sum("stock_movements.qty * COALESCE(products.unit_cost, 0)").to_f
+      payroll_total  = @modules.payroll? ? @company.employees.where(status: :active).sum("COALESCE(salary, 0)").to_f : 0.0
+      inventory_cost = if @modules.inventory?
+        @company.stock_movements
+                .where(movement_type: :entry, created_at: range)
+                .joins(:product)
+                .sum("stock_movements.qty * COALESCE(products.unit_cost, 0)").to_f
+      else
+        0.0
+      end
 
       {
         payroll:        payroll_total,
