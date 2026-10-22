@@ -11,13 +11,18 @@ class CheckSerializer
 
   # Resumen para el plano de mesas.
   # `counts` ({ "ready" => 2, ... }) se puede dar ya calculado para no consultar por cada cuenta.
+  # Para quien no es jefe ni dueño de la cuenta se omiten el total y el mesero (spec 032, FR-019b).
   def self.summary(check, context, counts: nil)
     counts ||= check.check_items.group(:status).count
-    {
-      id: check.id, waiter: person(check.waiter), opened_at: check.opened_at, total: money(check.total),
+    own = check.waiter_id == context.user.id
+    summary = {
+      id: check.id, opened_at: check.opened_at,
       counts: %w[new preparing ready delivered].index_with { |s| counts.fetch(s, 0) },
-      mine: check.waiter_id == context.user.id
+      mine: own
     }
+    return summary unless own || context.boss?
+
+    summary.merge(waiter: person(check.waiter), total: money(check.total))
   end
 
   def as_json(*)

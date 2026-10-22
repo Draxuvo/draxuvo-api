@@ -14,12 +14,17 @@ module Api
             CheckSerializer.summary(check, restaurant_context, counts: per_status)
           end
           by_table = open_checks.select(&:dining_table_id).index_by(&:dining_table_id)
+          by_check = counts.each_with_object(Hash.new { |h, k| h[k] = {} }) { |((check_id, status), n), acc| acc[check_id][status] = n }
 
           render json: {
-            results: tables.map { |t| DiningTableSerializer.new(t, summary: by_table[t.id] && summaries[by_table[t.id].id]).as_json },
+            results: tables.map do |t|
+              check = by_table[t.id]
+              DiningTableSerializer.new(t, summary: check && summaries[check.id],
+                                           state: ::Restaurant::TableState.call(check, counts: check && by_check[check.id])).as_json
+            end,
             takeouts: open_checks.reject(&:dining_table_id).map { |c| summaries[c.id].merge(takeout_name: c.takeout_name) },
             ready_items: ready_items
-          }.merge(stock_alerts_count)
+          }.merge(stock_alerts_count).merge(overview_for(open_checks, by_check))
         end
 
         private
@@ -33,6 +38,13 @@ module Api
               table: item.check.dining_table&.name, takeout_name: item.check.takeout_name, ready_at: item.ready_at
             }
           end
+        end
+
+        # Solo para dueño, administrador y gerente (spec 032, FR-019b).
+        def overview_for(open_checks, by_check)
+          return {} unless restaurant_context.boss?
+
+          { overview: ::Restaurant::ServiceOverview.new(current_company, open_checks, by_check).call }
         end
 
         def stock_alerts_count

@@ -8,6 +8,7 @@ kitchen:
 bar:
   company: resto_co
   name: Barra
+  kind: bar
   is_default: false
   active: true
   position: 2

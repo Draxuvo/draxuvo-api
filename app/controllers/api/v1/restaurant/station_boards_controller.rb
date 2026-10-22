@@ -11,7 +11,7 @@ module Api
           return unless stale?(etag: [ station.id, items.map { |i| [ i.id, i.status, i.updated_at ] }, Time.current.to_i / 30 ])
 
           render json: {
-            station: { id: station.id, name: station.name },
+            station: { id: station.id, name: station.name, kind: station.kind },
             server_time: Time.current,
             orders: items.group_by(&:kitchen_order).sort_by { |order, _| order.sent_at }.map { |order, list| order_json(order, list) }
           }

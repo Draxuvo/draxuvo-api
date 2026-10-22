@@ -274,6 +274,7 @@ en:
     errors:
       invalid_terminal: "The terminal does not exist or is inactive"
       table_occupied: "The table already has an open check"
+      not_on_menu: "%{name} is no longer on the restaurant menu"
       table_inactive: "The table is not available"
       sold_out: "%{name} is sold out"
       nothing_to_send: "There is nothing to send"

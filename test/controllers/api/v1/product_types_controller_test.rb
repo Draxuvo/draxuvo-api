@@ -85,4 +85,18 @@ class Api::V1::ProductTypesControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     assert_equal "beer", type.reload.icon
   end
+
+  test "in_menu is listed, defaults to true and only an admin changes it" do
+    get BASE, headers: auth_headers(users(:resto_waiter), @company)
+    rows = response.parsed_body["results"].index_by { |t| t["name"] }
+    assert_equal true, rows["Platillo"]["in_menu"]
+    assert_equal false, rows["Insumo"]["in_menu"]
+
+    patch "#{BASE}/#{product_types(:resto_co_sold).id}", params: { in_menu: false }, headers: auth_headers(users(:resto_manager), @company), as: :json
+    assert_response :forbidden
+
+    patch "#{BASE}/#{product_types(:resto_co_sold).id}", params: { in_menu: false }, headers: @admin, as: :json
+    assert_response :ok
+    assert_equal false, response.parsed_body["in_menu"]
+  end
 end

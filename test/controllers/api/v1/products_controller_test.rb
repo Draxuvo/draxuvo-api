@@ -191,4 +191,31 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["icon"]
     assert_equal "utensils", response.parsed_body.dig("product_type", "icon")
   end
+
+  # --- spec 032 ---
+
+  test "in an order-mode company the menu leaves out the types that are not on the menu" do
+    company = companies(:resto_co)
+    headers = auth_headers(users(:resto_owner), company)
+    abarrotes = company.product_types.create!(name: "Abarrotes", kind: "sold", sellable: true, in_menu: false, position: 9)
+    company.products.create!(name: "Arroz a granel", sku: "ARR", product_type: abarrotes, price: 20)
+
+    get "/api/v1/products/menu", headers: headers
+    names = response.parsed_body["menu"].flat_map { |group| group["items"].map { |item| item["name"] } }
+    assert_not_includes names, "Arroz a granel"
+    assert_includes names, "Sopa del día"
+
+    get "/api/v1/products", params: { sellable: "true" }, headers: headers
+    assert_includes response.parsed_body["results"].map { |p| p["sku"] }, "ARR"
+  end
+
+  test "in a service company the menu keeps every sellable type even if it is not on the menu" do
+    company = companies(:pro_co)
+    type = company.product_types.create!(name: "Mano de obra", kind: "sold", sellable: true, in_menu: false, position: 9)
+    company.products.create!(name: "Revisión", sku: "REV", product_type: type, price: 100)
+
+    get "/api/v1/products/menu", headers: auth_headers(users(:pro_co_owner), company)
+    names = response.parsed_body["menu"].flat_map { |group| group["items"].map { |item| item["name"] } }
+    assert_includes names, "Revisión"
+  end
 end

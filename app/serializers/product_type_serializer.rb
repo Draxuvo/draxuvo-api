@@ -9,7 +9,7 @@ class ProductTypeSerializer
     unit = @type.default_unit
     {
       id: @type.id, name: @type.name, kind: @type.kind,
-      icon: @type.icon, sellable: @type.sellable, counted: @type.counted, fractional: @type.fractional,
+      icon: @type.icon, sellable: @type.sellable, in_menu: @type.in_menu, counted: @type.counted, fractional: @type.fractional,
       default_unit: unit && { key: unit.key, name: unit.name },
       active: @type.active, position: @type.position,
       products_count: @products_count || @type.products.count

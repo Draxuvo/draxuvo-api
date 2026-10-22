@@ -299,6 +299,16 @@ barra = sazon.stations.find_or_create_by!(name: "Barra") { |st| st.position = 2 
 end
 puts "  [ok] #{sazon.name}: estaciones Cocina y Barra, 6 mesas y menú de restaurante"
 
+# Menú del servicio (spec 032): los insumos no se venden y el abarrote y el material eléctrico que comparte el
+# catálogo de demo no salen en Tomar pedido, aunque siguen en Inventario.
+insumo = sazon.product_types.find_by!(kind: "supply")
+otros = sazon.product_types.find_or_create_by!(name: "Abarrotes y material") do |type|
+  type.assign_attributes(kind: nil, sellable: true, in_menu: false, counted: true, fractional: false, default_unit_key: "pza", position: 4)
+end
+sazon.products.where(category: "Insumos").find_each { |product| product.update!(product_type: insumo) }
+sazon.products.where(category: [ "Abarrotes", "Material eléctrico", "Plomería" ]).find_each { |product| product.update!(product_type: otros) }
+puts "  [ok] #{sazon.name}: insumos fuera de la venta y abarrotes y material fuera del menú"
+
 # Iconos de producto (spec 026) en algunos productos de demo; el resto usa el icono sugerido de su tipo.
 {
   "SZN-TAC" => "taco", "SZN-ENS" => "salad", "SZN-SOP" => "soup", "SZN-POS" => "cake", "SZN-AGU" => "juice",

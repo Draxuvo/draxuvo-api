@@ -42,4 +42,14 @@ class Api::V1::Restaurant::DiningTablesControllerTest < ActionDispatch::Integrat
 
     assert_response :not_found
   end
+
+  test "a boss reorders the floor plan by changing a table position, and the list follows it" do
+    table = dining_tables(:table_1)
+    patch "/api/v1/restaurant/tables/#{table.id}", params: { table: { position: 99 } }, headers: headers_for(users(:resto_manager)), as: :json
+
+    assert_response :ok
+    assert_equal 99, response.parsed_body["position"]
+    get "/api/v1/restaurant/tables", headers: headers_for(users(:resto_manager))
+    assert_equal table.name, response.parsed_body["results"].last["name"]
+  end
 end

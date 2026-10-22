@@ -7,7 +7,9 @@ module Api
 
         def create
           # Solo productos de tipos que se venden (spec 016); un insumo responde 404 como uno no disponible.
+          # Uno que salió del menú (spec 032) se rechaza; lo ya agregado a la cuenta se conserva.
           product = current_company.products.available.sellable.find(params[:product_id])
+          invalid!(:not_on_menu, name: product.name) unless product.product_type.in_menu
           quantity = params[:quantity].to_i
           quantity = 1 if quantity < 1
           availability = ::Restaurant::Availability.new(current_company)

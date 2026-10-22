@@ -14,6 +14,7 @@ class Api::V1::Restaurant::StationBoardsControllerTest < ActionDispatch::Integra
     assert_response :ok
     body = response.parsed_body
     assert_equal "Cocina", body.dig("station", "name")
+    assert_equal "kitchen", body.dig("station", "kind")
     order = body["orders"].first
     assert_equal 1, order["number"]
     assert_equal "1", order["table"]

@@ -4,6 +4,7 @@ class StationSerializer
   end
 
   def as_json(*)
-    { id: @station.id, name: @station.name, is_default: @station.is_default, active: @station.active, position: @station.position }
+    { id: @station.id, name: @station.name, is_default: @station.is_default, active: @station.active, position: @station.position,
+      kind: @station.kind }
   end
 end

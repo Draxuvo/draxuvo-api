@@ -23,7 +23,7 @@ module Api
         private
 
         def station_params
-          params.fetch(:station, params).permit(:name, :is_default, :active, :position)
+          params.fetch(:station, params).permit(:name, :is_default, :active, :position, :kind)
         end
       end
     end

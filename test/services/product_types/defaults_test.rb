@@ -42,4 +42,9 @@ class ProductTypes::DefaultsTest < ActiveSupport::TestCase
     service = Company.create!(name: "Taller Dos")
     assert_equal %w[wrench gear box], service.product_types.ordered.pluck(:icon)
   end
+
+  test "the supply type of a new restaurant is left out of the menu, the rest are in" do
+    restaurant = Company.create!(name: "Mariscos Tres", order_mode: :order)
+    assert_equal [ true, true, false ], restaurant.product_types.ordered.pluck(:in_menu)
+  end
 end
