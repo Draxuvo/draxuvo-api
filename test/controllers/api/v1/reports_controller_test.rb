@@ -89,4 +89,65 @@ class Api::V1::ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal 0.0, response.parsed_body["income"]["total_revenue"]
   end
+
+  test "basic plan gets 403 module_not_in_plan on income and 200 on the rest" do
+    basic = companies(:basic_co)
+    headers = auth_headers(users(:basic_co_owner), basic)
+
+    get "/api/v1/reports/income", params: { from: "2026-03-01", to: "2026-03-31" }, headers: headers
+    assert_response :forbidden
+    assert_equal "module_not_in_plan", response.parsed_body.dig("error", "details", "code")
+    assert_equal "tickets", response.parsed_body.dig("error", "details", "module")
+
+    %w[expenses payroll inventory].each do |report|
+      get "/api/v1/reports/#{report}", params: { from: "2026-03-01", to: "2026-03-31" }, headers: headers
+      assert_response :ok, report
+    end
+  end
+
+  test "basic summary has no income nor work orders" do
+    basic = companies(:basic_co)
+
+    get "/api/v1/reports/summary", params: { from: "2026-03-01", to: "2026-03-31", compare: "true" },
+                                   headers: auth_headers(users(:basic_co_owner), basic)
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_not body.key?("income")
+    assert_not body.key?("work_orders")
+    assert body.key?("expenses")
+    assert body.key?("inventory")
+    assert_not body["previous"].key?("income")
+  end
+
+  test "inventory report answers 200 on pro and 403 once inventory is disabled" do
+    get "/api/v1/reports/inventory", params: { from: "2026-03-01", to: "2026-03-31" }, headers: @headers
+    assert_response :ok
+    assert_equal %w[period stock movements], response.parsed_body.keys
+
+    @company.update!(disabled_modules: %w[inventory])
+    get "/api/v1/reports/inventory", params: { from: "2026-03-01", to: "2026-03-31" }, headers: @headers
+    assert_response :forbidden
+    assert_equal "inventory", response.parsed_body.dig("error", "details", "module")
+  end
+
+  test "payroll asks for attendance when employees are on" do
+    basic = companies(:basic_co)
+    basic.update!(disabled_modules: %w[attendance])
+
+    get "/api/v1/reports/payroll", params: { from: "2026-03-01", to: "2026-03-31" },
+                                   headers: auth_headers(users(:basic_co_owner), basic)
+
+    assert_response :forbidden
+    assert_equal "attendance", response.parsed_body.dig("error", "details", "module")
+  end
+
+  test "the super admin keeps access to income of a basic company" do
+    admin = users(:super_admin) rescue nil
+    skip "sin super admin en fixtures" unless admin
+
+    get "/api/v1/reports/income", params: { from: "2026-03-01", to: "2026-03-31" },
+                                  headers: auth_headers(admin, companies(:basic_co))
+    assert_response :ok
+  end
 end

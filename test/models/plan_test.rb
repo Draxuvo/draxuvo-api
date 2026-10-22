@@ -9,7 +9,7 @@ class PlanTest < ActiveSupport::TestCase
   }.freeze
 
   EXPECTED_MODULES = {
-    basic:      %i[employees attendance inventory],
+    basic:      %i[employees attendance inventory reports],
     pro:        %i[employees attendance inventory work_orders tickets reports restaurant terminals],
     enterprise: %i[employees attendance inventory work_orders tickets reports restaurant terminals whatsapp multi_company]
   }.freeze

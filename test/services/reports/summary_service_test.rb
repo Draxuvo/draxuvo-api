@@ -23,9 +23,9 @@ class Reports::SummaryServiceTest < ActiveSupport::TestCase
     Ticket.create!(work_order: order, company: @company, total: total, status: status, **attrs)
   end
 
-  test "has the four sections and echoes the period" do
+  test "has the sections of the plan and echoes the period" do
     result = summary
-    assert_equal %i[period income work_orders expenses attendance], result.keys
+    assert_equal %i[period income work_orders expenses attendance inventory], result.keys
     assert_equal({ type: "month", from: RANGE.first, to: RANGE.last }, result[:period])
   end
 
@@ -109,5 +109,31 @@ class Reports::SummaryServiceTest < ActiveSupport::TestCase
     assert_equal 0, result[:work_orders][:total]
     assert_equal({ payroll: 0.0, inventory_cost: 0.0, total: 0.0 }, result[:expenses])
     assert_equal({ total: 0, normal: 0, late: 0, absent: 0 }, result[:attendance])
+  end
+
+  test "basic plan omits income and work orders and keeps expenses, attendance and inventory" do
+    @company.subscription.update!(plan: :basic)
+
+    result = Reports::SummaryService.new(@company, RANGE, "month", compare: true).call
+
+    assert_equal %i[period expenses attendance inventory previous], result.keys
+    assert_equal %i[period expenses], result[:previous].keys
+    assert_equal 10_000.0, result[:expenses][:payroll]
+  end
+
+  test "a module taken away by the super admin removes its block" do
+    @company.update!(disabled_modules: %w[inventory])
+
+    result = summary
+
+    assert_not result.key?(:inventory)
+    assert_equal 0.0, result[:expenses][:inventory_cost]
+  end
+
+  test "inventory block reports today's value and low stock" do
+    type = ProductType.find_by!(company: @company, counted: true)
+    Product.create!(company: @company, sku: "R-2", name: "Tornillo", unit_cost: 2, stock: 10, min_stock: 10, product_type: type)
+
+    assert_equal({ value: 20.0, counted_products: 1, low_stock: 1 }, summary[:inventory])
   end
 end

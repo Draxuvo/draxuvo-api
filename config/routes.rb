@@ -142,6 +142,7 @@ Rails.application.routes.draw do
       get "reports/income",   to: "reports#income"
       get "reports/expenses", to: "reports#expenses"
       get "reports/payroll",  to: "reports#payroll"
+      get "reports/inventory", to: "reports#inventory"
 
       resources :work_orders do
         collection do

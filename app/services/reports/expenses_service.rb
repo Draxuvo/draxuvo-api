@@ -4,18 +4,16 @@ module Reports
       @company  = company
       @range    = range
       @group_by = group_by
+      @modules  = Modules.new(company)
     end
 
+    # Solo incluye nómina o compras de inventario si su módulo está activo (spec 033).
     def call
-      payroll   = payroll_data
-      inventory = inventory_data
-
-      {
-        period:         { from: @range.first, to: @range.last },
-        total_expenses: payroll[:total] + inventory[:total],
-        payroll:        payroll,
-        inventory_cost: inventory
-      }
+      result = { period: { from: @range.first, to: @range.last } }
+      result[:payroll]        = payroll_data if @modules.payroll?
+      result[:inventory_cost] = inventory_data if @modules.inventory?
+      result[:total_expenses] = result.values_at(:payroll, :inventory_cost).compact.sum { |x| x[:total] }
+      result
     end
 
     private

@@ -6,7 +6,7 @@ class Api::V1::PlansControllerTest < ActionDispatch::IntegrationTest
   EXPECTED_PLANS = [
     {
       "key" => "basic",
-      "modules" => %w[employees attendance inventory],
+      "modules" => %w[employees attendance inventory reports],
       "prices" => {
         "monthly" => { "amount_cents" => 39_900, "iva_cents" => 6_384, "total_cents" => 46_284 },
         "annual" => { "amount_cents" => 399_000, "iva_cents" => 63_840, "total_cents" => 462_840 }
