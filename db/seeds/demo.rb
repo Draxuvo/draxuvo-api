@@ -277,6 +277,7 @@ puts "  [ok] multi@demo.demo: owner de Electricidad Volta y staff de Restaurante
 # Restaurante (spec 013): estaciones, mesas y menú de Sazón. Se puede volver a ejecutar sin duplicar.
 cocina = sazon.stations.find_or_create_by!(name: "Cocina") { |st| st.position = 1 }
 barra = sazon.stations.find_or_create_by!(name: "Barra") { |st| st.position = 2 }
+barra.update!(kind: "bar")
 (1..6).each { |n| sazon.dining_tables.find_or_create_by!(name: n.to_s) { |t| t.position = n } }
 [
   [ "SZN-TAC", "Tacos al pastor", "Platillos", 25.0, 70.0, cocina, true, 40, 10 ],
