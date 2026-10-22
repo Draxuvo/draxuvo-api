@@ -28,6 +28,8 @@ class Product < ApplicationRecord
   scope :available,    ->      { where(available: true) }
   scope :by_category,  ->(cat) { where(category: cat) if cat.present? }
   scope :sellable,     ->      { joins(:product_type).where(product_types: { sellable: true }) }
+  # Menú del restaurante (spec 032): se vende y el tipo está en el menú.
+  scope :on_menu,      ->      { joins(:product_type).where(product_types: { sellable: true, in_menu: true }) }
   scope :counted,      ->      { joins(:product_type).where(product_types: { counted: true }) }
   # Bajo inventario (spec 016, FR-013): solo tipos que se cuentan, con mínimo y existencia en el mínimo o debajo.
   scope :low_stock,    ->      { counted.where("products.min_stock > 0 AND products.stock <= products.min_stock") }

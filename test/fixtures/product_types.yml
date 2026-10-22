@@ -26,6 +26,7 @@
   name: <%= names[2] %>
   kind: supply
   sellable: false
+  in_menu: false
   counted: true
   fractional: true
   default_unit_key: <%= mode == :order ? "kg" : "pza" %>

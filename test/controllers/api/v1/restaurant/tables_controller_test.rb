@@ -100,4 +100,48 @@ class Api::V1::Restaurant::TablesControllerTest < ActionDispatch::IntegrationTes
 
     assert_response :unauthorized
   end
+
+  test "each table carries its state" do
+    get_tables(users(:resto_waiter))
+    tables = response.parsed_body["results"].index_by { |t| t["name"] }
+
+    assert_equal "free", tables["3"]["state"]
+    assert_equal "occupied", tables["1"]["state"]
+  end
+
+  test "a table whose items were all delivered is to pay" do
+    settle_check(checks(:open_check))
+    get_tables(users(:resto_waiter))
+
+    assert_equal "to_pay", response.parsed_body["results"].find { |t| t["name"] == "1" }["state"]
+  end
+
+  test "a waiter does not see total or waiter of other people's checks" do
+    get_tables(users(:resto_waiter2))
+    check = response.parsed_body["results"].find { |t| t["name"] == "1" }
+
+    assert_equal "occupied", check["state"]
+    assert_equal false, check["check"]["mine"]
+    assert check["check"]["opened_at"].present?
+    assert_not check["check"].key?("total")
+    assert_not check["check"].key?("waiter")
+  end
+
+  test "a boss sees total and waiter of every check" do
+    get_tables(users(:resto_manager))
+    check = response.parsed_body["results"].find { |t| t["name"] == "1" }["check"]
+
+    assert_equal "155.00", check["total"]
+    assert check["waiter"].present?
+  end
+
+  test "the overview is only for a boss" do
+    get_tables(users(:resto_manager))
+    overview = response.parsed_body["overview"]
+    assert_equal 2, overview["open_checks"]
+    assert_equal 2, overview["pending_comandas"]
+
+    get_tables(users(:resto_waiter))
+    assert_not response.parsed_body.key?("overview")
+  end
 end

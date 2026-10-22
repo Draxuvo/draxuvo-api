@@ -24,7 +24,9 @@ module Api
       # GET /api/v1/products/menu
       # Retorna los productos disponibles agrupados por categoría para usar como menú
       def menu
-        products = current_company.products.available.sellable.includes(:product_type).search(params[:search])
+        # Con mesas (modo pedido) el menú es el del restaurante: solo tipos marcados `in_menu` (spec 032).
+        sold = current_company.order_mode_order? ? :on_menu : :sellable
+        products = current_company.products.available.public_send(sold).includes(:product_type).search(params[:search])
         products = products.by_category(params[:category]) if params[:category].present?
         products = products.order(:category, :name)
 

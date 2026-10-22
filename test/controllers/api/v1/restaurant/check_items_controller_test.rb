@@ -108,4 +108,15 @@ class Api::V1::Restaurant::CheckItemsControllerTest < ActionDispatch::Integratio
     add(lime)
     assert_response :not_found
   end
+
+  test "a product whose type is not on the menu is refused, but a line already on the check stays" do
+    tacos = products(:resto_tacos)
+    kept = checks(:open_check).check_items.find_by!(product: tacos)
+    tacos.product_type.update!(in_menu: false)
+
+    add(tacos)
+    assert_response :unprocessable_entity
+    assert_equal "not_on_menu", response.parsed_body.dig("error", "details", "code")
+    assert kept.reload.persisted?
+  end
 end

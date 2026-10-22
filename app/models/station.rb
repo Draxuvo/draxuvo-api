@@ -4,7 +4,10 @@ class Station < ApplicationRecord
   has_many :check_items, dependent: :nullify
   has_many :products, dependent: :nullify
 
+  KINDS = %w[kitchen bar other].freeze
+
   validates :name, presence: true, uniqueness: { scope: :company_id }
+  validates :kind, inclusion: { in: KINDS }
   validate :default_station_stays_active
 
   before_validation :first_station_is_default, on: :create

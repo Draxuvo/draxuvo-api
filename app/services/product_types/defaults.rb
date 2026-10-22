@@ -6,7 +6,7 @@ module ProductTypes
       "order" => [
         { kind: "sold", name: "Platillo", sellable: true, counted: false, fractional: false, default_unit_key: "pza" },
         { kind: "counted_sold", name: "Bebida", sellable: true, counted: true, fractional: false, default_unit_key: "pza" },
-        { kind: "supply", name: "Insumo", sellable: false, counted: true, fractional: true, default_unit_key: "kg" }
+        { kind: "supply", name: "Insumo", sellable: false, counted: true, fractional: true, default_unit_key: "kg", in_menu: false }
       ],
       "service" => [
         { kind: "sold", name: "Servicio", sellable: true, counted: false, fractional: false, default_unit_key: "serv" },
