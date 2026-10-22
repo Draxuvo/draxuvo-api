@@ -42,6 +42,9 @@ es:
       blank: "no puede estar vacío"
     subscription:
       inactive: "Tu suscripción ha expirado o fue cancelada. Actualiza tu plan para continuar."
+      suspended: "Tu suscripción está suspendida por falta de pago. Paga para volver a operar."
+      trial_plan_locked: "Durante la prueba el plan solo lo cambia el equipo de Draxuvo."
+      portal_unavailable_in_trial: "Durante la prueba no puedes administrar el plan desde el portal de pagos."
       invalid_plan: "Plan inválido. Debe ser 'basic', 'pro' o 'enterprise'."
       stripe_not_configured: "Stripe no está configurado. Contacta al soporte."
       invalid_billing_cycle: "Ciclo de facturación inválido. Debe ser 'monthly' o 'annual'."

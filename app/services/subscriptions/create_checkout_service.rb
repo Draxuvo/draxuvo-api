@@ -2,7 +2,8 @@ module Subscriptions
   # Crea una sesión de Stripe Checkout para el plan y ciclo elegidos (contracts/api.md, checkout).
   # No cambia la suscripción: el estado solo se actualiza por webhook (FR-007).
   class CreateCheckoutService
-    def initialize(company:, plan:, success_url:, cancel_url:, billing_cycle: nil)
+    def initialize(company:, plan:, success_url:, cancel_url:, billing_cycle: nil, actor: nil)
+      @actor         = actor
       @company       = company
       @plan          = plan.to_s
       @billing_cycle = billing_cycle.presence&.to_s || "monthly"
@@ -11,8 +12,10 @@ module Subscriptions
     end
 
     def call
+      ensure_not_suspended!
       ensure_no_paid_subscription!
       price_id    = PriceLookupService.price_id(@plan, @billing_cycle)
+      ensure_trial_plan_unchanged!
       customer_id = find_or_create_stripe_customer
 
       session = Stripe::Checkout::Session.create(
@@ -23,6 +26,7 @@ module Subscriptions
         success_url: @success_url,
         cancel_url: @cancel_url,
         metadata: { company_id: @company.id, plan: @plan, billing_cycle: @billing_cycle },
+        **trial_options,
         tax_id_collection: { enabled: true },
         # Stripe exige que el cliente existente acepte el nombre y la dirección fiscal capturados en el checkout.
         customer_update: { name: "auto", address: "auto" },
@@ -33,6 +37,36 @@ module Subscriptions
     end
 
     private
+
+    # Suspendida (spec 031): se paga la factura pendiente; no se abre otro cobro.
+    def ensure_not_suspended!
+      return unless @company.subscription&.suspended?
+
+      raise ApiErrors::UnprocessableEntityError.new(
+        message: I18n.t("errors.subscription.suspended"), details: { code: "subscription_suspended" }
+      )
+    end
+
+    # En la prueba solo el super admin cambia el plan; el dueño puede pagar el que ya tiene asignado (spec 031).
+    def ensure_trial_plan_unchanged!
+      subscription = @company.subscription
+      return unless subscription&.trialing?
+      return if @actor&.super_admin? || subscription.plan == @plan
+
+      raise ApiErrors::ForbiddenError.new(
+        message: I18n.t("errors.subscription.trial_plan_locked"), details: { code: "trial_plan_locked" }
+      )
+    end
+
+    # Pagar durante la prueba respeta los días que sobran: el primer cobro llega al terminar la prueba.
+    # Stripe exige que trial_end esté al menos 48 h adelante; con menos, cobra al momento.
+    def trial_options
+      subscription = @company.subscription
+      ends_at = subscription&.trialing? ? subscription.trial_ends_at : nil
+      return {} unless ends_at && ends_at > 2.days.from_now + 1.minute
+
+      { subscription_data: { trial_end: ends_at.to_i } }
+    end
 
     # Una suscripción pagada vigente se administra desde el portal, no con otro checkout.
     def ensure_no_paid_subscription!

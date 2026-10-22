@@ -38,4 +38,21 @@ class ResendMailerTest < ActiveSupport::TestCase
     end
     assert_equal "Mi Empresa <no-reply@draxuvo.com>", captured[:from]
   end
+
+  # --- spec 031: avisos de suscripción ---
+
+  test "the subscription notices go to Resend with their subject, the plan and the pay button" do
+    sent = []
+    Resend::Emails.stub(:send, ->(params) { sent << params; { "id" => "email_1" } }) do
+      %w[past_due suspended cancel_warning].each do |kind|
+        ResendMailer.subscription_notice(user: users(:pro_co_owner), company_name: "Volta", kind: kind, plan: "pro",
+                                         pay_url: "https://invoice.stripe.com/i/x", grace_ends_at: 7.days.from_now,
+                                         cancels_at: 30.days.from_now)
+      end
+    end
+
+    assert_equal ResendMailer::NOTICE_SUBJECTS.values, sent.map { |mail| mail[:subject] }
+    assert sent.all? { |mail| mail[:html].include?("https://invoice.stripe.com/i/x") && mail[:html].include?("Pagar ahora") }
+    assert_includes sent[1][:html], "plan pro"
+  end
 end

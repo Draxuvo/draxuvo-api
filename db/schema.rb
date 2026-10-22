@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_22_040100) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -430,6 +430,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_040100) do
     t.index ["stripe_event_id"], name: "index_stripe_events_on_stripe_event_id", unique: true
   end
 
+  create_table "subscription_changes", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "subscription_id", null: false
+    t.bigint "actor_id"
+    t.string "kind", null: false
+    t.string "from_plan"
+    t.string "to_plan"
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_subscription_changes_on_actor_id"
+    t.index ["company_id"], name: "index_subscription_changes_on_company_id"
+    t.index ["subscription_id"], name: "index_subscription_changes_on_subscription_id"
+  end
+
   create_table "subscriptions", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.integer "plan", default: 0, null: false
@@ -445,6 +459,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_040100) do
     t.datetime "updated_at", null: false
     t.boolean "cancel_at_period_end", default: false, null: false
     t.string "stripe_price_lookup_key"
+    t.datetime "past_due_since"
+    t.datetime "suspended_at"
+    t.string "suspension_reason"
+    t.string "pending_invoice_url"
+    t.datetime "past_due_notice_sent_at"
+    t.datetime "cancel_warning_sent_at"
     t.index ["company_id"], name: "index_subscriptions_on_company_id", unique: true
     t.index ["status"], name: "index_subscriptions_on_status"
     t.index ["stripe_subscription_id"], name: "index_subscriptions_on_stripe_subscription_id", unique: true, where: "(stripe_subscription_id IS NOT NULL)"
@@ -658,6 +678,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_040100) do
   add_foreign_key "stations", "companies"
   add_foreign_key "stock_movements", "companies"
   add_foreign_key "stock_movements", "products"
+  add_foreign_key "subscription_changes", "companies"
+  add_foreign_key "subscription_changes", "subscriptions"
+  add_foreign_key "subscription_changes", "users", column: "actor_id"
   add_foreign_key "subscriptions", "companies"
   add_foreign_key "ticket_payments", "companies"
   add_foreign_key "ticket_payments", "payment_terminals", column: "terminal_id"

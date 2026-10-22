@@ -1,6 +1,11 @@
 class ResendMailer
   DEFAULT_SUBJECT = "Configura tu contraseña en Draxuvo"
   WELCOME_SUBJECT = "Bienvenido a Draxuvo"
+  NOTICE_SUBJECTS = {
+    "past_due" => "Tu pago de Draxuvo está pendiente",
+    "suspended" => "Tu suscripción de Draxuvo está suspendida",
+    "cancel_warning" => "Tu suscripción de Draxuvo se cancelará pronto"
+  }.freeze
 
   class << self
     def set_password(user:, set_password_url:, company_name: nil)
@@ -55,6 +60,26 @@ class ResendMailer
 
       log(:warn, "#welcome params built from=#{params[:from].inspect} to=#{params[:to].inspect}")
       send_email(params)
+    rescue => e
+      handle_email_error(user, e)
+      false
+    end
+
+    # Avisos de suscripción (spec 031): pago pendiente, suspendida y cancelación próxima.
+    def subscription_notice(user:, company_name:, kind:, plan: nil, pay_url: nil, grace_ends_at: nil, cancels_at: nil)
+      raise ArgumentError, "User email is required" unless user&.email.present?
+
+      send_email(
+        from:    sender_email,
+        to:      user.email,
+        subject: NOTICE_SUBJECTS.fetch(kind),
+        html:    ApplicationController.render(
+                   template: "resend_mailer/subscription_notice",
+                   layout:   false,
+                   locals:   { user: user, company_name: company_name, kind: kind, plan: plan, pay_url: pay_url,
+                               grace_ends_at: grace_ends_at, cancels_at: cancels_at }
+                 )
+      )
     rescue => e
       handle_email_error(user, e)
       false

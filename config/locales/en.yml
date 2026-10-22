@@ -42,6 +42,9 @@ en:
       blank: "can't be blank"
     subscription:
       inactive: "Your subscription has expired or was cancelled. Update your plan to continue."
+      suspended: "Your subscription is suspended for non-payment. Pay to resume operating."
+      trial_plan_locked: "During the trial only the Draxuvo team can change the plan."
+      portal_unavailable_in_trial: "During the trial you cannot manage the plan from the billing portal."
       invalid_plan: "Invalid plan. Must be 'basic', 'pro' or 'enterprise'."
       stripe_not_configured: "Stripe is not configured. Contact support."
       invalid_billing_cycle: "Invalid billing cycle. Must be 'monthly' or 'annual'."

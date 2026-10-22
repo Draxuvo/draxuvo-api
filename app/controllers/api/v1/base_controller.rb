@@ -71,6 +71,7 @@ module Api
         subscription = billing&.subscription
         subscription = Subscription.start_trial!(current_company, plan: :pro) if subscription.nil? && !current_company.branch?
 
+        raise_subscription_suspended!(subscription) if subscription&.suspended?
         unless subscription&.active_access?
           raise ApiErrors::ForbiddenError.new(details: I18n.t("errors.subscription.inactive"))
         end
@@ -79,6 +80,14 @@ module Api
         return if billing.available_modules.include?(:multi_company)
 
         raise_module_not_in_plan!(:multi_company)
+      end
+
+      # Suspendida por falta de pago (spec 031): 403 con el motivo; la URL de pago solo para dueño y administrador.
+      def raise_subscription_suspended!(subscription)
+        details = { code: "subscription_suspended", reason: subscription.suspension_reason, plan: subscription.plan,
+                    cancels_at: subscription.cancels_at }
+        details[:pay_url] = subscription.pending_invoice_url if %w[owner admin].include?(current_role)
+        raise ApiErrors::ForbiddenError.new(message: I18n.t("errors.subscription.suspended"), details: details)
       end
 
       def handle_invalid(e)
