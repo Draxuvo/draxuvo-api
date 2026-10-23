@@ -192,4 +192,101 @@ class Products::ImportServiceTest < ActiveSupport::TestCase
     assert_empty result.errors
     assert_equal [ "taco", nil, "pipe" ], companies(:one).products.where(sku: %w[I-1 I-2 I-3]).order(:sku).map(&:icon)
   end
+
+  # --- spec 034: códigos de barras, movimientos de stock y resumen ---
+
+  def run_csv(csv, company: companies(:resto_co), user: users(:resto_owner), **options)
+    Tempfile.create([ "productos", ".csv" ]) do |file|
+      file.write(csv)
+      file.flush
+      Products::ImportService.new(company, file, user: user, **options).call
+    end
+  end
+
+  test "reads several barcodes per cell as exact text and adds them to an existing product" do
+    result = run_csv("sku,name,barcodes\nBC-1,Cuaderno,\"0012345; 7500000000011\"\nTAC-001,,7500000000028\n")
+
+    assert_empty result.errors
+    assert_equal [ "0012345", "7500000000011" ], companies(:resto_co).products.find_by!(sku: "BC-1").barcode_codes
+    assert_equal [ "7502000000002", "7500000000028" ], products(:resto_tacos).reload.barcode_codes
+  end
+
+  test "a numeric xlsx cell keeps every digit of the barcode" do
+    package = Axlsx::Package.new
+    package.workbook.add_worksheet(name: "Productos") do |sheet|
+      sheet.add_row %w[sku name barcodes]
+      sheet.add_row [ "XL-9", "Hoja", 7_501_234_567_890 ]
+    end
+    Tempfile.create([ "productos", ".xlsx" ]) do |file|
+      file.binmode
+      file.write(package.to_stream.read)
+      file.flush
+      Products::ImportService.new(companies(:resto_co), file, user: users(:resto_owner)).call
+    end
+
+    assert_equal [ "7501234567890" ], companies(:resto_co).products.find_by!(sku: "XL-9").barcode_codes
+  end
+
+  test "a code that belongs to another product or repeats in the file is an error of that row only" do
+    result = run_csv("sku,name,barcodes\nNEW-A,Uno,7502000000002\nNEW-B,Dos,8800000000001\nNEW-C,Tres,8800000000001\n")
+
+    assert_equal 1, result.created
+    assert_equal [ 2, 4 ], result.errors.map { |e| e[:row] }
+    assert_match(/Tacos al pastor/, result.errors.first[:error])
+    assert_match(/Dos/, result.errors.last[:error])
+    assert_not companies(:resto_co).products.exists?(sku: "NEW-A")
+    assert companies(:resto_co).products.exists?(sku: "NEW-B")
+    assert_equal [ "7502000000002" ], products(:resto_tacos).reload.barcode_codes
+  end
+
+  test "stock changes leave a movement with the user and note, and equal stock leaves none" do
+    tacos = products(:resto_tacos)
+    assert_difference -> { StockMovement.count }, 2 do
+      result = run_csv("sku,name,stock,product_type\nNEW-S,Nuevo con stock,8,Bebida\n#{tacos.sku},,#{tacos.stock + 4},\n")
+      assert_equal [ 1, 1, 0 ], [ result.created, result.updated, result.unchanged ]
+    end
+
+    entry = StockMovement.joins(:product).find_by!(products: { sku: "NEW-S" })
+    assert_equal [ "entry", 8 ], [ entry.movement_type, entry.qty.to_i ]
+    adjustment = tacos.stock_movements.order(:id).last
+    assert_equal [ "adjustment", 4, users(:resto_owner).id, I18n.t("products.import.stock_note") ], [ adjustment.movement_type, adjustment.qty.to_i, adjustment.user_id, adjustment.note ]
+    assert_equal 8, companies(:resto_co).products.find_by!(sku: "NEW-S").stock
+  end
+
+  test "importing the same file twice changes nothing the second time" do
+    csv = "sku,name,price,stock,barcodes\nR-1,Repetido,10,5,9100000000001\nR-2,Repetido dos,20,7,9100000000018\n"
+    first = run_csv(csv)
+    assert_equal 2, first.created
+
+    assert_no_difference -> { StockMovement.count } do
+      assert_no_difference -> { ProductBarcode.count } do
+        second = run_csv(csv)
+        assert_equal [ 0, 0, 2 ], [ second.created, second.updated, second.unchanged ]
+      end
+    end
+  end
+
+  test "stock of products that are not counted is ignored and fractions are rejected in whole types" do
+    result = run_csv("sku,name,stock,product_type\nSV-1,Servicio,5,Platillo\nFR-1,Fraccion,2.5,Bebida\n")
+
+    assert_equal 1, result.created
+    assert_equal [ 3 ], result.errors.map { |e| e[:row] }
+    assert_equal 0, companies(:resto_co).products.find_by!(sku: "SV-1").stock
+  end
+
+  test "reports progress after each batch" do
+    rows = (1..7).map { |i| "P#{i},Producto #{i}" }
+    seen = []
+    run_csv("sku,name\n#{rows.join("\n")}\n", on_progress: ->(result) { seen << result.processed }, batch_size: 3)
+
+    assert_equal [ 3, 6, 7 ], seen
+  end
+
+  test "count_rows counts only data rows" do
+    Tempfile.create([ "productos", ".csv" ]) do |file|
+      file.write("sku,name\nA,Uno\n,\n# nota\nB,Dos\n")
+      file.flush
+      assert_equal 2, Products::ImportService.count_rows(file)
+    end
+  end
 end

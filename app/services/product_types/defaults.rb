@@ -33,12 +33,16 @@ module ProductTypes
     # se vende y se cuenta; en servicio, con existencia o mínimo → se vende y se cuenta; lo demás → se vende sin contar.
     def self.classify(company, product)
       create_missing(company)
-      kind = if product.available == false then "supply"
+      company.product_types.find_by(kind: kind_for(company, product)) || company.product_types.active.ordered.first
+    end
+
+    # Solo la regla: el `kind` que le toca a un producto sin tipo.
+    def self.kind_for(company, product)
+      if product.available == false then "supply"
       elsif product.tracks_stock then "counted_sold"
       elsif company.order_mode_service? && (product.stock.to_d.positive? || product.min_stock.to_d.positive?) then "counted_sold"
       else "sold"
       end
-      company.product_types.find_by(kind: kind) || company.product_types.active.ordered.first
     end
   end
 end

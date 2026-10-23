@@ -2,6 +2,7 @@
 class StockMovement < ApplicationRecord
   belongs_to :product
   belongs_to :company
+  belongs_to :user, optional: true
 
   enum :movement_type, { entry: 0, exit: 1, adjustment: 2 }
 

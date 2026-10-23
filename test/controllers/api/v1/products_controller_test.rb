@@ -218,4 +218,77 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     names = response.parsed_body["menu"].flat_map { |group| group["items"].map { |item| item["name"] } }
     assert_includes names, "Revisión"
   end
+
+  # --- spec 034: códigos de barras ---
+
+  def resto_headers = auth_headers(users(:resto_owner), companies(:resto_co))
+
+  test "creates a product with barcodes and returns them in order" do
+    post "/api/v1/products", params: { product: { sku: "PAP-1", name: "Cuaderno", price: 30, barcodes: [ "7509990000011", " 7509990000028 ", "7509990000011", "" ] } },
+                             headers: resto_headers, as: :json
+
+    assert_response :created
+    assert_equal %w[7509990000011 7509990000028], response.parsed_body["barcodes"]
+  end
+
+  test "update replaces the barcodes and omitting them changes nothing" do
+    tacos = products(:resto_tacos)
+    patch "/api/v1/products/#{tacos.id}", params: { product: { name: "Tacos pastor" } }, headers: resto_headers, as: :json
+    assert_equal [ "7502000000002" ], response.parsed_body["barcodes"]
+
+    patch "/api/v1/products/#{tacos.id}", params: { product: { barcodes: [ "7503000000003", "7503000000010" ] } }, headers: resto_headers, as: :json
+    assert_response :ok
+    assert_equal %w[7503000000003 7503000000010], response.parsed_body["barcodes"]
+    assert_nil ProductBarcode.find_by(code: "7502000000002")
+
+    patch "/api/v1/products/#{tacos.id}", params: { product: { barcodes: [] } }, headers: resto_headers, as: :json
+    assert_equal [], response.parsed_body["barcodes"]
+  end
+
+  test "a code that belongs to another product of the company answers barcode_taken with its name" do
+    sopa = products(:resto_sopa)
+    patch "/api/v1/products/#{sopa.id}", params: { product: { barcodes: [ "7502000000002" ] } }, headers: resto_headers, as: :json
+
+    assert_response :unprocessable_entity
+    details = response.parsed_body.dig("error", "details")
+    assert_equal "barcode_taken", details["code"]
+    assert_equal "Tacos al pastor", details.dig("product", "name")
+    assert_equal [], sopa.reload.barcode_codes
+  end
+
+  test "the same code in another company does not conflict" do
+    other = companies(:pro_co)
+    post "/api/v1/products", params: { product: { sku: "X-1", name: "Otro negocio", barcodes: [ "7502000000002" ] } },
+                             headers: auth_headers(@owner, other), as: :json
+    assert_response :created
+  end
+
+  test "search finds a product by any of its barcodes, partial or exact, and the exact match goes first" do
+    resto_headers
+    company = companies(:resto_co)
+    exact = company.products.create!(name: "Aaa primero por nombre", sku: "AAA", product_type: product_types(:resto_co_sold))
+    exact.replace_barcodes!([ "7502000000002X" ])
+
+    get "/api/v1/products", params: { search: "7502000000002" }, headers: resto_headers
+    assert_equal [ "TAC-001", "AAA" ], response.parsed_body["results"].map { |p| p["sku"] }
+
+    get "/api/v1/products", params: { search: "000000002" }, headers: resto_headers
+    assert_includes response.parsed_body["results"].map { |p| p["sku"] }, "TAC-001"
+  end
+
+  test "by_code finds by barcode or sku and answers 404 code_not_found otherwise" do
+    get "/api/v1/products/by_code", params: { code: "7502000000002" }, headers: resto_headers
+    assert_response :ok
+    assert_equal "TAC-001", response.parsed_body["sku"]
+
+    get "/api/v1/products/by_code", params: { code: "TAC-001" }, headers: resto_headers
+    assert_response :ok
+
+    get "/api/v1/products/by_code", params: { code: "000" }, headers: resto_headers
+    assert_response :not_found
+    assert_equal "code_not_found", response.parsed_body.dig("error", "details", "code")
+
+    get "/api/v1/products/by_code", params: { code: "7502000000002" }, headers: auth_headers(@owner, companies(:pro_co))
+    assert_response :not_found
+  end
 end
