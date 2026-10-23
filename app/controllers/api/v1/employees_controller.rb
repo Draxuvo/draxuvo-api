@@ -27,14 +27,17 @@ module Api
 
       def create
         email = params.dig(:employee, :email).to_s.strip.downcase.presence
-        require_admin! if email || params[:access].present?
+        # Dar acceso es de administrador y dueño; el gerente puede dar de alta al empleado, con su correo como dato de contacto.
+        boss = Authorizable::ADMIN_ROLES.include?(current_role)
+        require_admin! if params[:access].present?
 
         ActiveRecord::Base.transaction do
           employee = current_company.employees.build(employee_params.except(:email, :phone))
           employee.status = :active if employee_params[:status].blank?
           employee.phone = params.dig(:employee, :phone)
+          employee.email = email unless boss
           employee.save!
-          grant!(employee, email: email, role: params.dig(:access, :role), phone: params.dig(:employee, :phone)) if email
+          grant!(employee, email: email, role: params.dig(:access, :role), phone: params.dig(:employee, :phone)) if email && boss
           render json: serialize(employee.reload), status: :created
         end
       end

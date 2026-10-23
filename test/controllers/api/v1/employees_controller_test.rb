@@ -125,9 +125,16 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     assert_nil User.find_by(email: "jefe@acceso.test")
   end
 
-  test "a manager cannot give access" do
-    post "/api/v1/employees", params: { employee: { name: "Otro", email: "otro@acceso.test" } }, headers: headers_for(@manager)
+  test "a manager cannot give access, but can register an employee with a contact email" do
+    post "/api/v1/employees", params: { employee: { name: "Otro", email: "otro@acceso.test" }, access: { role: "staff" } }, headers: headers_for(@manager)
     assert_response :forbidden
+
+    assert_no_difference -> { User.count } do
+      post "/api/v1/employees", params: { employee: { name: "Otro", email: "otro@acceso.test" } }, headers: headers_for(@manager)
+    end
+    assert_response :created
+    assert_nil response.parsed_body["access"]
+    assert_equal "otro@acceso.test", response.parsed_body["email"]
   end
 
   # --- acceso desde la ficha ---------------------------------------------------------------------
