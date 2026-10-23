@@ -9,10 +9,12 @@ module Api
       requires_module :attendance, only: %i[checkin checkout]
       # Marcar a otro y dar o quitar acceso es de administrador, dueño y super admin (spec 036).
       before_action :require_admin!, only: %i[checkin checkout grant_access update_access revoke_access]
-      before_action :set_employee, only: %i[show update destroy checkin checkout active grant_access update_access revoke_access]
+      before_action :set_employee, only: %i[show update destroy checkin checkout active]
+      # El acceso se puede administrar aunque la persona ya dirija (gerente, administrador, dueño) y no figure en el equipo.
+      before_action :set_any_employee, only: %i[grant_access update_access revoke_access]
 
       def index
-        employees = current_company.employees.includes(user: :user_companies).search(params[:search])
+        employees = current_company.employees.team.includes(user: :user_companies).search(params[:search])
         employees = employees.where(status: params[:status]) if params[:status].present?
         employees = filter_by_access(employees)
         employees = apply_sort(employees, allowed: %i[name position department salary created_at], default: :name)
@@ -118,6 +120,10 @@ module Api
       private
 
       def set_employee
+        @employee = current_company.employees.team.includes(:user).find(params[:id])
+      end
+
+      def set_any_employee
         @employee = current_company.employees.includes(:user).find(params[:id])
       end
 

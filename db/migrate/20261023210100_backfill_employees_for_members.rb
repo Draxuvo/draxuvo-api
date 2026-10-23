@@ -1,4 +1,4 @@
-# Spec 036: toda persona con acceso a una empresa tiene ficha de empleado. Crea la que falte, activa y sin
+# Spec 036: todo el personal (staff) con acceso a una empresa tiene ficha de empleado. Crea la que falte, activa y sin
 # correo (employees.email es único en toda la base; el correo se ve por el usuario ligado). Idempotente.
 class BackfillEmployeesForMembers < ActiveRecord::Migration[8.0]
   class Membership < ActiveRecord::Base
@@ -14,7 +14,8 @@ class BackfillEmployeesForMembers < ActiveRecord::Migration[8.0]
   end
 
   def up
-    Membership.find_each do |m|
+    # Solo el personal (staff) tiene ficha; quien dirige no es personal (spec 036).
+    Membership.where(role: 0).find_each do |m|
       next if Ficha.exists?(company_id: m.company_id, user_id: m.user_id)
 
       user = Person.find_by(id: m.user_id)

@@ -11,6 +11,15 @@ class Employee < ApplicationRecord
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :email, uniqueness: true, allow_blank: true
 
+  # El equipo de la empresa: quienes dirigen (gerente, administrador o dueño) no son personal, no marcan asistencia ni
+  # salen en Personal ni en Asistencia (spec 036). Un empleado sin usuario o sin membresía cuenta como equipo.
+  scope :team, -> {
+    where(<<~SQL.squish, managerial: UserCompany.roles.values_at("manager", "admin", "owner"))
+      NOT EXISTS (SELECT 1 FROM user_companies uc
+                  WHERE uc.user_id = employees.user_id AND uc.company_id = employees.company_id AND uc.role IN (:managerial))
+    SQL
+  }
+
   scope :search, ->(q) {
     where("name ILIKE :q OR position ILIKE :q OR department ILIKE :q", q: "%#{q}%") if q.present?
   }

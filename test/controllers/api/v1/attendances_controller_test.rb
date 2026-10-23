@@ -185,4 +185,23 @@ class Api::V1::AttendancesControllerTest < ActionDispatch::IntegrationTest
     end
     assert_operator queries, :<=, 12
   end
+
+  # --- quien dirige no es personal ---
+
+  test "roster and history leave out owners, admins and managers" do
+    boss = create_member(@company, role: :admin)
+    boss_card = @company.employees.create!(name: "Jefe con ficha", status: :active, user: boss)
+    boss_card.attendances.create!(company: @company, checkin_at: 1.hour.ago)
+    @luis.attendances.create!(company: @company, checkin_at: 2.hours.ago)
+
+    get "/api/v1/attendances/roster", headers: auth_headers(@owner, @company)
+    names = response.parsed_body["results"].map { |r| r["employee"]["name"] }
+    assert_includes names, "Luis Pérez"
+    assert_not_includes names, "Jefe con ficha"
+
+    get "/api/v1/attendances", params: { from: Time.zone.today.iso8601 }, headers: auth_headers(@owner, @company)
+    history = response.parsed_body["results"].map { |a| a["employee"]["name"] }
+    assert_includes history, "Luis Pérez"
+    assert_not_includes history, "Jefe con ficha"
+  end
 end

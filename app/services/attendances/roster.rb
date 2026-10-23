@@ -15,7 +15,7 @@ module Attendances
     end
 
     def call
-      employees = @company.employees.active.order(:name).to_a
+      employees = @company.employees.team.active.order(:name).to_a
       by_employee = @company.attendances.where(employee_id: employees.map(&:id), checkin_at: @day)
                             .includes(:checkin_by, :checkout_by).order(:checkin_at).group_by(&:employee_id)
 
