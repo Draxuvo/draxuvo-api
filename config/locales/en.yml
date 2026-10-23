@@ -127,6 +127,7 @@ en:
       total: "Total"
     errors:
       period_invalid: "The period is not valid: check the type and the dates (weekly up to 7 days, biweekly up to 16, monthly up to 31)"
+      no_employees: "There are no active employees with a salary set to pay in this period"
       period_overlap: "A payroll run already overlaps that period"
       not_draft: "The run is no longer a draft"
       not_approved: "Only an approved run can be cancelled"

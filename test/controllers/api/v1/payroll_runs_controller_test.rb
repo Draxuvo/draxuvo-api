@@ -121,6 +121,7 @@ class Api::V1::PayrollRunsControllerTest < ActionDispatch::IntegrationTest
 
     delete "/api/v1/payroll_payments/#{beto["id"]}", headers: h
     assert_response :no_content
+    @beto.update!(status: :inactive)
     @company.employees.create!(name: "Carla", salary: 6_000, status: :active)
 
     post "/api/v1/payroll_runs/#{id}/refresh_employees", headers: h
@@ -145,10 +146,16 @@ class Api::V1::PayrollRunsControllerTest < ActionDispatch::IntegrationTest
     post "/api/v1/payroll_runs/#{id}/approve", params: { lock_version: 99 }, headers: h, as: :json
     assert_response :conflict
 
-    @beto.update!(salary: 0)
-    post "/api/v1/payroll_runs/#{id}/refresh_employees", headers: h
-    delete "/api/v1/payroll_payments/#{run_body["payments"][1]["id"]}", headers: h
-    @company.employees.find_by!(name: "Beto").update!(status: :inactive)
+    get "/api/v1/payroll_runs/#{id}", headers: h
+    ana = run_body["payments"][0]
+    post "/api/v1/payroll_payments/#{ana["id"]}/adjustments", params: { kind: "deduction", amount_cents: 700_000, note: "Demasiado" }, headers: h, as: :json
+    adjustment = response.parsed_body
+
+    approve!(id)
+    assert_response :unprocessable_entity
+    assert_equal [ "lines_invalid", [ ana["id"] ] ], [ run_body.dig("error", "details", "code"), run_body.dig("error", "details", "payment_ids") ]
+
+    delete "/api/v1/payroll_adjustments/#{adjustment["id"]}", headers: h
     approve!(id)
     assert_response :ok
     assert_equal "approved", run_body["status"]

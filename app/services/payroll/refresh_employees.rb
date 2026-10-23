@@ -1,5 +1,5 @@
 module Payroll
-  # «Actualizar empleados» (spec 037, edge cases): agrega los activos dados de alta después de crear la corrida y quita las líneas sin ajustes de
+  # «Actualizar empleados» (spec 037, edge cases): agrega los activos con salario que faltan y quita las líneas sin ajustes de
   # quienes ya no están activos. Solo en borrador.
   class RefreshEmployees
     def self.call(**args) = new(**args).call
@@ -14,7 +14,7 @@ module Payroll
         run = PayrollRun.lock.find(@run.id)
         raise Error.new(:not_draft) unless run.draft?
 
-        added = Lines.new(run).add_missing!(only_new: true)
+        added = Lines.new(run).add_missing!
         stale = run.payments.left_joins(:employee, :adjustments)
                    .where("employees.id IS NULL OR employees.status = ?", Employee.statuses[:inactive])
                    .where(payroll_adjustments: { id: nil })

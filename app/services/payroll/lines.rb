@@ -7,13 +7,11 @@ module Payroll
       @company = run.company
     end
 
-    # Al crear la corrida entran todos los activos; al actualizar (`only_new`) solo los dados de alta después, para que
-    # una línea que el jefe quitó a propósito no vuelva sola.
-    def add_missing!(only_new: false)
+    # Entran los empleados activos con salario capturado: quien no tiene salario (el dueño, por ejemplo) no se paga por
+    # aquí y no estorba la aprobación.
+    def add_missing!
       taken = @run.payments.pluck(:employee_id)
-      employees = @company.employees.active.where.not(id: taken)
-      employees = employees.where("employees.created_at > ?", @run.created_at) if only_new
-      employees = employees.order(:name).to_a
+      employees = @company.employees.active.where("employees.salary > 0").where.not(id: taken).order(:name).to_a
       stats = attendance_stats(employees.map(&:id))
       employees.each { |employee| build(employee, stats[employee.id]) }
       employees.size

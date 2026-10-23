@@ -335,9 +335,6 @@ unless volta.payroll_runs.exists?
   last_month = Date.current.prev_month
   run = Payroll::BuildRun.call(company: volta, user: boss, period_type: :monthly,
                                starts_on: last_month.beginning_of_month, ends_on: last_month.end_of_month)
-  # Las fichas de dueño, administrador y gerente no traen salario: sin neto no se aprueban.
-  run.payments.where(net_cents: ..0).destroy_all
-  Payroll::Recalculate.run!(run)
   run = Payroll::Approve.call(run: run, user: boss, lock_version: run.lock_version)
   Payroll::Pay.call(run: run, user: boss, payment_method: "transfer", paid_on: [ last_month.end_of_month + 1, Time.zone.today ].min,
                     reference: "Demo")

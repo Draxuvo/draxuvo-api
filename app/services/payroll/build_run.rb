@@ -23,7 +23,8 @@ module Payroll
 
         check_overlap!
         run.save!
-        Lines.new(run).add_missing!
+        raise Error.new(:no_employees) if Lines.new(run).add_missing!.zero?
+
         Recalculate.run!(run)
         RecordEvent.call(run: run, user: @user, action: :created,
                          details: { period_type: @period_type, starts_on: @starts_on, ends_on: @ends_on })

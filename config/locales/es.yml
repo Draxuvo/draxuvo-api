@@ -127,6 +127,7 @@ es:
       total: "Total"
     errors:
       period_invalid: "El periodo no es válido: revisa el tipo y las fechas (semanal hasta 7 días, quincenal hasta 16, mensual hasta 31)"
+      no_employees: "No hay empleados activos con salario capturado para pagar en este periodo"
       period_overlap: "Ya existe una corrida que se empalma con ese periodo"
       not_draft: "La corrida ya no está en borrador"
       not_approved: "Solo se puede cancelar una corrida aprobada"

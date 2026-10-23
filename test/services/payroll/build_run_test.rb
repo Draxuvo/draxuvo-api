@@ -7,21 +7,23 @@ class Payroll::BuildRunTest < ActiveSupport::TestCase
     @ana, @beto = payroll_employees(@company, { name: "Ana", salary: 12_000 }, { name: "Beto", salary: nil })
   end
 
-  test "creates a draft with one line per active employee" do
+  test "creates a draft with one line per active employee with a salary" do
     run = build_payroll_run(@company, @owner)
 
     assert run.draft?
-    assert_equal %w[Ana Beto], run.payments.order(:employee_name).pluck(:employee_name)
+    assert_equal [ "Ana" ], run.payments.pluck(:employee_name), "Beto no tiene salario y no entra"
     ana = run.payments.find_by!(employee: @ana)
     assert_equal [ 1_200_000, 15, 15, 600_000, 600_000 ], [ ana.monthly_salary_cents, ana.period_days, ana.days_paid, ana.salary_cents, ana.net_cents ]
-    assert_equal 0, run.payments.find_by!(employee: @beto).net_cents
     assert_equal 600_000, run.total_cents
     assert_equal [ "created" ], run.events.pluck(:action)
   end
 
-  test "skips inactive employees" do
-    @beto.update!(status: :inactive)
-    assert_equal [ "Ana" ], build_payroll_run(@company, @owner).payments.pluck(:employee_name)
+  test "skips inactive employees and those without salary, and fails if nobody is left" do
+    @ana.update!(status: :inactive)
+    @beto.update!(salary: 0)
+
+    assert_equal :no_employees, assert_raises(Payroll::Error) { build_payroll_run(@company, @owner) }.code
+    assert_equal 0, @company.payroll_runs.count
   end
 
   test "attendance is informational: counts distinct days without absences and closed hours" do
@@ -35,7 +37,6 @@ class Payroll::BuildRunTest < ActiveSupport::TestCase
   end
 
   test "rejects an overlapping run but allows it once the other is cancelled" do
-    @beto.update!(salary: 3_000)
     first = approved_payroll_run(@company, @owner)
 
     error = assert_raises(Payroll::Error) { build_payroll_run(@company, @owner, starts_on: Date.new(2026, 10, 10), ends_on: Date.new(2026, 10, 20)) }
@@ -59,14 +60,14 @@ class Payroll::BuildRunTest < ActiveSupport::TestCase
   test "refresh adds new active employees and drops inactive lines without adjustments" do
     run = build_payroll_run(@company, @owner)
     carla = @company.employees.create!(name: "Carla", salary: 6_000, status: :active)
-    @beto.update!(status: :inactive)
-    old = @company.employees.create!(name: "Vieja", salary: 1_000, status: :active, created_at: 1.day.ago(run.created_at))
+    @company.employees.create!(name: "Sin sueldo", salary: nil, status: :active)
+    @beto.update!(salary: 9_000)
+    @ana.update!(status: :inactive)
 
     Payroll::RefreshEmployees.call(run: run, user: @owner)
 
-    assert_not run.payments.exists?(employee: old), "una ficha anterior a la corrida no se agrega sola"
-    assert_equal %w[Ana Carla], run.payments.order(:employee_name).pluck(:employee_name)
-    assert_equal 900_000, run.reload.total_cents
+    assert_equal %w[Beto Carla], run.payments.order(:employee_name).pluck(:employee_name), "entran los activos con salario; sale Ana, inactiva"
+    assert_equal 750_000, run.reload.total_cents
     assert_equal carla.id, run.payments.find_by!(employee_name: "Carla").employee_id
   end
 end
