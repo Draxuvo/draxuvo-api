@@ -27,17 +27,18 @@ module Api
 
       def create
         email = params.dig(:employee, :email).to_s.strip.downcase.presence
-        # Dar acceso es de administrador y dueño; el gerente puede dar de alta al empleado, con su correo como dato de contacto.
-        boss = Authorizable::ADMIN_ROLES.include?(current_role)
-        require_admin! if params[:access].present?
+        # Dar acceso es de administrador y dueño y solo ocurre si se pide (`access`); sin eso, el correo es un dato de contacto.
+        grant = params[:access].present?
+        require_admin! if grant
+        raise email_required_error if grant && email.nil?
 
         ActiveRecord::Base.transaction do
           employee = current_company.employees.build(employee_params.except(:email, :phone))
           employee.status = :active if employee_params[:status].blank?
           employee.phone = params.dig(:employee, :phone)
-          employee.email = email unless boss
+          employee.email = email unless grant
           employee.save!
-          grant!(employee, email: email, role: params.dig(:access, :role), phone: params.dig(:employee, :phone)) if email && boss
+          grant!(employee, email: email, role: params.dig(:access, :role), phone: params.dig(:employee, :phone)) if grant
           render json: serialize(employee.reload), status: :created
         end
       end
@@ -86,7 +87,7 @@ module Api
       def grant_access
         role = params[:role].presence
         email = params[:email].to_s.strip.downcase.presence || @employee.email
-        raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("employees.email_required"), details: { code: "email_required" }) if email.blank?
+        raise email_required_error if email.blank?
         raise already_member_error if @employee.user_id
 
         ActiveRecord::Base.transaction { grant!(@employee, email: email, role: role, phone: params[:phone]) }
@@ -163,6 +164,10 @@ module Api
         raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("employees.no_access"), details: { code: "no_user" }) unless membership
 
         membership
+      end
+
+      def email_required_error
+        ApiErrors::UnprocessableEntityError.new(message: I18n.t("employees.email_required"), details: { code: "email_required" })
       end
 
       def already_member_error

@@ -111,10 +111,27 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "manager", @company.user_companies.find_by(user: User.find_by(email: "marta@acceso.test")).role
   end
 
-  test "email without a role defaults to staff" do
-    post "/api/v1/employees", params: { employee: { name: "Pedro Ríos", email: "pedro@acceso.test", phone: "5511112222" } }, headers: headers_for(@owner)
+  test "access without a role defaults to staff" do
+    post "/api/v1/employees", params: { employee: { name: "Pedro Ríos", email: "pedro@acceso.test", phone: "5511112222" }, access: { role: "" } },
+         headers: headers_for(@owner)
     assert_response :created
     assert_equal "staff", response.parsed_body.dig("access", "role")
+  end
+
+  test "an email without access is only contact data" do
+    assert_no_difference -> { User.count } do
+      post "/api/v1/employees", params: { employee: { name: "Solo Contacto", email: "contacto@acceso.test", phone: "5511112222" } }, headers: headers_for(@owner)
+    end
+    assert_response :created
+    assert_nil response.parsed_body["access"]
+    assert_equal "contacto@acceso.test", response.parsed_body["email"]
+  end
+
+  test "asking for access without an email is 422 email_required" do
+    post "/api/v1/employees", params: { employee: { name: "Sin Correo" }, access: { role: "staff" } }, headers: headers_for(@owner)
+    assert_response :unprocessable_entity
+    assert_equal "email_required", response.parsed_body.dig("error", "details", "code")
+    assert_nil Employee.find_by(name: "Sin Correo")
   end
 
   test "a role above the actor's is forbidden" do
