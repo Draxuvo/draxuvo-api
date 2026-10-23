@@ -43,7 +43,7 @@ class Api::V1::WorkOrdersTrackingTest < ActionDispatch::IntegrationTest
 
   test "reassigning moves the order between staff and writes the event" do
     order = work_orders(:pro_open)
-    other_user = create_member(@company, role: :staff)
+    other_user = create_member(@company, role: :staff, employee: false)
     other_employee = employees(:pro_other_employee)
     other_employee.update!(user: other_user)
 

@@ -110,10 +110,7 @@ module Api
         guard_target!(membership)
         ensure_another_owner!(membership) if membership.owner?
 
-        ActiveRecord::Base.transaction do
-          membership.destroy!
-          @employee.update!(user: nil)
-        end
+        membership.destroy! # suelta la ficha del usuario (UserCompany#release_employee)
         render json: serialize(@employee.reload)
       end
 
@@ -183,8 +180,9 @@ module Api
           **employee.parsed_name_parts, email: email, phone: phone.to_s,
           password: SecureRandom.hex(12), role: :staff, active: false
         )
-        current_company.user_companies.create!(user: user, role: role)
+        # Primero se liga la ficha: así la membresía no crea otra ficha para el mismo usuario.
         employee.update!(user: user, email: (Employee.where(email: email).where.not(id: employee.id).exists? ? nil : email), phone: phone.presence || employee.phone)
+        current_company.user_companies.create!(user: user, role: role)
         send_set_password_email(user) if new_user
       end
     end

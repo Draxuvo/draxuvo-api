@@ -192,7 +192,7 @@ class Api::V1::WorkOrdersStaffTest < ActionDispatch::IntegrationTest
   end
 
   test "staff without an employee in the company cannot create orders" do
-    other = create_member(@company, role: :staff)
+    other = create_member(@company, role: :staff, employee: false)
     post BASE, params: { work_order: { title: "Sin empleado" } }, headers: auth_headers(other, @company), as: :json
     assert_response :unprocessable_entity
     assert_equal "employee_required", response.parsed_body.dig("error", "details", "code")

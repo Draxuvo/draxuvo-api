@@ -9,7 +9,7 @@ class BackfillEmployeesForMembersTest < ActiveSupport::TestCase
 
   test "creates the missing employee card for a member, active and without email" do
     company = companies(:pro_co)
-    user = create_member(company, role: :admin)
+    user = create_member(company, role: :admin, employee: false)
     assert_nil company.employees.find_by(user_id: user.id)
 
     run_migration

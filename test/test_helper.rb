@@ -25,12 +25,14 @@ module ActiveSupport
       headers
     end
 
-    # Usuario con una membresía en `company` y el rol de esa empresa (el rol es por empresa).
-    def create_member(company, role:, email: nil, user: nil)
+    # Usuario con una membresía en `company` y el rol de esa empresa (el rol es por empresa). La membresía crea su
+    # ficha de empleado (spec 036); `employee: false` la quita para probar a alguien sin ficha.
+    def create_member(company, role:, email: nil, user: nil, employee: true)
       user ||= User.create!(first_name: "Miembro", last_name: role.to_s.camelize,
                             email: email || "#{role}-#{SecureRandom.hex(4)}@member.test",
                             phone: "5512340000", password: "password123", active: true)
       UserCompany.create!(user: user, company: company, role: role)
+      company.employees.where(user_id: user.id).destroy_all unless employee
       user
     end
   end
