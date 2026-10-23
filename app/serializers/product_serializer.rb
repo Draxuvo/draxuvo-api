@@ -13,6 +13,7 @@ class ProductSerializer
     {
       id:          @product.id,
       sku:         @product.sku,
+      barcodes:    @product.barcode_codes,
       name:        @product.name,
       description: @product.description,
       icon:        @product.icon,

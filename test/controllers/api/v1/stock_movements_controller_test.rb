@@ -28,4 +28,14 @@ class Api::V1::StockMovementsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal 2, products(:resto_cola).reload.stock
   end
+
+  test "a movement keeps who registered it and the list returns the user (spec 034)" do
+    move(@shrimp, "entry", "2")
+    assert_response :created
+    assert_equal users(:resto_owner).id, StockMovement.order(:id).last.user_id
+    assert_equal users(:resto_owner).id, response.parsed_body.dig("movement", "user", "id")
+
+    get "/api/v1/products/#{@shrimp.id}/stock_movements", headers: @headers
+    assert_equal users(:resto_owner).full_name, response.parsed_body["results"].first.dig("user", "name")
+  end
 end

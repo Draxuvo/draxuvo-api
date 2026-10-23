@@ -1,0 +1,15 @@
+# Códigos de barras (spec 034): `one` (empresa one) con dos códigos y `resto_tacos` (resto_co) con uno.
+one_piece:
+  company: one
+  product: one
+  code: "7501000000001"
+
+one_pack:
+  company: one
+  product: one
+  code: "7501000000018"
+
+resto_tacos:
+  company: resto_co
+  product: resto_tacos
+  code: "7502000000002"

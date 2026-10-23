@@ -85,12 +85,35 @@ en:
     user_created: "User created and linked to employee"
     email_taken: "Email address is already registered"
 
+  stock:
+    receive:
+      note: "Goods received"
+    count:
+      note: "Physical count #%{id}"
+    errors:
+      empty_items: "There are no products to receive"
+      invalid_qty: "Invalid quantity: use a number above zero (no decimals if the type does not allow them)"
+      not_counted: "%{product} is not counted in the inventory"
+      insufficient_stock: "Not enough stock for %{product}"
+      count_closed: "This count no longer accepts changes"
+      code_not_found: "No product has that code"
+
   products:
     deleted: "Product deleted"
     insufficient_stock: "Insufficient stock. Available: %{available}"
+    export:
+      filename: "products.xlsx"
+    barcodes:
+      not_found: "No product has that code"
+      taken: "The code %{barcode} already belongs to %{product}"
     menu:
       uncategorized: "Uncategorized"
     import:
+      stock_note: "Excel import"
+      interrupted: "The import was interrupted. Upload the file again."
+      in_progress: "An import is already running. Wait for it to finish."
+      file_too_large: "The file is too large (5 MB maximum)."
+      too_many_rows: "The file has too many rows (10,000 maximum)."
       completed:          "Import completed"
       file_required:      "A file is required"
       unsupported_format: "Unsupported format. Use .xlsx, .xls or .csv"
@@ -110,6 +133,7 @@ en:
         product_type: "TYPE"
         unit: "UNIT"
         icon: "ICON"
+        barcodes: "BARCODES"
       sample:
         sku:         "PROD-001"
         name:        "Sample Product"
@@ -123,7 +147,8 @@ en:
         product_type: ""
         unit: "pza"
         icon: ""
-      hint: "SKU and Name are required. AVAILABLE: TRUE or FALSE. ICON (optional, admins and owners only): a key such as taco, coffee or wrench."
+        barcodes: "7501234567890; 7501234567906"
+      hint: "SKU and Name are required. AVAILABLE: TRUE or FALSE. ICON (optional, admins and owners only): a key such as taco, coffee or wrench. BARCODES (optional): several separated by semicolons; keep the column as text to preserve leading zeros; codes are added, never removed."
 
   users:
     not_found: "User not found"

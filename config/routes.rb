@@ -89,10 +89,23 @@ Rails.application.routes.draw do
       resources :products do
         collection do
           get  :menu
+          get  :by_code
+          get  :export
           post :import
           get  :template
         end
         resources :stock_movements, only: [ :index, :create ]
+      end
+
+      resources :product_imports, only: [ :index, :show ]
+      resources :stock_receipts, only: [ :create ]
+      resources :stock_counts, only: [ :index, :create, :show, :destroy ] do
+        member do
+          post :scan
+          post :confirm
+          patch "items/:product_id", action: :update_item
+          delete "items/:product_id", action: :destroy_item
+        end
       end
 
       resources :units, only: [ :index ]

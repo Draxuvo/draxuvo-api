@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_22_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -213,6 +213,40 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_200000) do
     t.index ["company_id"], name: "index_payment_terminals_on_company_id"
   end
 
+  create_table "product_barcodes", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "product_id", null: false
+    t.string "code", limit: 64, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "code"], name: "index_product_barcodes_on_company_id_and_code", unique: true
+    t.index ["company_id"], name: "index_product_barcodes_on_company_id"
+    t.index ["product_id"], name: "index_product_barcodes_on_product_id"
+  end
+
+  create_table "product_imports", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "status", default: 0, null: false
+    t.string "filename"
+    t.boolean "allow_icon", default: false, null: false
+    t.integer "total_rows", default: 0, null: false
+    t.integer "processed_rows", default: 0, null: false
+    t.integer "created_count", default: 0, null: false
+    t.integer "updated_count", default: 0, null: false
+    t.integer "unchanged_count", default: 0, null: false
+    t.jsonb "errors_list", default: [], null: false
+    t.integer "errors_total", default: 0, null: false
+    t.binary "file_data"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "created_at"], name: "index_product_imports_on_company_id_and_created_at"
+    t.index ["company_id"], name: "index_product_imports_on_company_id"
+    t.index ["user_id"], name: "index_product_imports_on_user_id"
+  end
+
   create_table "product_types", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.string "name", null: false
@@ -411,6 +445,33 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_200000) do
     t.index ["company_id"], name: "index_stations_on_company_id"
   end
 
+  create_table "stock_count_items", force: :cascade do |t|
+    t.bigint "stock_count_id", null: false
+    t.bigint "product_id", null: false
+    t.decimal "counted_qty", precision: 12, scale: 3, default: "0.0", null: false
+    t.decimal "baseline_stock", precision: 12, scale: 3, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_stock_count_items_on_product_id"
+    t.index ["stock_count_id", "product_id"], name: "index_stock_count_items_on_stock_count_id_and_product_id", unique: true
+    t.index ["stock_count_id"], name: "index_stock_count_items_on_stock_count_id"
+  end
+
+  create_table "stock_counts", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "status", default: 0, null: false
+    t.string "name"
+    t.datetime "confirmed_at"
+    t.bigint "confirmed_by_id"
+    t.jsonb "result", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_stock_counts_on_company_id"
+    t.index ["confirmed_by_id"], name: "index_stock_counts_on_confirmed_by_id"
+    t.index ["user_id"], name: "index_stock_counts_on_user_id"
+  end
+
   create_table "stock_movements", force: :cascade do |t|
     t.bigint "product_id", null: false
     t.bigint "company_id", null: false
@@ -419,8 +480,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_200000) do
     t.string "note"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "user_id"
     t.index ["company_id"], name: "index_stock_movements_on_company_id"
     t.index ["product_id"], name: "index_stock_movements_on_product_id"
+    t.index ["user_id"], name: "index_stock_movements_on_user_id"
   end
 
   create_table "stripe_events", force: :cascade do |t|
@@ -667,6 +730,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_200000) do
   add_foreign_key "module_changes", "companies"
   add_foreign_key "module_changes", "users", column: "actor_id"
   add_foreign_key "payment_terminals", "companies"
+  add_foreign_key "product_barcodes", "companies"
+  add_foreign_key "product_barcodes", "products"
+  add_foreign_key "product_imports", "companies"
+  add_foreign_key "product_imports", "users"
   add_foreign_key "product_types", "companies"
   add_foreign_key "products", "companies"
   add_foreign_key "products", "product_types"
@@ -678,8 +745,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_200000) do
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "stations", "companies"
+  add_foreign_key "stock_count_items", "products"
+  add_foreign_key "stock_count_items", "stock_counts"
+  add_foreign_key "stock_counts", "companies"
+  add_foreign_key "stock_counts", "users"
+  add_foreign_key "stock_counts", "users", column: "confirmed_by_id"
   add_foreign_key "stock_movements", "companies"
   add_foreign_key "stock_movements", "products"
+  add_foreign_key "stock_movements", "users"
   add_foreign_key "subscription_changes", "companies"
   add_foreign_key "subscription_changes", "subscriptions"
   add_foreign_key "subscription_changes", "users", column: "actor_id"

@@ -6,6 +6,7 @@ class Product < ApplicationRecord
   has_many :work_order_items, dependent: :destroy
   belongs_to :station, optional: true
   has_many :check_items, dependent: :nullify
+  has_many :barcodes, -> { order(:id) }, class_name: "ProductBarcode", dependent: :destroy
 
   before_validation { self.stock ||= 0 }
   # Sin tipo (formularios o archivos anteriores), se clasifica con la regla de los tipos iniciales (spec 016).
@@ -23,7 +24,13 @@ class Product < ApplicationRecord
   validates :sku, uniqueness: { scope: :company_id }
   validates :stock, numericality: { greater_than_or_equal_to: 0 }
 
-  scope :search,       ->(q)   { where("name ILIKE :q OR sku ILIKE :q", q: "%#{q}%") if q.present? }
+  # Nombre, SKU o cualquiera de sus códigos de barras (spec 034).
+  scope :search,       ->(q)   {
+    next if q.blank?
+
+    where("products.name ILIKE :q OR products.sku ILIKE :q OR EXISTS (SELECT 1 FROM product_barcodes pb WHERE pb.product_id = products.id AND pb.code ILIKE :q)",
+          q: "%#{sanitize_sql_like(q.to_s.strip)}%")
+  }
   scope :tracked,      ->      { where(tracks_stock: true) }
   scope :available,    ->      { where(available: true) }
   scope :by_category,  ->(cat) { where(category: cat) if cat.present? }
@@ -40,6 +47,16 @@ class Product < ApplicationRecord
 
     value = value.to_d
     value == value.round ? value.to_i : value.to_f
+  end
+
+  def barcode_codes = barcodes.map(&:code)
+
+  # Reemplaza la lista de códigos (formulario del producto); quita los que ya no están y agrega los nuevos.
+  def replace_barcodes!(codes)
+    wanted = Products::Barcodes.clean_list(codes)
+    barcodes.where.not(code: wanted).destroy_all
+    (wanted - barcodes.reload.map(&:code)).each { |code| barcodes.create!(company: company, code: code) }
+    barcodes.reset
   end
 
   def unit

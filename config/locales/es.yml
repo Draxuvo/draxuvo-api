@@ -85,12 +85,35 @@ es:
     user_created: "Usuario creado y vinculado al empleado"
     email_taken: "El correo electrónico ya está registrado"
 
+  stock:
+    receive:
+      note: "Recepción de mercancía"
+    count:
+      note: "Conteo físico #%{id}"
+    errors:
+      empty_items: "No hay productos que recibir"
+      invalid_qty: "Cantidad inválida: usa un número mayor que cero (sin decimales si el tipo no los admite)"
+      not_counted: "%{product} no se cuenta en el inventario"
+      insufficient_stock: "Stock insuficiente en %{product}"
+      count_closed: "El conteo ya no admite cambios"
+      code_not_found: "No hay ningún producto con ese código"
+
   products:
     deleted: "Producto eliminado"
     insufficient_stock: "Stock insuficiente. Disponible: %{available}"
+    export:
+      filename: "productos.xlsx"
+    barcodes:
+      not_found: "No hay ningún producto con ese código"
+      taken: "El código %{barcode} ya pertenece a %{product}"
     menu:
       uncategorized: "Sin categoría"
     import:
+      stock_note: "Importación de Excel"
+      interrupted: "La importación se interrumpió. Vuelve a subir el archivo."
+      in_progress: "Ya hay una importación en curso. Espera a que termine."
+      file_too_large: "El archivo es demasiado grande (máximo 5 MB)."
+      too_many_rows: "El archivo tiene demasiadas filas (máximo 10,000)."
       completed:        "Importación completada"
       file_required:    "Se requiere un archivo"
       unsupported_format: "Formato no soportado. Use .xlsx, .xls o .csv"
@@ -110,6 +133,7 @@ es:
         product_type: "TIPO"
         unit: "UNIDAD"
         icon: "ICONO"
+        barcodes: "CÓDIGOS DE BARRAS"
       sample:
         sku:         "PROD-001"
         name:        "Producto Ejemplo"
@@ -123,7 +147,8 @@ es:
         product_type: ""
         unit: "pza"
         icon: ""
-      hint: "SKU y Nombre son obligatorios. DISPONIBLE: TRUE o FALSE. ICONO (opcional, solo administrador y dueño): clave como taco, coffee o wrench."
+        barcodes: "7501234567890; 7501234567906"
+      hint: "SKU y Nombre son obligatorios. DISPONIBLE: TRUE o FALSE. ICONO (opcional, solo administrador y dueño): clave como taco, coffee o wrench. CÓDIGOS DE BARRAS (opcional): varios separados por punto y coma; la columna debe ir como texto para conservar los ceros iniciales; los códigos se agregan, nunca se quitan."
 
   users:
     not_found: "Usuario no encontrado"
