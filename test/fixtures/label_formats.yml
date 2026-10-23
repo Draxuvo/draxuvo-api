@@ -1,0 +1,30 @@
+# Formatos propios (spec 035): `one_sheet` en la empresa one y `two_roll` en la two.
+one_sheet:
+  company: one
+  name: Mis etiquetas 3x8
+  kind: sheet
+  page_width_mm: 210
+  page_height_mm: 297
+  columns: 3
+  rows: 8
+  label_width_mm: 63.5
+  label_height_mm: 33.9
+  margin_top_mm: 13
+  margin_left_mm: 7.2
+  gap_x_mm: 2.5
+  gap_y_mm: 0
+
+two_roll:
+  company: two
+  name: Rollo del mostrador
+  kind: roll
+  page_width_mm: 50
+  page_height_mm: 30
+  columns: 1
+  rows: 1
+  label_width_mm: 50
+  label_height_mm: 30
+  margin_top_mm: 0
+  margin_left_mm: 0
+  gap_x_mm: 0
+  gap_y_mm: 0

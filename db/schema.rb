@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -133,6 +133,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_120000) do
     t.string "disabled_modules", default: [], null: false, array: true
     t.bigint "parent_company_id"
     t.integer "order_mode", default: 0, null: false
+    t.bigint "barcode_sequence", default: 0, null: false
     t.index ["parent_company_id"], name: "index_companies_on_parent_company_id"
   end
 
@@ -189,6 +190,26 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_120000) do
     t.index ["check_id"], name: "index_kitchen_orders_on_check_id"
     t.index ["company_id"], name: "index_kitchen_orders_on_company_id"
     t.index ["sent_by_id"], name: "index_kitchen_orders_on_sent_by_id"
+  end
+
+  create_table "label_formats", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "name", limit: 60, null: false
+    t.string "kind", default: "sheet", null: false
+    t.decimal "page_width_mm", precision: 6, scale: 2, null: false
+    t.decimal "page_height_mm", precision: 6, scale: 2, null: false
+    t.integer "columns", default: 1, null: false
+    t.integer "rows", default: 1, null: false
+    t.decimal "label_width_mm", precision: 6, scale: 2, null: false
+    t.decimal "label_height_mm", precision: 6, scale: 2, null: false
+    t.decimal "margin_top_mm", precision: 6, scale: 2, default: "0.0", null: false
+    t.decimal "margin_left_mm", precision: 6, scale: 2, default: "0.0", null: false
+    t.decimal "gap_x_mm", precision: 6, scale: 2, default: "0.0", null: false
+    t.decimal "gap_y_mm", precision: 6, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "company_id, lower((name)::text)", name: "index_label_formats_on_company_and_lower_name", unique: true
+    t.index ["company_id"], name: "index_label_formats_on_company_id"
   end
 
   create_table "module_changes", force: :cascade do |t|
@@ -727,6 +748,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_120000) do
   add_foreign_key "kitchen_orders", "checks"
   add_foreign_key "kitchen_orders", "companies"
   add_foreign_key "kitchen_orders", "users", column: "sent_by_id"
+  add_foreign_key "label_formats", "companies"
   add_foreign_key "module_changes", "companies"
   add_foreign_key "module_changes", "users", column: "actor_id"
   add_foreign_key "payment_terminals", "companies"
