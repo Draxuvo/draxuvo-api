@@ -11,5 +11,22 @@ class UserCompany < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: :company_id }
 
+  # Spec 036: toda persona con acceso tiene ficha de empleado en la empresa (se crea al darle acceso), y quitarle el
+  # acceso suelta su ficha —que se conserva con su asistencia— sin dejarla ligada a un usuario que ya no entra.
+  after_create :ensure_employee
+  after_destroy :release_employee
+
   def self.rank(role) = RANKS.fetch(role.to_s, -1)
+
+  private
+
+  def ensure_employee
+    return if company.employees.exists?(user_id: user_id)
+
+    company.employees.create!(user: user, name: user.full_name.presence || user.email, status: :active)
+  end
+
+  def release_employee
+    company.employees.where(user_id: user_id).update_all(user_id: nil, updated_at: Time.current)
+  end
 end

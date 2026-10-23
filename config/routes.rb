@@ -72,11 +72,16 @@ Rails.application.routes.draw do
           post  :checkin
           post  :checkout
           patch :active
+          post   :access, action: :grant_access
+          patch  :access, action: :update_access
+          delete :access, action: :revoke_access
         end
       end
 
       # Asistencias (con filtros por employee, from, to)
-      resources :attendances, only: [ :index ]
+      resources :attendances, only: [ :index ] do
+        get :roster, on: :collection
+      end
 
       # Marca propia de entrada y salida (spec 026)
       scope :my_attendance, controller: :my_attendance, as: :my_attendance do

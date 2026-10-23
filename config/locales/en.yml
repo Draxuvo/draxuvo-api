@@ -80,11 +80,18 @@ en:
     failed: "Authentication failed"
     invalid_or_expired: "Invalid or expired token"
     not_authorized: "You are not authorized to perform this action"
+    employee_inactive: "Your access to this company is suspended because the employee was deactivated"
     no_company: "User has no company assigned"
 
   attendance:
     no_open: "You have no open check-in"
     not_eligible: "Your user is not linked to an employee in this company"
+    future_time: "The time cannot be in the future"
+    before_checkin: "Check-out cannot be before check-in"
+    overlap: "That time overlaps another shift of the employee"
+    invalid_time: "The date or time is not valid"
+    employee_inactive: "The employee has been deactivated"
+    no_open_for_employee: "The employee has no open check-in"
 
   employees:
     deactivated: "Employee deactivated"
@@ -93,6 +100,8 @@ en:
     no_checkin: "No active check-in found"
     user_created: "User created and linked to employee"
     email_taken: "Email address is already registered"
+    no_access: "The employee has no access to the company"
+    email_required: "An email is required to give access"
 
   stock:
     receive:

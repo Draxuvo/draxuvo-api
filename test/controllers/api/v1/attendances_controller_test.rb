@@ -94,7 +94,7 @@ class Api::V1::AttendancesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     results = response.parsed_body["results"]
     row = results.find { |r| r["id"] == attendance.id }
-    assert_equal %w[attendance_type checkin_at checkout_at company_id created_at duration_minutes employee employee_id id lat lng open updated_at],
+    assert_equal %w[attendance_type checkin_at checkin_by checkin_captured checkout_at checkout_by checkout_captured checkout_recorded_at company_id created_at duration_minutes employee employee_id id lat lng open updated_at],
                  row.keys.sort
     assert_equal @luis.id, row["employee_id"]
     assert_equal @company.id, row["company_id"]
@@ -132,5 +132,57 @@ class Api::V1::AttendancesControllerTest < ActionDispatch::IntegrationTest
 
   def ids
     response.parsed_body["results"].map { |r| r["id"] }
+  end
+
+  # --- Spec 036: lista del día por empleado y constancia de quién marcó ---
+
+  test "roster lists every active employee with their state of the day" do
+    @company.employees.where.not(id: [ @luis.id, @ana.id ]).update_all(status: Employee.statuses[:inactive])
+    @luis.attendances.create!(company: @company, checkin_at: 2.hours.ago, checkin_by: @owner)
+    done = @company.employees.create!(name: "Zoe Cierre", status: :active)
+    done.attendances.create!(company: @company, checkin_at: 4.hours.ago, checkout_at: 1.hour.ago)
+    @company.employees.create!(name: "Baja", status: :inactive)
+
+    get "/api/v1/attendances/roster", headers: auth_headers(@owner, @company)
+
+    assert_response :ok
+    rows = response.parsed_body["results"].index_by { |r| r["employee"]["name"] }
+    assert_equal [ "Ana Ruiz", "Luis Pérez", "Zoe Cierre" ], rows.keys.sort
+    assert_equal "none", rows["Ana Ruiz"]["state"]
+    assert_nil rows["Ana Ruiz"]["attendance"]
+    assert_equal "working", rows["Luis Pérez"]["state"]
+    assert_equal @owner.id, rows["Luis Pérez"]["attendance"]["checkin_by"]["id"]
+    assert_equal "done", rows["Zoe Cierre"]["state"]
+  end
+
+  test "roster for another day only shows that day's shifts" do
+    @luis.attendances.create!(company: @company, checkin_at: 2.hours.ago)
+    day = (Time.zone.today - 3).iso8601
+
+    get "/api/v1/attendances/roster", params: { date: day }, headers: auth_headers(@owner, @company)
+
+    assert_response :ok
+    assert_equal day, response.parsed_body["date"]
+    assert response.parsed_body["results"].all? { |r| r["state"] == "none" }
+  end
+
+  test "roster is open to managers and closed to staff, and stays inside the company" do
+    get "/api/v1/attendances/roster", headers: auth_headers(users(:pro_manager), @company)
+    assert_response :ok
+    names = response.parsed_body["results"].map { |r| r["employee"]["name"] }
+    assert_not_includes names, employees(:one).name
+
+    get "/api/v1/attendances/roster", headers: auth_headers(users(:pro_staff), @company)
+    assert_response :forbidden
+  end
+
+  test "roster does not query per employee" do
+    5.times { |i| @company.employees.create!(name: "Extra #{i}", status: :active).attendances.create!(company: @company, checkin_at: 1.hour.ago) }
+    queries = 0
+    counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      get "/api/v1/attendances/roster", headers: auth_headers(@owner, @company)
+    end
+    assert_operator queries, :<=, 12
   end
 end

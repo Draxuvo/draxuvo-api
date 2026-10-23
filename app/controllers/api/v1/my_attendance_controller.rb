@@ -29,7 +29,7 @@ module Api
       private
 
       def mark
-        @mark ||= Attendances::Mark.new(current_employee)
+        @mark ||= Attendances::Mark.new(current_employee, actor: current_user)
       end
 
       def not_eligible

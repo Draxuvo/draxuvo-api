@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_23_210100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,6 +52,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_200000) do
     t.integer "attendance_type"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "checkin_by_id"
+    t.bigint "checkout_by_id"
+    t.boolean "checkin_captured", default: false, null: false
+    t.boolean "checkout_captured", default: false, null: false
+    t.datetime "checkout_recorded_at"
+    t.index ["checkin_by_id"], name: "index_attendances_on_checkin_by_id"
+    t.index ["checkout_by_id"], name: "index_attendances_on_checkout_by_id"
     t.index ["company_id"], name: "index_attendances_on_company_id"
     t.index ["employee_id"], name: "index_attendances_on_employee_id"
   end
@@ -727,6 +734,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_200000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "attendances", "companies"
   add_foreign_key "attendances", "employees"
+  add_foreign_key "attendances", "users", column: "checkin_by_id"
+  add_foreign_key "attendances", "users", column: "checkout_by_id"
   add_foreign_key "check_items", "checks"
   add_foreign_key "check_items", "companies"
   add_foreign_key "check_items", "kitchen_orders"

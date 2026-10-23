@@ -204,10 +204,11 @@ DEMO_COMPANIES.each do |cfg|
                     role: :staff, company: company)
 
   employees = PEOPLE.each_with_index.map do |(first, last, position, department), i|
-    Employee.create!(company: company, name: "#{first} #{last}", position: position,
-                     department: department, salary: 9_000 + (i * 1_500), status: :active,
-                     phone: "55100000#{i}#{company.id % 10}",
-                     user: (staff if i.zero?))
+    attrs = { name: "#{first} #{last}", position: position, department: department, salary: 9_000 + (i * 1_500),
+              status: :active, phone: "55100000#{i}#{company.id % 10}" }
+    # Cada membresía ya trae su ficha (spec 036); la del staff es la primera persona de la lista.
+    card = company.employees.find_by(user: staff) if i.zero?
+    card ? card.tap { |c| c.update!(attrs) } : Employee.create!(company: company, **attrs)
   end
 
   # Asistencia de los últimos 10 días hábiles.

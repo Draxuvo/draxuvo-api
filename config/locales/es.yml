@@ -80,11 +80,18 @@ es:
     failed: "Autenticación fallida"
     invalid_or_expired: "Token inválido o expirado"
     not_authorized: "No tienes autorización para realizar esta acción"
+    employee_inactive: "Tu acceso a esta empresa está suspendido porque el empleado fue dado de baja"
     no_company: "Usuario sin empresa asignada"
 
   attendance:
     no_open: "No tienes una entrada abierta"
     not_eligible: "Tu usuario no está ligado a un empleado de esta empresa"
+    future_time: "La hora no puede ser futura"
+    before_checkin: "La salida no puede ser anterior a la entrada"
+    overlap: "Ese horario se empalma con otro turno del empleado"
+    invalid_time: "La fecha u hora no es válida"
+    employee_inactive: "El empleado está dado de baja"
+    no_open_for_employee: "El empleado no tiene una entrada abierta"
 
   employees:
     deactivated: "Empleado desactivado"
@@ -93,6 +100,8 @@ es:
     no_checkin: "No hay entrada registrada"
     user_created: "Usuario creado y vinculado al empleado"
     email_taken: "El correo electrónico ya está registrado"
+    no_access: "El empleado no tiene acceso a la empresa"
+    email_required: "Para dar acceso se necesita un correo"
 
   stock:
     receive:

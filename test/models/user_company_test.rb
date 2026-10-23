@@ -39,4 +39,43 @@ class UserCompanyTest < ActiveSupport::TestCase
     assert user_companies(:pro_manager).manager?
     assert user_companies(:pro_co_owner).owner?
   end
+
+  # --- Spec 036: toda persona con acceso tiene ficha de empleado ---
+
+  test "giving access creates an active employee card for the person" do
+    company = companies(:pro_co)
+    user = User.create!(first_name: "Marta", last_name: "Gómez", email: "marta@ficha.test", phone: "5512340000", password: "password123", active: true)
+
+    assert_difference -> { company.employees.count }, 1 do
+      UserCompany.create!(user: user, company: company, role: :manager)
+    end
+
+    card = company.employees.find_by!(user_id: user.id)
+    assert_equal "active", card.status
+    assert_includes card.name, "Marta"
+  end
+
+  test "an existing card of the person is reused" do
+    company = companies(:pro_co)
+    user = create_member(company, role: :staff, employee: false)
+    company.employees.create!(name: "Ya existe", status: :active, user: user)
+    company.user_companies.find_by(user: user).destroy!
+    company.employees.create!(name: "Ya existe", status: :active, user: user)
+
+    assert_no_difference -> { company.employees.count } do
+      UserCompany.create!(user: user, company: company, role: :staff)
+    end
+  end
+
+  test "removing access releases the card but keeps it with its attendance" do
+    company = companies(:pro_co)
+    user = create_member(company, role: :staff)
+    card = company.employees.find_by!(user_id: user.id)
+    card.attendances.create!(company: company, checkin_at: 1.hour.ago)
+
+    company.user_companies.find_by!(user: user).destroy!
+
+    assert_nil card.reload.user_id
+    assert_equal 1, card.attendances.count
+  end
 end

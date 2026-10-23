@@ -42,10 +42,22 @@ module Api
           company_id = request.headers["X-Company-Id"].presence
           raise ApiErrors::BadRequestError.new(details: I18n.t("auth.no_company")) if company_id.blank?
           scope = current_user.super_admin? ? Company : current_user.companies
-          scope.find(company_id)
+          company = scope.find(company_id)
+          reject_inactive_employee!(company)
+          company
         rescue ActiveRecord::RecordNotFound
           raise ApiErrors::ForbiddenError.new(details: I18n.t("auth.no_company"))
         end
+      end
+
+      # Spec 036: dar de baja a un empleado suspende su acceso a esa empresa; reactivarlo lo restablece.
+      def reject_inactive_employee!(company)
+        return if current_user.super_admin?
+        return unless company.employees.inactive.exists?(user_id: current_user.id)
+
+        raise ApiErrors::ForbiddenError.new(
+          message: I18n.t("auth.employee_inactive"), details: { code: "employee_inactive" }
+        )
       end
 
       # Rol con el que actúa el usuario en la empresa activa (R16): super_admin o el de su membresía.
