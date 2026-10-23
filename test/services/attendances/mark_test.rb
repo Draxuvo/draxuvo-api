@@ -87,10 +87,10 @@ class Attendances::MarkTest < ActiveSupport::TestCase
   end
 
   test "a shift can cross midnight" do
-    entry = Time.zone.today.beginning_of_day - 2.hours
-    @employee.attendances.create!(company: @employee.company, checkin_at: entry)
-    attendance = boss_mark.check_out(at: Time.zone.today.beginning_of_day + 10.minutes, strict: true) if Time.current > Time.zone.today.beginning_of_day + 11.minutes
-    skip "cerca de medianoche" unless attendance
-    assert_equal 130, attendance.duration_minutes
+    travel_to Time.zone.local(2026, 10, 20, 9, 0) do
+      @employee.attendances.create!(company: @employee.company, checkin_at: Time.zone.local(2026, 10, 19, 22, 0))
+      attendance = boss_mark.check_out(at: Time.zone.local(2026, 10, 20, 0, 10), strict: true)
+      assert_equal 130, attendance.duration_minutes
+    end
   end
 end
