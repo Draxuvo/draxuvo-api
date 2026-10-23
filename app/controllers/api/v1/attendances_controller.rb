@@ -8,6 +8,7 @@ module Api
       # o fechas que no se pueden leer no aplican filtro.
       def index
         attendances = current_company.attendances
+                                     .joins(:employee).merge(Employee.team)
                                      .includes(:employee, :checkin_by, :checkout_by)
                                      .search(params[:search])
 

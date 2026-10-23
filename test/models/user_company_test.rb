@@ -42,17 +42,41 @@ class UserCompanyTest < ActiveSupport::TestCase
 
   # --- Spec 036: toda persona con acceso tiene ficha de empleado ---
 
-  test "giving access creates an active employee card for the person" do
+  test "giving staff access creates an active employee card for the person" do
     company = companies(:pro_co)
     user = User.create!(first_name: "Marta", last_name: "Gómez", email: "marta@ficha.test", phone: "5512340000", password: "password123", active: true)
 
     assert_difference -> { company.employees.count }, 1 do
-      UserCompany.create!(user: user, company: company, role: :manager)
+      UserCompany.create!(user: user, company: company, role: :staff)
     end
 
     card = company.employees.find_by!(user_id: user.id)
     assert_equal "active", card.status
     assert_includes card.name, "Marta"
+  end
+
+  test "managers, admins and owners get no employee card" do
+    company = companies(:pro_co)
+    %i[manager admin owner].each do |role|
+      user = create_member(company, role: role)
+      assert_not company.employees.exists?(user_id: user.id), "#{role} no es personal"
+    end
+  end
+
+  test "becoming staff creates the card and Employee.team leaves bosses out" do
+    company = companies(:pro_co)
+    user = create_member(company, role: :manager)
+    membership = company.user_companies.find_by!(user: user)
+
+    assert_difference -> { company.employees.count }, 1 do
+      membership.update!(role: :staff)
+    end
+    card = company.employees.find_by!(user_id: user.id)
+    assert_includes company.employees.team, card
+
+    membership.update!(role: :admin)
+    assert_not_includes company.employees.team, card
+    assert Employee.exists?(card.id)
   end
 
   test "an existing card of the person is reused" do

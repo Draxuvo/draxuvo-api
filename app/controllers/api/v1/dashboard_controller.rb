@@ -26,7 +26,7 @@ module Api
       end
 
       def employees_stats
-        employees = module_scope(:employees, current_company.employees)
+        employees = module_scope(:employees, current_company.employees.team)
         counts    = employees.group(:status).count
 
         {
@@ -130,7 +130,7 @@ module Api
         today_range = now.all_day
         month_range = now.all_month
 
-        attendances   = module_scope(:attendance, current_company.attendances)
+        attendances   = module_scope(:attendance, current_company.attendances.joins(:employee).merge(Employee.team))
         today_records = attendances.where(checkin_at: today_range)
         type_counts   = today_records.group(:attendance_type).count
 

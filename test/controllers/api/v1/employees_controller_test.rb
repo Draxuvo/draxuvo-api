@@ -214,7 +214,7 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
   # --- lista ----------------------------------------------------------------------------------
 
   test "index filters by access and only bosses see the access data" do
-    granted = @company.employees.create!(name: "Con Acceso", status: :active, user: @admin)
+    granted = @company.employees.find_by!(user: create_member(@company, role: :staff))
 
     get "/api/v1/employees", params: { access: "with" }, headers: headers_for(@admin)
     ids = response.parsed_body["results"].map { |e| e["id"] }
@@ -233,8 +233,8 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
   # --- baja --------------------------------------------------------------------------------------
 
   test "deactivating an employee suspends their access and reactivating restores it" do
-    user = create_member(@company, role: :manager)
-    employee = @company.employees.create!(name: "Gerente", status: :active, user: user)
+    user = create_member(@company, role: :staff)
+    employee = @company.employees.find_by!(user: user)
 
     get "/api/v1/employees", headers: headers_for(user)
     assert_response :ok
@@ -249,7 +249,7 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     patch "/api/v1/employees/#{employee.id}/active", headers: headers_for(@admin)
     get "/api/v1/employees", headers: headers_for(user)
     assert_response :ok
-    assert_equal "manager", @company.user_companies.find_by(user: user).role
+    assert_equal "staff", @company.user_companies.find_by(user: user).role
   end
 
   test "an inactive employee in one company does not block the same user in another" do
@@ -266,5 +266,35 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     @company.employees.create!(name: "Super", status: :inactive, user: users(:super_admin))
     get "/api/v1/employees", headers: headers_for(users(:super_admin))
     assert_response :ok
+  end
+
+  # --- quien dirige no es personal ---------------------------------------------------------------
+
+  test "owners, admins and managers are not in the employee list nor reachable as employees" do
+    staff = @company.employees.find_by!(user: create_member(@company, role: :staff))
+    boss_card = @company.employees.create!(name: "Jefa con ficha", status: :active, user: @admin)
+
+    get "/api/v1/employees", params: { page_size: 100 }, headers: headers_for(@owner)
+    ids = response.parsed_body["results"].map { |e| e["id"] }
+    assert_includes ids, staff.id
+    assert_includes ids, @employee.id, "un empleado sin acceso sigue siendo equipo"
+    assert_not_includes ids, boss_card.id
+
+    get "/api/v1/employees/#{boss_card.id}", headers: headers_for(@owner)
+    assert_response :not_found
+    post "/api/v1/employees/#{boss_card.id}/checkin", headers: headers_for(@owner)
+    assert_response :not_found
+  end
+
+  test "promoting an employee to manager takes them out of the team but keeps the card" do
+    staff_user = create_member(@company, role: :staff)
+    card = @company.employees.find_by!(user: staff_user)
+
+    patch "/api/v1/employees/#{card.id}/access", params: { role: "manager" }, headers: headers_for(@owner)
+    assert_response :ok
+
+    get "/api/v1/employees", params: { page_size: 100 }, headers: headers_for(@owner)
+    assert_not_includes response.parsed_body["results"].map { |e| e["id"] }, card.id
+    assert Employee.exists?(card.id)
   end
 end

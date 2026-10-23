@@ -104,4 +104,21 @@ class Api::V1::MyAttendanceControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_nil other.attendances.last.checkout_at
   end
+
+  test "owners, admins and managers do not mark their own attendance" do
+    %i[owner admin manager].each do |role|
+      boss = create_member(@company, role: role)
+      @company.employees.create!(name: "Ficha #{role}", status: :active, user: boss)
+      headers = auth_headers(boss, @company)
+
+      get "/api/v1/my_attendance/today", headers: headers
+      assert_equal false, response.parsed_body["eligible"], role
+
+      assert_no_difference -> { Attendance.count } do
+        post "/api/v1/my_attendance/check_in", headers: headers
+      end
+      assert_response :unprocessable_entity
+      assert_equal "not_eligible", response.parsed_body.dig("error", "code")
+    end
+  end
 end

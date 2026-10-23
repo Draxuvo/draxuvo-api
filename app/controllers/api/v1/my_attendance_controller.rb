@@ -10,14 +10,14 @@ module Api
       end
 
       def check_in
-        return not_eligible unless current_employee
+        return not_eligible unless attendance_employee
 
         created = mark.check_in
         render json: payload, status: created ? :created : :ok
       end
 
       def check_out
-        return not_eligible unless current_employee
+        return not_eligible unless attendance_employee
 
         mark.check_out
         render json: payload
@@ -29,7 +29,12 @@ module Api
       private
 
       def mark
-        @mark ||= Attendances::Mark.new(current_employee, actor: current_user)
+        @mark ||= Attendances::Mark.new(attendance_employee, actor: current_user)
+      end
+
+      # Quien dirige (gerente, administrador, dueño) no marca asistencia propia: no es personal (spec 036).
+      def attendance_employee
+        current_employee unless Authorizable::BOSS_ROLES.include?(current_role)
       end
 
       def not_eligible
@@ -38,7 +43,7 @@ module Api
       end
 
       def payload
-        return { eligible: false, state: "none", current: nil, last: nil, server_time: Time.current } unless current_employee
+        return { eligible: false, state: "none", current: nil, last: nil, server_time: Time.current } unless attendance_employee
 
         s = mark.state
         {
