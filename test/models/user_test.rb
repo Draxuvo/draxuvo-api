@@ -133,8 +133,26 @@ class UserTest < ActiveSupport::TestCase
     assert_equal User.order(created_at: :desc).to_a.map(&:id).sort, User.sorted.map(&:id).sort
   end
 
-  test "non_employees excludes users linked to an employee" do
-    assert_not_includes User.non_employees, users(:pro_staff)
-    assert_includes User.non_employees, users(:pro_manager)
+  test "managing keeps owners, admins and managers even with an employee card, and drops staff-only users" do
+    company = companies(:pro_co)
+    owner = create_member(company, role: :owner)
+    admin = create_member(company, role: :admin)
+    assert company.employees.exists?(user_id: admin.id), "la membresía crea su ficha (spec 036)"
+
+    assert_includes User.managing, owner
+    assert_includes User.managing, admin
+    assert_includes User.managing, users(:pro_manager)
+    assert_not_includes User.managing, users(:pro_staff)
+  end
+
+  test "managing counts a role in any company, users without companies, and lists each user once" do
+    mixed = create_member(companies(:pro_co), role: :staff)
+    create_member(companies(:one), role: :owner, user: mixed)
+    create_member(companies(:two), role: :admin, user: mixed)
+    nobody = User.create!(first_name: "Sin", last_name: "Empresa", email: "sin-empresa@x.test", phone: "5512340000", password: "password123", active: true)
+
+    assert_includes User.managing, mixed
+    assert_includes User.managing, nobody
+    assert_equal 1, User.managing.where(id: mixed.id).count
   end
 end

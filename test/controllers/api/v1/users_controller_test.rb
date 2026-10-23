@@ -56,6 +56,19 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes owner.companies.reload, companies(:one)
   end
 
+  test "the list shows owners and admins even though every member has an employee card (spec 036)" do
+    owner = create_member(companies(:pro_co), role: :owner)
+    admin = create_member(companies(:pro_co), role: :admin)
+    staff = create_member(companies(:pro_co), role: :staff)
+
+    get BASE, params: { page_size: 100 }, headers: auth_headers(users(:super_admin), companies(:pro_co))
+
+    ids = json["results"].map { |u| u["id"] }
+    assert_includes ids, owner.id
+    assert_includes ids, admin.id
+    assert_not_includes ids, staff.id
+  end
+
   test "the super admin lists, reads and updates any user" do
     headers = auth_headers(users(:super_admin), companies(:pro_co))
 
