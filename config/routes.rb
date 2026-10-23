@@ -91,6 +91,7 @@ Rails.application.routes.draw do
           get  :menu
           get  :by_code
           get  :export
+          post :generate_barcodes
           post :import
           get  :template
         end
@@ -98,6 +99,10 @@ Rails.application.routes.draw do
       end
 
       resources :product_imports, only: [ :index, :show ]
+      post "barcodes/generate", to: "barcodes#generate"
+      resources :label_formats, only: [ :index, :create, :update, :destroy ]
+      post "labels/check", to: "labels#check"
+      post "labels/pdf", to: "labels#pdf"
       resources :stock_receipts, only: [ :create ]
       resources :stock_counts, only: [ :index, :create, :show, :destroy ] do
         member do

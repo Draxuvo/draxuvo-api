@@ -291,4 +291,52 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     get "/api/v1/products/by_code", params: { code: "7502000000002" }, headers: auth_headers(@owner, companies(:pro_co))
     assert_response :not_found
   end
+
+  # --- spec 035: códigos propios en lote ---
+
+  def generate_for(ids, headers: resto_headers)
+    post "/api/v1/products/generate_barcodes", params: { product_ids: ids }, headers: headers, as: :json
+  end
+
+  test "generate_barcodes gives a code only to the selected products that have none and summarizes" do
+    tacos = products(:resto_tacos)
+    sopa = products(:resto_sopa)
+    cola = products(:resto_cola)
+
+    generate_for([ tacos.id, sopa.id, cola.id, 0 ])
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal [ 2, 1, [ { "product_id" => 0, "reason" => "not_found" } ] ], [ body["generated"], body["already_had"], body["failed"] ]
+    assert_equal [ sopa.id, cola.id ].sort, body["products"].map { |p| p["id"] }.sort
+    assert_equal [ "7502000000002" ], tacos.reload.barcode_codes
+    body["products"].each { |p| assert_match(/\A29\d{11}\z/, p["barcodes"].first) }
+  end
+
+  test "generate_barcodes never touches products of another company" do
+    other = products(:two)
+
+    generate_for([ other.id ])
+
+    assert_equal 0, response.parsed_body["generated"]
+    assert_equal [ { "product_id" => other.id, "reason" => "not_found" } ], response.parsed_body["failed"]
+    assert_empty other.reload.barcode_codes
+  end
+
+  test "generate_barcodes rejects an empty selection and more than 1,000 products" do
+    generate_for([])
+    assert_response :unprocessable_entity
+    assert_equal "empty_selection", response.parsed_body.dig("error", "details", "code")
+
+    generate_for((1..1001).to_a)
+    assert_response :unprocessable_entity
+    assert_equal "too_many_products", response.parsed_body.dig("error", "details", "code")
+  end
+
+  test "generate_barcodes works for any member with the inventory module" do
+    generate_for([ products(:resto_sopa).id ], headers: auth_headers(users(:resto_waiter), companies(:resto_co)))
+
+    assert_response :ok
+    assert_equal 1, response.parsed_body["generated"]
+  end
 end

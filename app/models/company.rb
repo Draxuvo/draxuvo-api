@@ -8,6 +8,7 @@ class Company < ApplicationRecord
   has_many :product_barcodes, dependent: :destroy
   has_many :product_imports, dependent: :destroy
   has_many :stock_counts, dependent: :destroy
+  has_many :label_formats, dependent: :destroy
   has_many :stock_movements, dependent: :destroy
   has_many :work_orders, dependent: :destroy
   has_many :tickets, dependent: :destroy

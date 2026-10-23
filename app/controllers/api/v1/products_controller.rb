@@ -2,6 +2,8 @@
 module Api
   module V1
     class ProductsController < BaseController
+      MAX_GENERATE = 1_000
+
       requires_module :inventory
       before_action :set_product, only: [ :show, :update, :destroy ]
       before_action :require_icon_permission!, only: [ :create, :update ]
@@ -103,6 +105,27 @@ module Api
         render json: ProductImportSerializer.new(import).as_json, status: :accepted
       end
 
+      # POST /api/v1/products/generate_barcodes  (spec 035): un código propio para cada producto de la selección
+      # que no tenga ninguno.
+      def generate_barcodes
+        ids = Array(params[:product_ids]).filter_map { |id| Integer(id, exception: false) }.uniq
+        raise labels_error("empty_selection") if ids.empty?
+        raise labels_error("too_many_products", count: MAX_GENERATE) if ids.size > MAX_GENERATE
+
+        products = current_company.products.includes(:barcodes).where(id: ids).order(:id).to_a
+        generated = []
+        already_had = 0
+        products.each_slice(200) do |slice|
+          result = Barcodes::Generator.assign(current_company, slice)
+          generated.concat(result[:generated])
+          already_had += result[:already_had]
+        end
+        failed = (ids - products.map(&:id)).map { |id| { product_id: id, reason: "not_found" } }
+        fresh = current_company.products.includes(:product_type, :barcodes).where(id: generated.map(&:id)).order(:id)
+        render json: { generated: generated.size, already_had: already_had, failed: failed,
+                       products: fresh.map { |product| ProductSerializer.new(product).as_json } }
+      end
+
       # GET /api/v1/products/export  (spec 034): el inventario en Excel con los filtros del listado.
       def export
         xlsx = Products::ExportService.new(filtered_products).call
@@ -165,6 +188,10 @@ module Api
           message: I18n.t("products.barcodes.taken", barcode: code, product: other.name),
           details: { code: "barcode_taken", barcode: code, product: { id: other.id, name: other.name } }
         )
+      end
+
+      def labels_error(code, **options)
+        ApiErrors::UnprocessableEntityError.new(message: I18n.t("labels.errors.#{code}", **options), details: { code: code })
       end
 
       def import_error(code, status)

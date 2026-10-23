@@ -90,3 +90,5 @@ group :development, :test do
   gem "pry-rails"
   gem "pry-byebug" # Para debugging con byebug
 end
+
+gem "barby", "~> 0.7"

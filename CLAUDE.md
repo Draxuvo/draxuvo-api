@@ -112,6 +112,10 @@ Any plan and cycle goes through a Stripe Checkout Session (`Subscriptions::Creat
 
 Uses Rails 8 defaults: **Solid Queue** for jobs, **Solid Cache** for caching, **Solid Cable** for ActionCable. Production uses a single database (`DATABASE_URL`): the Solid tables live in the primary schema (migration `create_solid_tables`). Solid Queue runs inside Puma when `SOLID_QUEUE_IN_PUMA` is set (it is in `render.yaml`).
 
+### Barcodes & labels (spec 035)
+
+`Barcodes::Generator` (`app/services/barcodes/`) reserves own codes: `"29"` + 10-digit sequence + EAN-13 check digit (`Barcodes::CheckDigit`); the sequence is advanced with one atomic `UPDATE … RETURNING` inside `Company.uncached` (the query cache would otherwise repeat blocks) and codes already in `product_barcodes` are skipped. `Labels::Catalog` loads the common formats from `config/label_formats.yml` (ids `std:<key>`); own formats are `LabelFormat` rows (max 20 per company, grid must fit the page). `Labels::PdfService` (Prawn, AFM Helvetica with Windows-1252 sanitization) draws with `Labels::Layout` (mm→pt, start position) and `Labels::BarcodeDrawing` (gem `barby`: EAN-13, EAN-8 or Code 128 chosen from the value; module 0.33 mm, never below 0.264 mm); `check` returns count, pages, warnings (`code_too_small`, `content_too_big`) and skipped products without building the file. Geometry tests read the uncompressed PDF (`test/support/label_pdf_helpers.rb`).
+
 ### File Storage
 
 Active Storage; dev uses local disk. Production supports Cloudinary or S3-compatible (AWS, Backblaze, Supabase) via env vars. Order photos are `WorkOrderAttachment` (`has_one_attached :file`; images only, 10 MB, 10 per order).

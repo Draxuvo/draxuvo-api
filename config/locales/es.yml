@@ -40,6 +40,15 @@ es:
       greater_than_or_equal_to: "debe ser mayor o igual a %{count}"
       less_than_or_equal_to: "debe ser menor o igual a %{count}"
       blank: "no puede estar vacío"
+      roll_single: "en un rollo debe ser 1"
+      grid_too_wide: "La cuadrícula de etiquetas no cabe a lo ancho de la página"
+      grid_too_tall: "La cuadrícula de etiquetas no cabe a lo alto de la página"
+      formats_limit: "Una empresa puede tener hasta %{count} formatos propios"
+      greater_than: "debe ser mayor que %{count}"
+      taken: "ya está en uso"
+      inclusion: "no es válido"
+      too_long: "es demasiado largo (máximo %{count} caracteres)"
+      only_integer: "debe ser un número entero"
     subscription:
       inactive: "Tu suscripción ha expirado o fue cancelada. Actualiza tu plan para continuar."
       suspended: "Tu suscripción está suspendida por falta de pago. Paga para volver a operar."
@@ -97,6 +106,30 @@ es:
       insufficient_stock: "Stock insuficiente en %{product}"
       count_closed: "El conteo ya no admite cambios"
       code_not_found: "No hay ningún producto con ese código"
+
+  labels:
+    papers:
+      a4: "A4"
+      letter: "Carta"
+    formats:
+      sheet: "Hoja %{paper} · %{count} etiquetas · %{size}"
+      roll: "Rollo · %{size}"
+    warnings:
+      code_too_small: "El código de barras no cabe con el tamaño mínimo para leerse en esta etiqueta"
+      content_too_big: "El nombre y el precio no caben junto con un código legible; apágalos o elige una etiqueta más grande"
+    errors:
+      empty_selection: "Elige al menos un producto"
+      too_many_products: "Elige hasta %{count} productos por vez"
+      invalid_count: "La cantidad de códigos debe estar entre 1 y %{count}"
+      no_barcode: "Hay productos sin código de barras: %{products}"
+      too_many_labels: "Un PDF admite hasta %{count} etiquetas"
+      invalid_format: "El formato de etiqueta no existe"
+      invalid_code: "El código no pertenece al producto"
+      invalid_copies: "Las copias deben ser un número entero de 1 a %{count}"
+      invalid_start: "La etiqueta de inicio debe estar entre 1 y %{count}"
+      empty_items: "Agrega al menos un producto"
+      formats_limit: "Una empresa puede tener hasta %{count} formatos propios"
+      name_taken: "Ya tienes un formato con ese nombre"
 
   products:
     deleted: "Producto eliminado"

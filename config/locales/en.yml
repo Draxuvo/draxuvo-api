@@ -40,6 +40,15 @@ en:
       greater_than_or_equal_to: "must be greater than or equal to %{count}"
       less_than_or_equal_to: "must be less than or equal to %{count}"
       blank: "can't be blank"
+      roll_single: "must be 1 on a roll"
+      grid_too_wide: "The label grid does not fit the page width"
+      grid_too_tall: "The label grid does not fit the page height"
+      formats_limit: "A company can have up to %{count} custom formats"
+      greater_than: "must be greater than %{count}"
+      taken: "has already been taken"
+      inclusion: "is not valid"
+      too_long: "is too long (maximum %{count} characters)"
+      only_integer: "must be an integer"
     subscription:
       inactive: "Your subscription has expired or was cancelled. Update your plan to continue."
       suspended: "Your subscription is suspended for non-payment. Pay to resume operating."
@@ -97,6 +106,30 @@ en:
       insufficient_stock: "Not enough stock for %{product}"
       count_closed: "This count no longer accepts changes"
       code_not_found: "No product has that code"
+
+  labels:
+    papers:
+      a4: "A4"
+      letter: "Letter"
+    formats:
+      sheet: "%{paper} sheet · %{count} labels · %{size}"
+      roll: "Roll · %{size}"
+    warnings:
+      code_too_small: "The barcode does not fit at the minimum readable size on this label"
+      content_too_big: "The name and price do not fit next to a readable barcode; turn them off or pick a larger label"
+    errors:
+      empty_selection: "Pick at least one product"
+      too_many_products: "Pick up to %{count} products at a time"
+      invalid_count: "The number of codes must be between 1 and %{count}"
+      no_barcode: "Some products have no barcode: %{products}"
+      too_many_labels: "A PDF holds up to %{count} labels"
+      invalid_format: "That label format does not exist"
+      invalid_code: "That code does not belong to the product"
+      invalid_copies: "Copies must be a whole number from 1 to %{count}"
+      invalid_start: "The starting label must be between 1 and %{count}"
+      empty_items: "Add at least one product"
+      formats_limit: "A company can have up to %{count} custom formats"
+      name_taken: "You already have a format with that name"
 
   products:
     deleted: "Product deleted"
