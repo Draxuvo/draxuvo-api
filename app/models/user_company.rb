@@ -11,9 +11,11 @@ class UserCompany < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: :company_id }
 
-  # Spec 036: toda persona con acceso tiene ficha de empleado en la empresa (se crea al darle acceso), y quitarle el
-  # acceso suelta su ficha —que se conserva con su asistencia— sin dejarla ligada a un usuario que ya no entra.
+  # Spec 036: el personal (rol staff) tiene ficha de empleado en la empresa, que se crea al darle acceso o al bajarlo
+  # a staff; quien dirige (gerente, administrador, dueño) no es personal y no la necesita. Quitarle el acceso suelta
+  # la ficha —que se conserva con su asistencia— sin dejarla ligada a un usuario que ya no entra.
   after_create :ensure_employee
+  after_update :ensure_employee, if: :saved_change_to_role?
   after_destroy :release_employee
 
   def self.rank(role) = RANKS.fetch(role.to_s, -1)
@@ -21,6 +23,7 @@ class UserCompany < ApplicationRecord
   private
 
   def ensure_employee
+    return unless staff?
     return if company.employees.exists?(user_id: user_id)
 
     company.employees.create!(user: user, name: user.full_name.presence || user.email, status: :active)

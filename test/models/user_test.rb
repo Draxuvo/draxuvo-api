@@ -137,7 +137,7 @@ class UserTest < ActiveSupport::TestCase
     company = companies(:pro_co)
     owner = create_member(company, role: :owner)
     admin = create_member(company, role: :admin)
-    assert company.employees.exists?(user_id: admin.id), "la membresía crea su ficha (spec 036)"
+    company.employees.create!(name: "Admin con ficha", status: :active, user: admin)
 
     assert_includes User.managing, owner
     assert_includes User.managing, admin
