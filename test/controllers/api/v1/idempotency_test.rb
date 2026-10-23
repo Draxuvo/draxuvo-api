@@ -70,7 +70,7 @@ class Api::V1::IdempotencyTest < ActionDispatch::IntegrationTest
 
   test "another user can reuse the same key" do
     other = create_member(@company, role: :staff)
-    employee = @company.employees.create!(user: other, name: "Otra Persona")
+    employee = @company.employees.create!(user: other, name: "Otra Persona", status: :active)
 
     note(@headers.merge("Idempotency-Key" => "k-4"))
     @order.update_columns(employee_id: employee.id)

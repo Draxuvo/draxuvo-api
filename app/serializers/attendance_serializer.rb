@@ -14,6 +14,11 @@ class AttendanceSerializer
       checkout_at:     @attendance.checkout_at,
       open:            @attendance.open?,
       duration_minutes: @attendance.duration_minutes,
+      checkin_by:      person(@attendance.checkin_by),
+      checkout_by:     person(@attendance.checkout_by),
+      checkin_captured:  @attendance.checkin_captured,
+      checkout_captured: @attendance.checkout_captured,
+      checkout_recorded_at: @attendance.checkout_recorded_at,
       lat:             @attendance.lat,
       lng:             @attendance.lng,
       created_at:      @attendance.created_at,
@@ -24,5 +29,11 @@ class AttendanceSerializer
         position: @attendance.employee.position
       }
     }
+  end
+
+  private
+
+  def person(user)
+    user && { id: user.id, name: user.full_name }
   end
 end

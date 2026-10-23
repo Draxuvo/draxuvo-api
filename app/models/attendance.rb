@@ -2,6 +2,8 @@
 class Attendance < ApplicationRecord
   belongs_to :employee
   belongs_to :company
+  belongs_to :checkin_by,  class_name: "User", optional: true
+  belongs_to :checkout_by, class_name: "User", optional: true
 
   enum :attendance_type, { normal: 0, late: 1, absent: 2 }, default: :normal
 

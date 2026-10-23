@@ -3,7 +3,8 @@ class EmployeeSerializer < ActiveModel::Serializer
   attributes :id, :name, :email, :phone, :position, :department, :salary, :status,
              :created_at, :updated_at
 
-  attribute :user do
+  # Spec 036: el acceso (rol del usuario ligado) solo lo ve quien lo administra (`include_access: true`).
+  attribute :access, if: -> { instance_options[:include_access] } do
     next nil unless object.user
 
     {
