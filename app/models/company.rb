@@ -18,6 +18,10 @@ class Company < ApplicationRecord
   has_many :payment_terminals, dependent: :destroy
   has_many :product_types, dependent: :destroy
   has_many :module_changes, dependent: :destroy
+  has_many :payroll_runs, dependent: :destroy
+  has_many :payroll_payments, dependent: :destroy
+  has_many :payroll_adjustments, dependent: :destroy
+  has_many :payroll_events, dependent: :delete_all
   has_one :subscription, dependent: :destroy
 
   # Sucursales del plan Empresa (R17): un solo nivel. Si la principal se borra, las sucursales

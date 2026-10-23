@@ -8,8 +8,8 @@ module Api
       requires_module :employees, except: %i[checkin checkout]
       requires_module :attendance, only: %i[checkin checkout]
       # Marcar a otro y dar o quitar acceso es de administrador, dueño y super admin (spec 036).
-      before_action :require_admin!, only: %i[checkin checkout grant_access update_access revoke_access]
-      before_action :set_employee, only: %i[show update destroy checkin checkout active grant_access update_access revoke_access]
+      before_action :require_admin!, only: %i[checkin checkout grant_access update_access revoke_access payroll_payments]
+      before_action :set_employee, only: %i[show update destroy checkin checkout active grant_access update_access revoke_access payroll_payments]
 
       def index
         employees = current_company.employees.includes(user: :user_companies).search(params[:search])
@@ -83,6 +83,14 @@ module Api
       rescue Attendances::Mark::Overlap          then mark_error("overlap", "attendance.overlap")
       end
 
+      # GET /employees/:id/payroll_payments — historial de pagos de nómina del empleado (spec 037, FR-016).
+      def payroll_payments
+        payments = current_company.payroll_payments.paid.where(employee_id: @employee.id).includes(:payroll_run, :paid_by, :adjustments)
+        @pagy, @payments = pagy(payments.order(paid_on: :desc, id: :desc))
+        results = @payments.map { |payment| PayrollPaymentSerializer.new(payment, receipt: false).as_json.merge(run: run_ref(payment.payroll_run)) }
+        render json: paginate_response(@pagy, results)
+      end
+
       # POST /employees/:id/access — da acceso a un empleado que aún no lo tiene.
       def grant_access
         role = params[:role].presence
@@ -116,6 +124,8 @@ module Api
       end
 
       private
+
+      def run_ref(run) = { id: run.id, period_type: run.period_type, starts_on: run.starts_on, ends_on: run.ends_on }
 
       def set_employee
         @employee = current_company.employees.includes(:user).find(params[:id])

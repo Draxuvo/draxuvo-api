@@ -72,11 +72,28 @@ Rails.application.routes.draw do
           post  :checkin
           post  :checkout
           patch :active
+          get   :payroll_payments
           post   :access, action: :grant_access
           patch  :access, action: :update_access
           delete :access, action: :revoke_access
         end
       end
+
+      # Nómina (spec 037): corridas, líneas de pago y ajustes
+      resources :payroll_runs, only: %i[index show create destroy] do
+        member do
+          post :approve
+          post :cancel
+          post :pay_all
+          post :refresh_employees
+          get  :export
+        end
+      end
+      resources :payroll_payments, only: %i[show update destroy] do
+        post :pay, on: :member
+        resources :adjustments, controller: "payroll_adjustments", only: :create
+      end
+      resources :payroll_adjustments, only: %i[update destroy]
 
       # Asistencias (con filtros por employee, from, to)
       resources :attendances, only: [ :index ] do

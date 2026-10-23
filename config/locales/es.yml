@@ -103,6 +103,48 @@ es:
     no_access: "El empleado no tiene acceso a la empresa"
     email_required: "Para dar acceso se necesita un correo"
 
+  payroll:
+    status:
+      pending: "Pendiente"
+      paid: "Pagada"
+    method:
+      cash: "Efectivo"
+      transfer: "Transferencia"
+      other: "Otro"
+    csv:
+      employee: "Empleado"
+      monthly_salary: "Salario mensual"
+      period_days: "Días del periodo"
+      days_paid: "Días a pagar"
+      salary: "Salario del periodo"
+      bonuses: "Bonos"
+      deductions: "Deducciones"
+      net: "Neto"
+      status: "Estado"
+      method: "Método"
+      reference: "Referencia"
+      paid_on: "Fecha de pago"
+      total: "Total"
+    errors:
+      period_invalid: "El periodo no es válido: revisa el tipo y las fechas (semanal hasta 7 días, quincenal hasta 16, mensual hasta 31)"
+      period_overlap: "Ya existe una corrida que se empalma con ese periodo"
+      not_draft: "La corrida ya no está en borrador"
+      not_approved: "Solo se puede cancelar una corrida aprobada"
+      not_paid: "Esa línea aún no está pagada"
+      stale_object: "La corrida cambió mientras la revisabas; recarga e inténtalo de nuevo"
+      lines_invalid: "Hay líneas con neto en cero o negativo; corrígelas o quítalas antes de aprobar"
+      empty_run: "La corrida no tiene líneas"
+      run_not_approved: "La corrida debe estar aprobada para registrar pagos"
+      already_paid: "Esa línea ya está pagada con otros datos; un pago hecho no se modifica"
+      nothing_to_pay: "No hay pagos pendientes que registrar"
+      invalid_method: "Elige un método de pago: efectivo, transferencia u otro"
+      future_date: "La fecha de pago no puede ser futura"
+      reference_too_long: "La referencia admite hasta 80 caracteres"
+      reason_required: "Indica el motivo de la cancelación"
+      has_payments: "La corrida ya tiene pagos y no se puede cancelar"
+      has_corrections: "La línea tiene correcciones de pagos anteriores; quita primero esos ajustes"
+      readonly: "La corrida ya no admite cambios"
+
   stock:
     receive:
       note: "Recepción de mercancía"

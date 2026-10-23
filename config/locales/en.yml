@@ -103,6 +103,48 @@ en:
     no_access: "The employee has no access to the company"
     email_required: "An email is required to give access"
 
+  payroll:
+    status:
+      pending: "Pending"
+      paid: "Paid"
+    method:
+      cash: "Cash"
+      transfer: "Transfer"
+      other: "Other"
+    csv:
+      employee: "Employee"
+      monthly_salary: "Monthly salary"
+      period_days: "Period days"
+      days_paid: "Days to pay"
+      salary: "Period salary"
+      bonuses: "Bonuses"
+      deductions: "Deductions"
+      net: "Net"
+      status: "Status"
+      method: "Method"
+      reference: "Reference"
+      paid_on: "Paid on"
+      total: "Total"
+    errors:
+      period_invalid: "The period is not valid: check the type and the dates (weekly up to 7 days, biweekly up to 16, monthly up to 31)"
+      period_overlap: "A payroll run already overlaps that period"
+      not_draft: "The run is no longer a draft"
+      not_approved: "Only an approved run can be cancelled"
+      not_paid: "That line is not paid yet"
+      stale_object: "The run changed while you were reviewing it; reload and try again"
+      lines_invalid: "Some lines have a zero or negative net; fix or remove them before approving"
+      empty_run: "The run has no lines"
+      run_not_approved: "The run must be approved before recording payments"
+      already_paid: "That line is already paid with different details; a recorded payment is not changed"
+      nothing_to_pay: "There are no pending payments to record"
+      invalid_method: "Choose a payment method: cash, transfer or other"
+      future_date: "The payment date cannot be in the future"
+      reference_too_long: "The reference can have up to 80 characters"
+      reason_required: "Enter the reason for the cancellation"
+      has_payments: "The run already has payments and cannot be cancelled"
+      has_corrections: "The line has corrections of earlier payments; remove those adjustments first"
+      readonly: "The run no longer accepts changes"
+
   stock:
     receive:
       note: "Goods received"
