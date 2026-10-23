@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_23_210100) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_24_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -239,6 +239,87 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_210100) do
     t.datetime "updated_at", null: false
     t.index "company_id, lower((name)::text)", name: "index_payment_terminals_on_company_and_lower_name", unique: true
     t.index ["company_id"], name: "index_payment_terminals_on_company_id"
+  end
+
+  create_table "payroll_adjustments", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "payroll_payment_id", null: false
+    t.integer "kind", null: false
+    t.bigint "amount_cents", null: false
+    t.string "note", limit: 200, null: false
+    t.bigint "corrects_payment_id"
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_payroll_adjustments_on_company_id"
+    t.index ["corrects_payment_id"], name: "index_payroll_adjustments_on_corrects_payment_id"
+    t.index ["created_by_id"], name: "index_payroll_adjustments_on_created_by_id"
+    t.index ["payroll_payment_id"], name: "index_payroll_adjustments_on_payroll_payment_id"
+  end
+
+  create_table "payroll_events", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "payroll_run_id", null: false
+    t.bigint "user_id", null: false
+    t.string "action", null: false
+    t.jsonb "details", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["company_id"], name: "index_payroll_events_on_company_id"
+    t.index ["payroll_run_id"], name: "index_payroll_events_on_payroll_run_id"
+    t.index ["user_id"], name: "index_payroll_events_on_user_id"
+  end
+
+  create_table "payroll_payments", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "payroll_run_id", null: false
+    t.bigint "employee_id"
+    t.string "employee_name", null: false
+    t.bigint "monthly_salary_cents", default: 0, null: false
+    t.integer "period_days", null: false
+    t.integer "days_paid", null: false
+    t.bigint "salary_cents", default: 0, null: false
+    t.bigint "bonus_cents", default: 0, null: false
+    t.bigint "deduction_cents", default: 0, null: false
+    t.bigint "net_cents", default: 0, null: false
+    t.integer "days_attended", default: 0, null: false
+    t.decimal "hours_worked", precision: 8, scale: 2, default: "0.0", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "payment_method"
+    t.string "reference", limit: 80
+    t.date "paid_on"
+    t.bigint "paid_by_id"
+    t.datetime "paid_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_payroll_payments_on_company_id"
+    t.index ["employee_id"], name: "index_payroll_payments_on_employee_id"
+    t.index ["paid_by_id"], name: "index_payroll_payments_on_paid_by_id"
+    t.index ["payroll_run_id", "employee_id"], name: "index_payroll_payments_on_payroll_run_id_and_employee_id", unique: true
+    t.index ["payroll_run_id"], name: "index_payroll_payments_on_payroll_run_id"
+  end
+
+  create_table "payroll_runs", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.integer "period_type", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.bigint "total_cents", default: 0, null: false
+    t.bigint "created_by_id", null: false
+    t.bigint "approved_by_id"
+    t.bigint "cancelled_by_id"
+    t.datetime "approved_at"
+    t.datetime "cancelled_at"
+    t.text "cancel_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["approved_by_id"], name: "index_payroll_runs_on_approved_by_id"
+    t.index ["cancelled_by_id"], name: "index_payroll_runs_on_cancelled_by_id"
+    t.index ["company_id", "starts_on"], name: "index_payroll_runs_on_company_id_and_starts_on", order: { starts_on: :desc }
+    t.index ["company_id", "status"], name: "index_payroll_runs_on_company_id_and_status"
+    t.index ["company_id"], name: "index_payroll_runs_on_company_id"
+    t.index ["created_by_id"], name: "index_payroll_runs_on_created_by_id"
   end
 
   create_table "product_barcodes", force: :cascade do |t|
@@ -761,6 +842,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_23_210100) do
   add_foreign_key "module_changes", "companies"
   add_foreign_key "module_changes", "users", column: "actor_id"
   add_foreign_key "payment_terminals", "companies"
+  add_foreign_key "payroll_adjustments", "companies"
+  add_foreign_key "payroll_adjustments", "payroll_payments"
+  add_foreign_key "payroll_adjustments", "payroll_payments", column: "corrects_payment_id"
+  add_foreign_key "payroll_adjustments", "users", column: "created_by_id"
+  add_foreign_key "payroll_events", "companies"
+  add_foreign_key "payroll_events", "payroll_runs"
+  add_foreign_key "payroll_events", "users"
+  add_foreign_key "payroll_payments", "companies"
+  add_foreign_key "payroll_payments", "employees", on_delete: :nullify
+  add_foreign_key "payroll_payments", "payroll_runs"
+  add_foreign_key "payroll_payments", "users", column: "paid_by_id"
+  add_foreign_key "payroll_runs", "companies"
+  add_foreign_key "payroll_runs", "users", column: "approved_by_id"
+  add_foreign_key "payroll_runs", "users", column: "cancelled_by_id"
+  add_foreign_key "payroll_runs", "users", column: "created_by_id"
   add_foreign_key "product_barcodes", "companies"
   add_foreign_key "product_barcodes", "products"
   add_foreign_key "product_imports", "companies"

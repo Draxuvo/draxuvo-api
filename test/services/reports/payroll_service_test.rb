@@ -65,4 +65,17 @@ class Reports::PayrollServiceTest < ActiveSupport::TestCase
   test "echoes the period" do
     assert_equal({ from: RANGE.first, to: RANGE.last }, report[:period])
   end
+
+  test "runs summary adds paid and pending of the runs ending in the range" do
+    owner = User.create!(first_name: "Dueño", last_name: "Nómina", email: "dueno-nomina@test.dev", phone: "5512340000", password: "password123", active: true)
+    run = Payroll::BuildRun.call(company: @company, user: owner, period_type: :biweekly,
+                                 starts_on: Date.new(2026, 3, 16), ends_on: Date.new(2026, 3, 31))
+    run = Payroll::Approve.call(run: run, user: owner, lock_version: run.lock_version)
+    # Pagada ya en abril: el reporte de marzo la cuenta por el periodo, no por la fecha de pago.
+    Payroll::Pay.call(run: run, user: owner, payment_method: "cash", paid_on: Time.zone.today)
+    Payroll::BuildRun.call(company: @company, user: owner, period_type: :biweekly, starts_on: Date.new(2026, 3, 1), ends_on: Date.new(2026, 3, 15))
+
+    assert_equal({ count: 1, paid_cents: 200_000, pending_cents: 0 }, report[:runs])
+    assert_equal({ count: 0, paid_cents: 0, pending_cents: 0 }, report(Time.utc(2026, 5, 1).beginning_of_day..Time.utc(2026, 5, 31).end_of_day)[:runs])
+  end
 end
