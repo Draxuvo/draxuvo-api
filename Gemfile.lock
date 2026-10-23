@@ -101,7 +101,7 @@ GEM
       aws-eventstream (~> 1, >= 1.0.2)
     barby (0.7.0)
     base64 (0.3.0)
-    bcrypt (3.1.20)
+    bcrypt (3.1.22)
     bcrypt_pbkdf (1.1.1)
     benchmark (0.4.1)
     bigdecimal (3.2.2)
@@ -461,7 +461,7 @@ DEPENDENCIES
   active_model_serializers
   aws-sdk-s3
   barby (~> 0.7)
-  bcrypt (~> 3.1.7)
+  bcrypt (~> 3.1.22)
   bootsnap
   brakeman
   capybara
