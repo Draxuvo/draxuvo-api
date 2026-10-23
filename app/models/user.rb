@@ -20,7 +20,15 @@ class User < ApplicationRecord
   scope :by_role, ->(role) { where(role: role) if role.present? }
   scope :sorted, -> { order(created_at: :desc) }
   scope :excluding_system_emails, -> { where.not(email: [ "draxuvo@mailinator.com" ]) }
-  scope :non_employees, -> { left_joins(:employee).where(employees: { id: nil }) }
+  # Administrador global de usuarios (spec 036): quienes dirigen una empresa (gerente, administrador o dueño en
+  # alguna) y quienes aún no tienen empresa. El personal de piso (solo staff) se ve en Personal de su empresa.
+  # Ya no se filtra por ficha de empleado: desde la spec 036 toda membresía crea la suya.
+  scope :managing, -> {
+    where(<<~SQL.squish, managerial: UserCompany.roles.values_at("manager", "admin", "owner"))
+      NOT EXISTS (SELECT 1 FROM user_companies uc WHERE uc.user_id = users.id)
+      OR EXISTS (SELECT 1 FROM user_companies uc WHERE uc.user_id = users.id AND uc.role IN (:managerial))
+    SQL
+  }
   scope :by_text, ->(text) {
           return unless text
 
