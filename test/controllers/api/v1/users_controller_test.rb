@@ -8,9 +8,9 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @pro_admin = create_member(companies(:pro_co), role: :admin)
   end
 
-  test "staff, manager, admin and owner get 403 on every /users action" do
+  test "staff, admin and owner get 403 on every /users action" do
     target = users(:one_owner)
-    actors = { staff: users(:pro_staff), manager: users(:pro_manager), admin: @pro_admin, owner: users(:pro_co_owner) }
+    actors = { staff: users(:pro_staff), admin: @pro_admin, owner: users(:pro_co_owner) }
 
     actors.each do |name, actor|
       headers = auth_headers(actor, companies(:pro_co))
@@ -99,15 +99,15 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
   test "changing the role in one company keeps the role in another" do
     target = users(:pro_staff)
-    create_member(companies(:two), role: :manager, user: target)
+    create_member(companies(:two), role: :admin, user: target)
 
     patch "#{BASE}/#{target.id}", params: { user: { memberships: [
-      { company_id: companies(:pro_co).id, role: "admin" }, { company_id: companies(:two).id, role: "manager" }
+      { company_id: companies(:pro_co).id, role: "admin" }, { company_id: companies(:two).id, role: "owner" }
     ] } }, headers: super_admin_headers, as: :json
 
     assert_response :ok
     assert_equal "admin", target.role_in(companies(:pro_co))
-    assert_equal "manager", target.role_in(companies(:two))
+    assert_equal "owner", target.role_in(companies(:two))
   end
 
   test "demoting the last owner saves nothing" do
@@ -158,13 +158,13 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   test "the super admin creates a person with a role in a company" do
     sent = []
     ResendMailer.stub(:set_password, ->(**args) { sent << args; { "id" => "email_1" } }) do
-      post BASE, params: { user: new_user_params(memberships: [ { company_id: companies(:pro_co).id, role: "manager" } ]) },
+      post BASE, params: { user: new_user_params(memberships: [ { company_id: companies(:pro_co).id, role: "admin" } ]) },
                  headers: super_admin_headers, as: :json
     end
 
     assert_response :created
     user = User.find_by!(email: "nueva@persona.test")
-    assert_equal "manager", user.role_in(companies(:pro_co))
+    assert_equal "admin", user.role_in(companies(:pro_co))
     assert_equal 1, sent.size
     assert_equal companies(:pro_co).name, sent.first[:company_name]
   end

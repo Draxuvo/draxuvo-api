@@ -31,7 +31,7 @@ class CheckItemTest < ActiveSupport::TestCase
     sent = check_items(:item_new)
 
     assert_not sent.update(status: :cancelled)
-    assert sent.update(status: :cancelled, cancel_reason: "El cliente cambió", cancelled_by: users(:resto_manager))
+    assert sent.update(status: :cancelled, cancel_reason: "El cliente cambió", cancelled_by: users(:resto_owner))
   end
 
   test "a draft cannot be cancelled, it is deleted" do

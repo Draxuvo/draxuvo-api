@@ -47,7 +47,6 @@ Todos los endpoints (excepto los marcados como **público**) requieren los sigui
 | Rol | Descripción |
 |---|---|
 | `staff` | Empleado básico |
-| `manager` | Gerente |
 | `admin` | Administrador |
 | `owner` | Dueño de la empresa |
 | `super_admin` | Acceso global a todas las empresas |
@@ -262,7 +261,7 @@ Lista usuarios de la empresa. Excluye empleados con cuenta asociada y emails del
 |---|---|---|
 | `search` | string | Busca en nombre y email |
 | `email` | string | Filtrar por email exacto |
-| `role` | string | `staff`, `manager`, `admin`, `owner` |
+| `role` | string | `staff`, `admin`, `owner` |
 | `sort` | string | `first_name`, `email`, `role`, `created_at` |
 
 **Respuesta `200`:** paginada con array de objetos usuario.
@@ -289,7 +288,7 @@ Lista usuarios de la empresa. Excluye empleados con cuenta asociada y emails del
     "second_last_name": null,
     "email": "ana@empresa.com",
     "phone": "5598765432",
-    "role": "manager",
+    "role": "admin",
     "active": true,
     "company_ids": [1]
   }
@@ -1252,7 +1251,6 @@ Estadísticas generales de la empresa.
     "total": 18,
     "by_role": {
       "staff": 10,
-      "manager": 4,
       "admin": 2,
       "owner": 1,
       "super_admin": 0

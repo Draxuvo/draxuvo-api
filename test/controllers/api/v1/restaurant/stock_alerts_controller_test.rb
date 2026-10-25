@@ -6,7 +6,7 @@ class Api::V1::Restaurant::StockAlertsControllerTest < ActionDispatch::Integrati
   def alerts(user) = get("/api/v1/restaurant/stock_alerts", headers: auth_headers(user, @company))
 
   test "a boss sees the tracked products that are low" do
-    alerts(users(:resto_manager))
+    alerts(users(:resto_owner))
 
     assert_response :ok
     assert_equal [ [ "Refresco de cola", 2, 3, false ] ],
@@ -23,7 +23,7 @@ class Api::V1::Restaurant::StockAlertsControllerTest < ActionDispatch::Integrati
 
   test "a product that does not track stock never alerts" do
     products(:resto_sopa).update!(stock: 0, min_stock: 5)
-    alerts(users(:resto_manager))
+    alerts(users(:resto_owner))
 
     assert_not_includes response.parsed_body["results"].map { |a| a["name"] }, "Sopa del día"
   end
@@ -36,7 +36,7 @@ class Api::V1::Restaurant::StockAlertsControllerTest < ActionDispatch::Integrati
 
   test "no alerts answers an empty list" do
     products(:resto_cola).update!(stock: 50)
-    alerts(users(:resto_manager))
+    alerts(users(:resto_owner))
 
     assert_empty response.parsed_body["results"]
   end

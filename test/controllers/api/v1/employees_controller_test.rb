@@ -6,7 +6,6 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     @company = companies(:pro_co)
     @owner = users(:pro_co_owner)
     @admin = create_member(@company, role: :admin)
-    @manager = users(:pro_manager)
     @employee = @company.employees.create!(name: "Luis Pérez", position: "Mesero", status: :active)
     ActionMailer::Base.deliveries.clear
   end
@@ -40,8 +39,8 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 120, response.parsed_body["duration_minutes"]
   end
 
-  test "manager and staff cannot mark another employee" do
-    [ @manager, users(:pro_staff) ].each do |user|
+  test "staff cannot mark another employee" do
+    [ users(:pro_staff) ].each do |user|
       assert_no_difference -> { Attendance.count } do
         post "/api/v1/employees/#{@employee.id}/checkin", headers: headers_for(user)
         assert_response :forbidden
@@ -95,7 +94,7 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
 
   test "create without status is active and without email creates no user" do
     assert_no_difference -> { User.count } do
-      post "/api/v1/employees", params: { employee: { name: "Sin Correo" } }, headers: headers_for(@manager)
+      post "/api/v1/employees", params: { employee: { name: "Sin Correo" } }, headers: headers_for(@admin)
     end
     assert_response :created
     assert_equal "active", response.parsed_body["status"]
@@ -103,12 +102,12 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
 
   test "create with email and role gives access with that role" do
     assert_difference -> { @company.user_companies.count }, 1 do
-      post "/api/v1/employees", params: { employee: { name: "Marta Gómez López", email: "marta@acceso.test", phone: "5511112222" }, access: { role: "manager" } },
+      post "/api/v1/employees", params: { employee: { name: "Marta Gómez López", email: "marta@acceso.test", phone: "5511112222" }, access: { role: "admin" } },
            headers: headers_for(@admin)
     end
     assert_response :created
-    assert_equal "manager", response.parsed_body.dig("access", "role")
-    assert_equal "manager", @company.user_companies.find_by(user: User.find_by(email: "marta@acceso.test")).role
+    assert_equal "admin", response.parsed_body.dig("access", "role")
+    assert_equal "admin", @company.user_companies.find_by(user: User.find_by(email: "marta@acceso.test")).role
   end
 
   test "access without a role defaults to staff" do
@@ -142,18 +141,6 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     assert_nil User.find_by(email: "jefe@acceso.test")
   end
 
-  test "a manager cannot give access, but can register an employee with a contact email" do
-    post "/api/v1/employees", params: { employee: { name: "Otro", email: "otro@acceso.test" }, access: { role: "staff" } }, headers: headers_for(@manager)
-    assert_response :forbidden
-
-    assert_no_difference -> { User.count } do
-      post "/api/v1/employees", params: { employee: { name: "Otro", email: "otro@acceso.test" } }, headers: headers_for(@manager)
-    end
-    assert_response :created
-    assert_nil response.parsed_body["access"]
-    assert_equal "otro@acceso.test", response.parsed_body["email"]
-  end
-
   # --- acceso desde la ficha ---------------------------------------------------------------------
 
   test "grant, change and revoke access keep the employee and their attendance" do
@@ -162,9 +149,9 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "staff", response.parsed_body.dig("access", "role")
 
     post "/api/v1/employees/#{@employee.id}/checkin", headers: headers_for(@admin)
-    patch "/api/v1/employees/#{@employee.id}/access", params: { role: "manager" }, headers: headers_for(@admin)
+    patch "/api/v1/employees/#{@employee.id}/access", params: { role: "admin" }, headers: headers_for(@admin)
     assert_response :ok
-    assert_equal "manager", response.parsed_body.dig("access", "role")
+    assert_equal "admin", response.parsed_body.dig("access", "role")
 
     assert_no_difference -> { Employee.count + Attendance.count } do
       delete "/api/v1/employees/#{@employee.id}/access", headers: headers_for(@admin)
@@ -175,7 +162,7 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "granting access to someone already in the company is 422 already_member" do
-    post "/api/v1/employees/#{@employee.id}/access", params: { email: @manager.email }, headers: headers_for(@admin)
+    post "/api/v1/employees/#{@employee.id}/access", params: { email: @owner.email }, headers: headers_for(@admin)
     assert_response :unprocessable_entity
     assert_equal "already_member", response.parsed_body.dig("error", "details", "code")
   end
@@ -206,8 +193,8 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "no_user", response.parsed_body.dig("error", "details", "code")
   end
 
-  test "manager and staff cannot manage access" do
-    patch "/api/v1/employees/#{@employee.id}/access", params: { role: "staff" }, headers: headers_for(@manager)
+  test "staff cannot manage access" do
+    patch "/api/v1/employees/#{@employee.id}/access", params: { role: "staff" }, headers: headers_for(users(:pro_staff))
     assert_response :forbidden
   end
 
@@ -225,7 +212,7 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     get "/api/v1/employees", params: { access: "without" }, headers: headers_for(@admin)
     assert_not_includes response.parsed_body["results"].map { |e| e["id"] }, granted.id
 
-    get "/api/v1/employees", headers: headers_for(@manager)
+    get "/api/v1/employees", headers: headers_for(users(:pro_staff))
     assert_response :ok
     assert response.parsed_body["results"].none? { |e| e.key?("access") }
   end
@@ -253,7 +240,7 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "an inactive employee in one company does not block the same user in another" do
-    user = create_member(@company, role: :manager)
+    user = create_member(@company, role: :admin)
     @company.employees.create!(name: "Baja", status: :inactive, user: user)
     other = companies(:one)
     create_member(other, role: :staff, user: user)
@@ -270,7 +257,7 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
 
   # --- quien dirige no es personal ---------------------------------------------------------------
 
-  test "owners, admins and managers are not in the employee list nor reachable as employees" do
+  test "owners and admins are not in the employee list nor reachable as employees" do
     staff = @company.employees.find_by!(user: create_member(@company, role: :staff))
     boss_card = @company.employees.create!(name: "Jefa con ficha", status: :active, user: @admin)
 
@@ -286,15 +273,25 @@ class Api::V1::EmployeesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "promoting an employee to manager takes them out of the team but keeps the card" do
+  test "promoting an employee to admin takes them out of the team but keeps the card" do
     staff_user = create_member(@company, role: :staff)
     card = @company.employees.find_by!(user: staff_user)
 
-    patch "/api/v1/employees/#{card.id}/access", params: { role: "manager" }, headers: headers_for(@owner)
+    patch "/api/v1/employees/#{card.id}/access", params: { role: "admin" }, headers: headers_for(@owner)
     assert_response :ok
 
     get "/api/v1/employees", params: { page_size: 100 }, headers: headers_for(@owner)
     assert_not_includes response.parsed_body["results"].map { |e| e["id"] }, card.id
     assert Employee.exists?(card.id)
+  end
+
+  test "each employee carries its linked user_id, so a check's waiter can be matched to it" do
+    member = create_member(@company, role: :staff)
+    get "/api/v1/employees", headers: auth_headers(@owner, @company)
+
+    assert_response :ok
+    by_id = response.parsed_body["results"].index_by { |e| e["id"] }
+    assert_nil by_id[@employee.id]["user_id"]
+    assert_equal member.id, by_id[@company.employees.find_by!(user: member).id]["user_id"]
   end
 end

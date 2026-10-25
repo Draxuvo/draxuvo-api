@@ -3,7 +3,7 @@ module Authorizable
   extend ActiveSupport::Concern
 
   ADMIN_ROLES = %w[admin owner super_admin].freeze
-  BOSS_ROLES = %w[manager admin owner super_admin].freeze
+  BOSS_ROLES = %w[admin owner super_admin].freeze
 
   private
 

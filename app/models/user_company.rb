@@ -4,7 +4,7 @@ class UserCompany < ApplicationRecord
   belongs_to :user
   belongs_to :company
 
-  enum :role, { staff: 0, manager: 1, admin: 2, owner: 3 }, default: :staff
+  enum :role, { staff: 0, admin: 2, owner: 3 }, default: :staff
 
   # Rango para comparar roles; super_admin queda por encima de todos.
   RANKS = roles.merge("super_admin" => 4).freeze
@@ -12,7 +12,7 @@ class UserCompany < ApplicationRecord
   validates :user_id, uniqueness: { scope: :company_id }
 
   # Spec 036: el personal (rol staff) tiene ficha de empleado en la empresa, que se crea al darle acceso o al bajarlo
-  # a staff; quien dirige (gerente, administrador, dueño) no es personal y no la necesita. Quitarle el acceso suelta
+  # a staff; quien dirige (administrador, dueño) no es personal y no la necesita. Quitarle el acceso suelta
   # la ficha —que se conserva con su asistencia— sin dejarla ligada a un usuario que ya no entra.
   after_create :ensure_employee
   after_update :ensure_employee, if: :saved_change_to_role?

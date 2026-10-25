@@ -68,11 +68,11 @@ class Api::V1::ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "a manager gets 403 on every report" do
-    manager = create_member(@company, role: :manager)
+  test "a staff member gets 403 on every report" do
+    staff = create_member(@company, role: :staff)
 
     %w[summary income expenses payroll].each do |report|
-      get "/api/v1/reports/#{report}", headers: auth_headers(manager, @company)
+      get "/api/v1/reports/#{report}", headers: auth_headers(staff, @company)
 
       assert_response :forbidden, "#{report} should be admin only"
     end

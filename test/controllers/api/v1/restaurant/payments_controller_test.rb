@@ -78,7 +78,7 @@ class Api::V1::Restaurant::PaymentsControllerTest < ActionDispatch::IntegrationT
     assert_response :forbidden
     assert_equal 0, @check.check_payments.count
 
-    pay({ method: "cash", amount_received: "500" }, auth_headers(users(:resto_manager), @company))
+    pay({ method: "cash", amount_received: "500" }, auth_headers(users(:resto_owner), @company))
     assert_response :created
   end
 

@@ -4,7 +4,7 @@ class Restaurant::CancelItemTest < ActiveSupport::TestCase
   setup do
     @waiter = Restaurant::Permissions::Context.new(user: users(:resto_waiter), role: "staff")
     @other = Restaurant::Permissions::Context.new(user: users(:resto_waiter2), role: "staff")
-    @boss = Restaurant::Permissions::Context.new(user: users(:resto_manager), role: "manager")
+    @boss = Restaurant::Permissions::Context.new(user: users(:resto_owner), role: "owner")
   end
 
   def code_of

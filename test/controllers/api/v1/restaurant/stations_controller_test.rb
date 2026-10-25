@@ -14,11 +14,11 @@ class Api::V1::Restaurant::StationsControllerTest < ActionDispatch::IntegrationT
   end
 
   test "a boss creates a station, accepting the params wrapped or flat" do
-    post "/api/v1/restaurant/stations", params: { station: { name: "Parrilla" } }, headers: headers_for(users(:resto_manager)), as: :json
+    post "/api/v1/restaurant/stations", params: { station: { name: "Parrilla" } }, headers: headers_for(users(:resto_owner)), as: :json
     assert_response :created
     assert_equal "Parrilla", response.parsed_body["name"]
 
-    post "/api/v1/restaurant/stations", params: { name: "Postres" }, headers: headers_for(users(:resto_manager)), as: :json
+    post "/api/v1/restaurant/stations", params: { name: "Postres" }, headers: headers_for(users(:resto_owner)), as: :json
     assert_response :created
   end
 
@@ -71,11 +71,11 @@ class Api::V1::Restaurant::StationsControllerTest < ActionDispatch::IntegrationT
     get "/api/v1/restaurant/stations", headers: headers_for(users(:resto_waiter))
     assert_equal %w[kitchen bar], response.parsed_body["results"].map { |s| s["kind"] }
 
-    post "/api/v1/restaurant/stations", params: { name: "Postres", kind: "other" }, headers: headers_for(users(:resto_manager)), as: :json
+    post "/api/v1/restaurant/stations", params: { name: "Postres", kind: "other" }, headers: headers_for(users(:resto_owner)), as: :json
     assert_response :created
     assert_equal "other", response.parsed_body["kind"]
 
-    post "/api/v1/restaurant/stations", params: { name: "Raro", kind: "sushi" }, headers: headers_for(users(:resto_manager)), as: :json
+    post "/api/v1/restaurant/stations", params: { name: "Raro", kind: "sushi" }, headers: headers_for(users(:resto_owner)), as: :json
     assert_response :unprocessable_entity
   end
 end

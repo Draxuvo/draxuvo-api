@@ -389,7 +389,7 @@ class Api::V1::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
   # --- Roles ------------------------------------------------------------------------------------
 
-  %i[pro_staff pro_manager].each do |role_user|
+  %i[pro_staff].each do |role_user|
     test "#{role_user} gets 403 on every subscription action" do
       user = users(role_user)
       guard = ->(*) { flunk "Stripe should not be called" }

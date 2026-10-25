@@ -9,8 +9,8 @@ class Api::V1::PaymentTerminalsControllerTest < ActionDispatch::IntegrationTest
     @admin = auth_headers(users(:pro_co_owner), @company)
   end
 
-  test "staff and managers list only active terminals and cannot write" do
-    [ users(:pro_staff), users(:pro_manager) ].each do |user|
+  test "staff lists only active terminals and cannot write" do
+    [ users(:pro_staff) ].each do |user|
       headers = auth_headers(user, @company)
       get BASE, params: { include_inactive: true }, headers: headers
       assert_response :ok

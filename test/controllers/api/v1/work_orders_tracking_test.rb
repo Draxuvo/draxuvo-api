@@ -7,7 +7,6 @@ class Api::V1::WorkOrdersTrackingTest < ActionDispatch::IntegrationTest
   setup do
     @company = companies(:pro_co)
     @owner = users(:pro_co_owner)
-    @manager = users(:pro_manager)
     @staff = users(:pro_staff)
     @boss_headers = auth_headers(@owner, @company)
   end
@@ -95,34 +94,6 @@ class Api::V1::WorkOrdersTrackingTest < ActionDispatch::IntegrationTest
     assert_equal %w[charged voided], kinds.last(2)
     voided = response.parsed_body["events"].last
     assert_equal "Cobro duplicado", voided.dig("data", "reason")
-  end
-
-  test "a manager edits, reassigns and cancels but cannot void a charge or delete" do
-    headers = auth_headers(@manager, @company)
-    order = work_orders(:pro_open)
-
-    patch "#{BASE}/#{order.id}", params: { work_order: { title: "Editada por gerente" } }, headers: headers, as: :json
-    assert_response :ok
-
-    post "#{BASE}/#{order.id}/cancel", params: { reason: "Sin material" }, headers: headers, as: :json
-    assert_response :ok
-    assert_equal "cancelled", response.parsed_body["status"]
-
-    post "#{BASE}/#{work_orders(:pro_done).id}/charge", params: { payment_method: "card" }, headers: headers, as: :json
-    assert_response :ok
-    post "#{BASE}/#{work_orders(:pro_done).id}/void_charge", params: { reason: "x" }, headers: headers, as: :json
-    assert_response :forbidden
-
-    delete "#{BASE}/#{work_orders(:pro_unassigned).id}", headers: headers
-    assert_response :forbidden
-  end
-
-  test "allowed_actions for a manager include edit but not delete or void" do
-    get "#{BASE}/#{work_orders(:pro_done).id}", headers: auth_headers(@manager, @company)
-    actions = response.parsed_body["allowed_actions"]
-    assert_includes actions, "edit"
-    assert_includes actions, "charge"
-    assert_empty actions & %w[delete void_charge]
   end
 
   test "orders of another company are never visible" do

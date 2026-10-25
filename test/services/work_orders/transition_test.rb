@@ -7,7 +7,7 @@ class WorkOrders::TransitionTest < ActiveSupport::TestCase
     Transition::Context.new(user: user, role: role.to_s, employee: employee)
   end
 
-  def boss = ctx(:manager, user: users(:pro_manager))
+  def boss = ctx(:admin)
   def admin = ctx(:admin)
   def owner = ctx(:owner)
   def worker = ctx(:staff, user: users(:pro_staff), employee: employees(:pro_staff_employee))
@@ -113,16 +113,10 @@ class WorkOrders::TransitionTest < ActiveSupport::TestCase
     assert_equal I18n.t("auth.not_authorized"), error.message
   end
 
-  test "void_charge is for admins, not for managers" do
-    assert_raises(ApiErrors::ForbiddenError) { Transition.call(work_orders(:pro_paid), :void_charge, boss, { reason: "x" }) }
-    assert Transition.call(work_orders(:pro_paid), :void_charge, admin, { reason: "Error" }).done?
-  end
-
   test "super_admin counts as admin and boss" do
     context = ctx(:super_admin, user: users(:super_admin))
     assert context.boss?
     assert context.admin?
-    assert_not ctx(:manager).admin?
     assert_not ctx(:staff).boss?
   end
 
@@ -294,7 +288,7 @@ class WorkOrders::TransitionTest < ActiveSupport::TestCase
   test "allowed gives a boss cancel as well and an admin void_charge on paid orders" do
     assert_equal %i[start finish cancel], Transition.allowed(work_orders(:pro_open), boss)
     assert_equal %i[reopen charge cancel], Transition.allowed(work_orders(:pro_done), boss)
-    assert_equal [], Transition.allowed(work_orders(:pro_paid), boss)
+    assert_equal [], Transition.allowed(work_orders(:pro_paid), worker)
     assert_equal %i[void_charge], Transition.allowed(work_orders(:pro_paid), admin)
   end
 

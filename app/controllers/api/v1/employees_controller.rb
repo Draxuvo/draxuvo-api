@@ -10,7 +10,7 @@ module Api
       # Marcar a otro y dar o quitar acceso es de administrador, dueño y super admin (spec 036).
       before_action :require_admin!, only: %i[checkin checkout grant_access update_access revoke_access payroll_payments]
       before_action :set_employee, only: %i[show update destroy checkin checkout active]
-      # El acceso y la nómina también aplican a quien ya dirige (gerente, administrador, dueño), que no figura en el equipo.
+      # El acceso y la nómina también aplican a quien ya dirige (administrador, dueño), que no figura en el equipo.
       before_action :set_any_employee, only: %i[grant_access update_access revoke_access payroll_payments]
 
       def index

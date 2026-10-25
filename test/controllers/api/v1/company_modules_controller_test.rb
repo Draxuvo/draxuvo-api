@@ -87,11 +87,11 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
-  test "owners, admins, managers and staff cannot change modules, by any means" do
+  test "owners, admins and staff cannot change modules, by any means" do
     admin = users(:pro_staff)
     admin.user_companies.find_by!(company: companies(:pro_co)).update!(role: :admin)
 
-    [ users(:pro_co_owner), admin, users(:pro_manager) ].each do |user|
+    [ users(:pro_co_owner), admin ].each do |user|
       assert_no_difference -> { ModuleChange.count } do
         patch PATH, params: { disabled_modules: [ "tickets" ] }, headers: auth_headers(user, companies(:pro_co)), as: :json
       end

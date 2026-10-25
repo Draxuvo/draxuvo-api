@@ -72,7 +72,6 @@ class UserTest < ActiveSupport::TestCase
 
   test "role_in returns the membership role, super_admin everywhere and nil without membership" do
     assert_equal "staff", users(:pro_staff).role_in(companies(:pro_co))
-    assert_equal "manager", users(:pro_manager).role_in(companies(:pro_co))
     assert_nil users(:pro_staff).role_in(companies(:one))
     assert_nil users(:pro_staff).role_in(nil)
     assert_equal "super_admin", users(:super_admin).role_in(companies(:one))
@@ -127,13 +126,13 @@ class UserTest < ActiveSupport::TestCase
     assert_includes User.by_role("super_admin"), users(:super_admin)
     assert_not_includes User.by_role("super_admin"), users(:pro_staff)
     assert_includes User.search("empleado"), users(:pro_staff)
-    assert_includes User.by_text("manager@pro"), users(:pro_manager)
+    assert_includes User.by_text("staff@pro"), users(:pro_staff)
     assert_equal User.count, User.by_text(nil).count
     assert_equal User.all.to_a.sort_by(&:id), User.excluding_system_emails.to_a.sort_by(&:id)
     assert_equal User.order(created_at: :desc).to_a.map(&:id).sort, User.sorted.map(&:id).sort
   end
 
-  test "managing keeps owners, admins and managers even with an employee card, and drops staff-only users" do
+  test "managing keeps owners and admins even with an employee card, and drops staff-only users" do
     company = companies(:pro_co)
     owner = create_member(company, role: :owner)
     admin = create_member(company, role: :admin)
@@ -141,7 +140,6 @@ class UserTest < ActiveSupport::TestCase
 
     assert_includes User.managing, owner
     assert_includes User.managing, admin
-    assert_includes User.managing, users(:pro_manager)
     assert_not_includes User.managing, users(:pro_staff)
   end
 

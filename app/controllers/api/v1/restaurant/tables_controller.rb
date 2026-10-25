@@ -6,7 +6,8 @@ module Api
         def index
           tables = current_company.dining_tables.ordered
           open_checks = checks_scope.status_open.includes(:waiter).to_a
-          return unless stale?(etag: fingerprint(tables, open_checks))
+          closed_today = closed_today_checks
+          return unless stale?(etag: fingerprint(tables, open_checks, closed_today))
 
           counts = CheckItem.where(check_id: open_checks.map(&:id)).group(:check_id, :status).count
           summaries = open_checks.index_by(&:id).transform_values do |check|
@@ -23,11 +24,30 @@ module Api
                                            state: ::Restaurant::TableState.call(check, counts: check && by_check[check.id])).as_json
             end,
             takeouts: open_checks.reject(&:dining_table_id).map { |c| summaries[c.id].merge(takeout_name: c.takeout_name) },
-            ready_items: ready_items
+            ready_items: ready_items,
+            closed_today: closed_today.map { |c| closed_summary(c) }
           }.merge(stock_alerts_count).merge(overview_for(open_checks, by_check))
         end
 
         private
+
+        # Cuentas cobradas hoy (spec 038): el plano solo tiene las abiertas y Cuentas lista también las cobradas.
+        def closed_today_checks
+          checks_scope.status_closed.where(closed_at: Time.zone.now.all_day)
+                      .includes(:waiter, :dining_table, :ticket).order(closed_at: :desc).to_a
+        end
+
+        # Mesero y total solo para quien es jefe o dueño de la cuenta (spec 032, FR-019b).
+        def closed_summary(check)
+          own = check.waiter_id == current_user.id
+          summary = {
+            id: check.id, name: check.dining_table&.name, takeout_name: check.takeout_name,
+            closed_at: check.closed_at, ticket_id: check.ticket&.id, mine: own
+          }
+          return summary unless own || restaurant_context.boss?
+
+          summary.merge(waiter: CheckSerializer.person(check.waiter), total: CheckSerializer.money(check.total))
+        end
 
         def ready_items
           CheckItem.status_ready.joins(:check)
@@ -40,7 +60,7 @@ module Api
           end
         end
 
-        # Solo para dueño, administrador y gerente (spec 032, FR-019b).
+        # Solo para dueño y administrador (spec 032, FR-019b).
         def overview_for(open_checks, by_check)
           return {} unless restaurant_context.boss?
 
@@ -54,9 +74,10 @@ module Api
         end
 
         # Cambia cuando cambia cualquier mesa, cuenta abierta o artículo: la consulta sin cambios responde 304.
-        def fingerprint(tables, open_checks)
+        def fingerprint(tables, open_checks, closed_today)
           items = CheckItem.where(company_id: current_company.id)
           [ current_user.id, current_role, tables.maximum(:updated_at), open_checks.map { |c| [ c.id, c.updated_at, c.waiter_id ] },
+            closed_today.map { |c| [ c.id, c.updated_at ] },
             items.maximum(:updated_at), items.count, current_company.products.maximum(:updated_at) ]
         end
       end

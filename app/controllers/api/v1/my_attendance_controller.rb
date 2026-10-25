@@ -32,7 +32,7 @@ module Api
         @mark ||= Attendances::Mark.new(attendance_employee, actor: current_user)
       end
 
-      # Quien dirige (gerente, administrador, dueño) no marca asistencia propia: no es personal (spec 036).
+      # Quien dirige (administrador, dueño) no marca asistencia propia: no es personal (spec 036).
       def attendance_employee
         current_employee unless Authorizable::BOSS_ROLES.include?(current_role)
       end

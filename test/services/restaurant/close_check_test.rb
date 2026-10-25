@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Restaurant::CloseCheckTest < ActiveSupport::TestCase
-  setup { @user = users(:resto_manager) }
+  setup { @user = users(:resto_owner) }
 
   test "closes a check without payments in zero as a courtesy with the reason" do
     check = checks(:takeout_check)

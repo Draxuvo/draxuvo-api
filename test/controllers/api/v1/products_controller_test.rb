@@ -137,30 +137,30 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["icon"]
   end
 
-  test "a manager cannot change the icon but still edits the other fields" do
+  test "a waiter cannot change the icon but still edits the other fields" do
     resto = companies(:resto_co)
     product = products(:resto_tacos)
     product.update!(icon: "taco")
-    manager = auth_headers(users(:resto_manager), resto)
+    staff_h = auth_headers(users(:resto_waiter), resto)
 
-    patch "/api/v1/products/#{product.id}", params: { product: { icon: "pizza" } }, headers: manager, as: :json
+    patch "/api/v1/products/#{product.id}", params: { product: { icon: "pizza" } }, headers: staff_h, as: :json
     assert_response :forbidden
     assert_equal "taco", product.reload.icon
 
-    patch "/api/v1/products/#{product.id}", params: { product: { description: "Con piña" } }, headers: manager, as: :json
+    patch "/api/v1/products/#{product.id}", params: { product: { description: "Con piña" } }, headers: staff_h, as: :json
     assert_response :ok
     assert_equal "Con piña", product.reload.description
 
-    patch "/api/v1/products/#{product.id}", params: { product: { icon: "taco", description: "Sin piña" } }, headers: manager, as: :json
+    patch "/api/v1/products/#{product.id}", params: { product: { icon: "taco", description: "Sin piña" } }, headers: staff_h, as: :json
     assert_response :ok
     assert_equal "taco", product.reload.icon
   end
 
-  test "a manager cannot create a product with an icon, an admin can" do
+  test "a waiter cannot create a product with an icon, an admin can" do
     resto = companies(:resto_co)
     type = product_types(:resto_co_sold)
     post "/api/v1/products", params: { product: { sku: "M-1", name: "Mole", product_type_id: type.id, icon: "soup" } },
-                             headers: auth_headers(users(:resto_manager), resto), as: :json
+                             headers: auth_headers(users(:resto_waiter), resto), as: :json
     assert_response :forbidden
 
     post "/api/v1/products", params: { product: { sku: "M-1", name: "Mole", product_type_id: type.id, icon: "soup" } },

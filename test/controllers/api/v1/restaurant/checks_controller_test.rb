@@ -76,7 +76,7 @@ class Api::V1::Restaurant::ChecksControllerTest < ActionDispatch::IntegrationTes
 
   test "a boss reassigns the waiter" do
     patch "/api/v1/restaurant/checks/#{checks(:open_check).id}", params: { waiter_id: users(:resto_waiter2).id },
-                                                                 headers: headers_for(users(:resto_manager)), as: :json
+                                                                 headers: headers_for(users(:resto_owner)), as: :json
 
     assert_response :ok
     assert_equal users(:resto_waiter2), checks(:open_check).reload.waiter
@@ -91,7 +91,7 @@ class Api::V1::Restaurant::ChecksControllerTest < ActionDispatch::IntegrationTes
 
   test "reassigning to someone outside the company is rejected" do
     patch "/api/v1/restaurant/checks/#{checks(:open_check).id}", params: { waiter_id: users(:pro_staff).id },
-                                                                 headers: headers_for(users(:resto_manager)), as: :json
+                                                                 headers: headers_for(users(:resto_owner)), as: :json
 
     assert_response :unprocessable_entity
     assert_equal "waiter_not_member", response.parsed_body.dig("error", "details", "code")
@@ -108,7 +108,7 @@ class Api::V1::Restaurant::ChecksControllerTest < ActionDispatch::IntegrationTes
   end
 
   test "a check with sent items cannot be cancelled" do
-    post "/api/v1/restaurant/checks/#{checks(:open_check).id}/cancel", headers: headers_for(users(:resto_manager)), as: :json
+    post "/api/v1/restaurant/checks/#{checks(:open_check).id}/cancel", headers: headers_for(users(:resto_owner)), as: :json
 
     assert_response :unprocessable_entity
     assert_equal "has_sent_items", response.parsed_body.dig("error", "details", "code")

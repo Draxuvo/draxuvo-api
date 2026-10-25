@@ -9,7 +9,7 @@ class User < ApplicationRecord
   has_one_attached :avatar
   normalizes :email, with: ->(e) { e.strip.downcase }
   # users.role solo distingue a super_admin (global). El rol de empresa vive en user_companies.role (R16).
-  enum :role, { staff: 0, manager: 1, admin: 2, owner: 3, super_admin: 4 }, default: :staff
+  enum :role, { staff: 0, admin: 2, owner: 3, super_admin: 4 }, default: :staff
 
   # Apariencia del panel (spec 006). Las mismas claves viven en draxuvo-ui/src/lib/appearance.ts.
   THEMES = %w[anaquel mercado talavera rosa_mexicano grafito].freeze
@@ -20,11 +20,11 @@ class User < ApplicationRecord
   scope :by_role, ->(role) { where(role: role) if role.present? }
   scope :sorted, -> { order(created_at: :desc) }
   scope :excluding_system_emails, -> { where.not(email: [ "draxuvo@mailinator.com" ]) }
-  # Administrador global de usuarios (spec 036): quienes dirigen una empresa (gerente, administrador o dueño en
+  # Administrador global de usuarios (spec 036): quienes dirigen una empresa (administrador o dueño en
   # alguna) y quienes aún no tienen empresa. El personal de piso (solo staff) se ve en Personal de su empresa.
   # Ya no se filtra por ficha de empleado: desde la spec 036 toda membresía crea la suya.
   scope :managing, -> {
-    where(<<~SQL.squish, managerial: UserCompany.roles.values_at("manager", "admin", "owner"))
+    where(<<~SQL.squish, managerial: UserCompany.roles.values_at("admin", "owner"))
       NOT EXISTS (SELECT 1 FROM user_companies uc WHERE uc.user_id = users.id)
       OR EXISTS (SELECT 1 FROM user_companies uc WHERE uc.user_id = users.id AND uc.role IN (:managerial))
     SQL

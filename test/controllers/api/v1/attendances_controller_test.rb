@@ -166,8 +166,8 @@ class Api::V1::AttendancesControllerTest < ActionDispatch::IntegrationTest
     assert response.parsed_body["results"].all? { |r| r["state"] == "none" }
   end
 
-  test "roster is open to managers and closed to staff, and stays inside the company" do
-    get "/api/v1/attendances/roster", headers: auth_headers(users(:pro_manager), @company)
+  test "roster is open to bosses and closed to staff, and stays inside the company" do
+    get "/api/v1/attendances/roster", headers: auth_headers(@owner, @company)
     assert_response :ok
     names = response.parsed_body["results"].map { |r| r["employee"]["name"] }
     assert_not_includes names, employees(:one).name
@@ -188,7 +188,7 @@ class Api::V1::AttendancesControllerTest < ActionDispatch::IntegrationTest
 
   # --- quien dirige no es personal ---
 
-  test "roster and history leave out owners, admins and managers" do
+  test "roster and history leave out owners and admins" do
     boss = create_member(@company, role: :admin)
     boss_card = @company.employees.create!(name: "Jefe con ficha", status: :active, user: boss)
     boss_card.attendances.create!(company: @company, checkin_at: 1.hour.ago)

@@ -1,6 +1,6 @@
 # app/serializers/employee_serializer.rb
 class EmployeeSerializer < ActiveModel::Serializer
-  attributes :id, :name, :email, :phone, :position, :department, :salary, :status,
+  attributes :id, :user_id, :name, :email, :phone, :position, :department, :salary, :status,
              :created_at, :updated_at
 
   # Spec 036: el acceso (rol del usuario ligado) solo lo ve quien lo administra (`include_access: true`).

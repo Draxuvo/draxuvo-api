@@ -22,8 +22,8 @@ class Api::V1::CompanyOrderModeTest < ActionDispatch::IntegrationTest
     assert @company.reload.order_mode_service?
   end
 
-  test "admin, manager and staff get 403 and the mode does not change" do
-    %w[admin manager staff].each do |role|
+  test "admin and staff get 403 and the mode does not change" do
+    %w[admin staff].each do |role|
       member = create_member(@company, role: role.to_sym)
       patch PATH, params: { order_mode: "order" }, headers: auth_headers(member, @company), as: :json
       assert_response :forbidden, role

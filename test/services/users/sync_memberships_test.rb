@@ -13,11 +13,11 @@ class Users::SyncMembershipsTest < ActiveSupport::TestCase
   test "creates, updates and removes memberships to match the list" do
     user = users(:pro_staff)
 
-    sync(user, [ { company_id: companies(:pro_co).id, role: "admin" }, { company_id: companies(:two).id, role: "manager" } ])
-    assert_equal({ companies(:pro_co).id => "admin", companies(:two).id => "manager" }, roles_of(user))
+    sync(user, [ { company_id: companies(:pro_co).id, role: "admin" }, { company_id: companies(:two).id, role: "owner" } ])
+    assert_equal({ companies(:pro_co).id => "admin", companies(:two).id => "owner" }, roles_of(user))
 
-    sync(user, [ { company_id: companies(:two).id, role: "manager" } ])
-    assert_equal({ companies(:two).id => "manager" }, roles_of(user))
+    sync(user, [ { company_id: companies(:two).id, role: "owner" } ])
+    assert_equal({ companies(:two).id => "owner" }, roles_of(user))
   end
 
   test "a membership without role is staff" do
