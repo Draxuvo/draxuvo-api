@@ -13,7 +13,7 @@ class UserCompanyTest < ActiveSupport::TestCase
   end
 
   test "the same user can belong to different companies" do
-    assert UserCompany.new(user: users(:pro_staff), company: companies(:basic_co), role: :manager).valid?
+    assert UserCompany.new(user: users(:pro_staff), company: companies(:basic_co), role: :admin).valid?
   end
 
   test "requires user and company" do
@@ -24,7 +24,7 @@ class UserCompanyTest < ActiveSupport::TestCase
   end
 
   test "rank orders roles from staff up to super_admin" do
-    ranks = %w[staff manager admin owner super_admin].map { |role| UserCompany.rank(role) }
+    ranks = %w[staff admin owner super_admin].map { |role| UserCompany.rank(role) }
     assert_equal ranks.sort, ranks
     assert_equal 4, UserCompany.rank("super_admin")
     assert_equal 0, UserCompany.rank(:staff)
@@ -36,7 +36,7 @@ class UserCompanyTest < ActiveSupport::TestCase
   end
 
   test "fixtures expose the role enum" do
-    assert user_companies(:pro_manager).manager?
+    assert user_companies(:pro_staff).staff?
     assert user_companies(:pro_co_owner).owner?
   end
 
@@ -55,9 +55,9 @@ class UserCompanyTest < ActiveSupport::TestCase
     assert_includes card.name, "Marta"
   end
 
-  test "managers, admins and owners get no employee card" do
+  test "admins and owners get no employee card" do
     company = companies(:pro_co)
-    %i[manager admin owner].each do |role|
+    %i[admin owner].each do |role|
       user = create_member(company, role: role)
       assert_not company.employees.exists?(user_id: user.id), "#{role} no es personal"
     end
@@ -65,7 +65,7 @@ class UserCompanyTest < ActiveSupport::TestCase
 
   test "becoming staff creates the card and Employee.team leaves bosses out" do
     company = companies(:pro_co)
-    user = create_member(company, role: :manager)
+    user = create_member(company, role: :admin)
     membership = company.user_companies.find_by!(user: user)
 
     assert_difference -> { company.employees.count }, 1 do

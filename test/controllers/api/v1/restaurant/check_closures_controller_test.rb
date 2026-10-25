@@ -6,7 +6,7 @@ class Api::V1::Restaurant::CheckClosuresControllerTest < ActionDispatch::Integra
     @check = checks(:takeout_check)
   end
 
-  def close(reason, user = users(:resto_manager))
+  def close(reason, user = users(:resto_owner))
     post "/api/v1/restaurant/checks/#{@check.id}/close", params: { reason: reason }, headers: auth_headers(user, @company), as: :json
   end
 

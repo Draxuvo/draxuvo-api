@@ -44,7 +44,6 @@ module Api
           total:   users.count,
           by_role: {
             staff:       role_counts["staff"].to_i,
-            manager:     role_counts["manager"].to_i,
             admin:       role_counts["admin"].to_i,
             owner:       role_counts["owner"].to_i,
             super_admin: 0

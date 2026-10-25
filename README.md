@@ -4,7 +4,7 @@ API REST del ERP **Draxuvo**: multiempresa, con suscripciones y cobro. Rails 8 (
 
 ## Qué hace
 
-- **Empresas y equipo**: usuarios con roles por empresa (`staff` < `manager` < `admin` < `owner` < `super_admin`), miembros, sucursales y módulos activos por plan.
+- **Empresas y equipo**: usuarios con roles por empresa (`staff` < `admin` < `owner` < `super_admin`), miembros, sucursales y módulos activos por plan.
 - **Operación**: empleados y asistencia, inventario con movimientos de stock e importación, órdenes de trabajo (servicio o pedido) con partidas, pasos, notas y fotos, tickets con PDF y envío por WhatsApp.
 - **Cobro**: planes Básico, Pro y Empresa con prueba de 30 días, pago con Stripe Checkout y estado de la suscripción por webhooks.
 - **Reportes**: dashboard, resumen, ingresos, gastos y nómina.
@@ -22,7 +22,7 @@ bin/rails db:prepare     # crea la base y carga semillas y datos de demo (solo e
 bin/rails server         # http://localhost:3000, salud en /up
 ```
 
-Los datos de demo son 5 empresas con usuarios `dueno@`, `admin@`, `manager@` y `staff@` en `donchuy.demo`, `volta.demo`, `sazon.demo`, `aroma.demo` y `plomeria.demo`; la contraseña es `Demo12345*`. `bin/rails db:reset` los regenera.
+Los datos de demo son 5 empresas con usuarios `dueno@`, `admin@` y `staff@` en `donchuy.demo`, `volta.demo`, `sazon.demo`, `aroma.demo` y `plomeria.demo`; la contraseña es `Demo12345*`. `bin/rails db:reset` los regenera.
 
 ### Variables de entorno
 

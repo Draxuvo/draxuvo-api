@@ -322,7 +322,7 @@ en:
     reason_required:      "A reason is required"
     no_items:             "The order has no priced items"
     catalog_item_required: "Pick a product from the catalog"
-    employee_required:    "Your user has no employee in this company; ask a manager to add you"
+    employee_required:    "Your user has no employee in this company; ask an administrator to add you"
     deleted:              "Work order deleted"
     photo:
       invalid_type:  "The file must be an image"

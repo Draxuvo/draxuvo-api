@@ -1,5 +1,5 @@
 module Restaurant
-  # Resumen vivo del servicio para dueño, administrador y gerente (spec 032): cuentas abiertas, saldo por cobrar,
+  # Resumen vivo del servicio para dueño y administrador (spec 032): cuentas abiertas, saldo por cobrar,
   # comandas pendientes y la cuenta abierta más antigua.
   class ServiceOverview
     def initialize(company, open_checks, counts_by_check)

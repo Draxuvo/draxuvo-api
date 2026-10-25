@@ -198,8 +198,6 @@ DEMO_COMPANIES.each do |cfg|
                     role: :owner, company: company)
   demo_user(email: "admin@#{cfg[:domain]}", first_name: "Admin", last_name: company.name,
             role: :admin, company: company)
-  demo_user(email: "manager@#{cfg[:domain]}", first_name: "Gerente", last_name: company.name,
-            role: :manager, company: company)
   staff = demo_user(email: "staff@#{cfg[:domain]}", first_name: "Ana", last_name: "López",
                     role: :staff, company: company)
 
@@ -341,4 +339,4 @@ unless volta.payroll_runs.exists?
   puts "  [ok] Nómina: corrida mensual #{last_month.strftime('%Y-%m')} pagada en #{volta.name}"
 end
 
-puts "  Usuarios de demo: dueno@, admin@, manager@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"
+puts "  Usuarios de demo: dueno@, admin@ y staff@ <dominio>.demo · contraseña #{DEMO_PASSWORD}"

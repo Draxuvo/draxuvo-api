@@ -7,7 +7,7 @@ class Restaurant::PermissionsTest < ActiveSupport::TestCase
     @check = checks(:open_check) # mesero: resto_waiter
     @waiter = context(users(:resto_waiter), "staff")
     @other = context(users(:resto_waiter2), "staff")
-    @boss = context(users(:resto_manager), "manager")
+    @boss = context(users(:resto_owner), "owner")
   end
 
   test "only the waiter of the check or a boss can charge it" do

@@ -105,8 +105,8 @@ class Api::V1::MyAttendanceControllerTest < ActionDispatch::IntegrationTest
     assert_nil other.attendances.last.checkout_at
   end
 
-  test "owners, admins and managers do not mark their own attendance" do
-    %i[owner admin manager].each do |role|
+  test "owners and admins do not mark their own attendance" do
+    %i[owner admin].each do |role|
       boss = create_member(@company, role: role)
       @company.employees.create!(name: "Ficha #{role}", status: :active, user: boss)
       headers = auth_headers(boss, @company)

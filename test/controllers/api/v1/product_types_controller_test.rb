@@ -18,7 +18,7 @@ class Api::V1::ProductTypesControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "key" => "kg", "name" => "Kilogramo" }, rows.last["default_unit"])
     assert_equal 2, rows.first["products_count"]
 
-    [ users(:resto_waiter), users(:resto_manager) ].each do |user|
+    [ users(:resto_waiter) ].each do |user|
       post BASE, params: { product_type: { name: "Postre" } }, headers: auth_headers(user, @company), as: :json
       assert_response :forbidden
     end
@@ -70,7 +70,7 @@ class Api::V1::ProductTypesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "an admin sets the suggested icon of a type; a manager cannot; invalid keys are rejected" do
+  test "an admin sets the suggested icon of a type; a waiter cannot; invalid keys are rejected" do
     type = product_types(:resto_co_counted)
 
     patch "#{BASE}/#{type.id}", params: { product_type: { icon: "beer" } }, headers: @admin, as: :json
@@ -81,7 +81,7 @@ class Api::V1::ProductTypesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
 
     patch "#{BASE}/#{type.id}", params: { product_type: { icon: "wine" } },
-                                headers: auth_headers(users(:resto_manager), @company), as: :json
+                                headers: auth_headers(users(:resto_waiter), @company), as: :json
     assert_response :forbidden
     assert_equal "beer", type.reload.icon
   end
@@ -92,7 +92,7 @@ class Api::V1::ProductTypesControllerTest < ActionDispatch::IntegrationTest
     assert_equal true, rows["Platillo"]["in_menu"]
     assert_equal false, rows["Insumo"]["in_menu"]
 
-    patch "#{BASE}/#{product_types(:resto_co_sold).id}", params: { in_menu: false }, headers: auth_headers(users(:resto_manager), @company), as: :json
+    patch "#{BASE}/#{product_types(:resto_co_sold).id}", params: { in_menu: false }, headers: auth_headers(users(:resto_waiter), @company), as: :json
     assert_response :forbidden
 
     patch "#{BASE}/#{product_types(:resto_co_sold).id}", params: { in_menu: false }, headers: @admin, as: :json

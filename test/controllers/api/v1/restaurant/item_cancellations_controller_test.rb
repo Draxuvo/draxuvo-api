@@ -37,11 +37,11 @@ class Api::V1::Restaurant::ItemCancellationsControllerTest < ActionDispatch::Int
   end
 
   test "a boss cancels an item in preparation and it stays on record" do
-    cancel(check_items(:item_preparing), "Se quemó", user: users(:resto_manager))
+    cancel(check_items(:item_preparing), "Se quemó", user: users(:resto_owner))
 
     assert_response :ok
     item = check_items(:item_preparing).reload
-    assert_equal [ "Se quemó", users(:resto_manager) ], [ item.cancel_reason, item.cancelled_by ]
+    assert_equal [ "Se quemó", users(:resto_owner) ], [ item.cancel_reason, item.cancelled_by ]
   end
 
   test "the reason is required" do

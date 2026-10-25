@@ -18,22 +18,19 @@ class Api::V1::CompanyMembersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     members = json["results"].index_by { |m| m["id"] }
-    assert_equal [ users(:pro_co_owner), users(:pro_staff), users(:pro_manager), @admin ].map(&:id).sort, members.keys.sort
+    assert_equal [ users(:pro_co_owner), users(:pro_staff), @admin ].map(&:id).sort, members.keys.sort
     assert_equal "owner", members[users(:pro_co_owner).id]["role"]
-    assert_equal "manager", members[users(:pro_manager).id]["role"]
     assert_equal "admin", members[@admin.id]["role"]
     %w[first_name last_name email active].each { |key| assert members[@admin.id].key?(key), "missing #{key}" }
     assert_not members.key?(users(:one_owner).id)
   end
 
-  test "admins can list, staff and managers cannot" do
+  test "admins can list, staff cannot" do
     get BASE, headers: auth_headers(@admin, @company)
     assert_response :ok
 
-    %i[pro_staff pro_manager].each do |name|
-      get BASE, headers: auth_headers(users(name), @company)
-      assert_response :forbidden, "#{name} should be forbidden"
-    end
+    get BASE, headers: auth_headers(users(:pro_staff), @company)
+    assert_response :forbidden
   end
 
   # --- POST ------------------------------------------------------------------------------------
@@ -41,14 +38,14 @@ class Api::V1::CompanyMembersControllerTest < ActionDispatch::IntegrationTest
   test "an admin invites a new person with a role up to its own" do
     assert_difference [ "User.count", "UserCompany.count" ], 1 do
       post BASE, params: { member: { email: "nuevo@pro-co.test", first_name: "Nuevo", last_name: "Miembro",
-                                     phone: "5511111111", role: "manager" } },
+                                     phone: "5511111111", role: "admin" } },
                  headers: auth_headers(@admin, @company), as: :json
     end
 
     assert_response :created
-    assert_equal "manager", json["role"]
+    assert_equal "admin", json["role"]
     user = User.find_by!(email: "nuevo@pro-co.test")
-    assert_equal "manager", user.user_companies.find_by!(company: @company).role
+    assert_equal "admin", user.user_companies.find_by!(company: @company).role
     assert_not user.super_admin?
   end
 
@@ -114,12 +111,12 @@ class Api::V1::CompanyMembersControllerTest < ActionDispatch::IntegrationTest
   test "an admin changes a role only for the active company" do
     create_member(companies(:one), role: :staff, user: users(:pro_staff))
 
-    patch "#{BASE}/#{users(:pro_staff).id}", params: { member: { role: "manager" } },
+    patch "#{BASE}/#{users(:pro_staff).id}", params: { member: { role: "admin" } },
                                               headers: auth_headers(@admin, @company), as: :json
 
     assert_response :ok
-    assert_equal "manager", json["role"]
-    assert_equal "manager", users(:pro_staff).user_companies.find_by!(company: @company).role
+    assert_equal "admin", json["role"]
+    assert_equal "admin", users(:pro_staff).user_companies.find_by!(company: @company).role
     assert_equal "staff", users(:pro_staff).user_companies.find_by!(company: companies(:one)).role
   end
 
@@ -142,11 +139,11 @@ class Api::V1::CompanyMembersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "only an owner assigns owner" do
-    patch "#{BASE}/#{users(:pro_manager).id}", params: { member: { role: "owner" } },
+    patch "#{BASE}/#{users(:pro_staff).id}", params: { member: { role: "owner" } },
                                                 headers: auth_headers(users(:pro_co_owner), @company), as: :json
 
     assert_response :ok
-    assert_equal "owner", users(:pro_manager).user_companies.find_by!(company: @company).role
+    assert_equal "owner", users(:pro_staff).user_companies.find_by!(company: @company).role
   end
 
   test "the last owner cannot be demoted" do

@@ -6,7 +6,6 @@ class Api::V1::PayrollRunsControllerTest < ActionDispatch::IntegrationTest
     @company = companies(:pro_co)
     @owner = users(:pro_co_owner)
     @admin = create_member(@company, role: :admin, employee: false)
-    @manager = users(:pro_manager)
     @staff = users(:pro_staff)
     @ana, @beto = payroll_employees(@company, { name: "Ana", salary: 12_000 }, { name: "Beto", salary: 9_000 })
   end
@@ -22,12 +21,12 @@ class Api::V1::PayrollRunsControllerTest < ActionDispatch::IntegrationTest
 
   # --- permisos ----------------------------------------------------------------------------------
 
-  test "owner and admin can use payroll; manager and staff get 403" do
+  test "owner and admin can use payroll; staff gets 403" do
     [ @owner, @admin ].each do |boss|
       get "/api/v1/payroll_runs", headers: h(boss)
       assert_response :ok
     end
-    [ @manager, @staff ].each do |other|
+    [ @staff ].each do |other|
       get "/api/v1/payroll_runs", headers: h(other)
       assert_response :forbidden
       post "/api/v1/payroll_runs", params: { period_type: "monthly", starts_on: "2026-10-01", ends_on: "2026-10-31" }, headers: h(other), as: :json
@@ -250,7 +249,7 @@ class Api::V1::PayrollRunsControllerTest < ActionDispatch::IntegrationTest
 
     get "/api/v1/employees/#{@ana.id}/payroll_payments", headers: h
     assert_equal [ ana["id"] ], response.parsed_body["results"].map { |p| p["id"] }
-    get "/api/v1/employees/#{@ana.id}/payroll_payments", headers: h(@manager)
+    get "/api/v1/employees/#{@ana.id}/payroll_payments", headers: h(@staff)
     assert_response :forbidden
   end
 

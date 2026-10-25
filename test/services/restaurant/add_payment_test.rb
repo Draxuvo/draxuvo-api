@@ -5,7 +5,7 @@ class Restaurant::AddPaymentTest < ActiveSupport::TestCase
     @check = settle_check(checks(:open_check)) # total 155
     @waiter = Restaurant::Permissions::Context.new(user: users(:resto_waiter), role: "staff")
     @other = Restaurant::Permissions::Context.new(user: users(:resto_waiter2), role: "staff")
-    @boss = Restaurant::Permissions::Context.new(user: users(:resto_manager), role: "manager")
+    @boss = Restaurant::Permissions::Context.new(user: users(:resto_owner), role: "owner")
   end
 
   def pay(params, context = @waiter, check = @check) = Restaurant::AddPayment.call(check, context, params)
@@ -136,7 +136,7 @@ class Restaurant::AddPaymentTest < ActiveSupport::TestCase
     tacos = products(:resto_tacos)
     unsettle_open_check
     check = checks(:open_check)
-    check_items(:item_new).update!(status: :cancelled, cancelled_at: Time.current, cancel_reason: "x", cancelled_by: users(:resto_manager))
+    check_items(:item_new).update!(status: :cancelled, cancelled_at: Time.current, cancel_reason: "x", cancelled_by: users(:resto_owner))
     settle_check(check)
 
     assert_equal 85, check.total

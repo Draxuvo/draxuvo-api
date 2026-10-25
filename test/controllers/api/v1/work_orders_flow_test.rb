@@ -5,7 +5,6 @@ class Api::V1::WorkOrdersFlowTest < ActionDispatch::IntegrationTest
   setup do
     @company = companies(:pro_co)
     @owner   = users(:pro_co_owner)
-    @manager = users(:pro_manager)
     @staff   = users(:pro_staff)
   end
 
@@ -124,9 +123,6 @@ class Api::V1::WorkOrdersFlowTest < ActionDispatch::IntegrationTest
 
   test "void requires owner or admin and a reason" do
     order = work_orders(:pro_paid)
-
-    act(order, :void_charge, { reason: "Error" }, as: @manager)
-    assert_response :forbidden
 
     act(order, :void_charge, { reason: "Error" }, as: @staff)
     assert_includes [ 403, 404 ], response.status

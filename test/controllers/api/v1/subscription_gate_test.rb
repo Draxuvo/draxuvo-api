@@ -23,8 +23,8 @@ class Api::V1::SubscriptionGateTest < ActionDispatch::IntegrationTest
     assert_equal "https://invoice.stripe.com/i/gate", details["pay_url"]
   end
 
-  test "staff and managers get the same 403 without the pay url" do
-    [ users(:pro_staff), users(:pro_manager) ].each do |user|
+  test "staff gets the same 403 without the pay url" do
+    [ users(:pro_staff) ].each do |user|
       get "/api/v1/work_orders", headers: auth_headers(user, @company)
 
       assert_response :forbidden

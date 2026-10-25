@@ -36,6 +36,36 @@ class Api::V1::Restaurant::TablesControllerTest < ActionDispatch::IntegrationTes
     assert_equal true, takeouts.first["mine"]
   end
 
+  test "lists the checks closed today, with total and waiter only for the owner of the check or a boss" do
+    Check.where(id: checks(:closed_check).id).update_all(closed_at: Time.current)
+
+    get_tables(users(:resto_waiter))
+    closed = response.parsed_body["closed_today"].first
+    assert_equal checks(:closed_check).id, closed["id"]
+    assert_equal "2", closed["name"]
+    assert_equal true, closed["mine"]
+    assert_equal "70.00", closed["total"]
+    assert_equal users(:resto_waiter).id, closed["waiter"]["id"]
+
+    get_tables(users(:resto_waiter2))
+    other = response.parsed_body["closed_today"].first
+    assert_equal false, other["mine"]
+    assert_not other.key?("total")
+    assert_not other.key?("waiter")
+
+    get_tables(users(:resto_owner))
+    assert_equal "70.00", response.parsed_body["closed_today"].first["total"]
+  end
+
+  test "checks closed on another day or cancelled are not listed as closed today" do
+    Check.where(id: checks(:closed_check).id).update_all(closed_at: 2.days.ago)
+    Check.where(id: checks(:open_check).id).update_all(status: Check.statuses[:cancelled], closed_at: Time.current)
+
+    get_tables(users(:resto_owner))
+
+    assert_equal [], response.parsed_body["closed_today"]
+  end
+
   test "ready items are only those of the caller's own checks" do
     get_tables(users(:resto_waiter))
     mine = response.parsed_body["ready_items"]
@@ -47,7 +77,7 @@ class Api::V1::Restaurant::TablesControllerTest < ActionDispatch::IntegrationTes
   end
 
   test "stock alerts count only for a boss" do
-    get_tables(users(:resto_manager))
+    get_tables(users(:resto_owner))
     assert_equal 1, response.parsed_body["stock_alerts"]
 
     get_tables(users(:resto_waiter))
@@ -128,7 +158,7 @@ class Api::V1::Restaurant::TablesControllerTest < ActionDispatch::IntegrationTes
   end
 
   test "a boss sees total and waiter of every check" do
-    get_tables(users(:resto_manager))
+    get_tables(users(:resto_owner))
     check = response.parsed_body["results"].find { |t| t["name"] == "1" }["check"]
 
     assert_equal "155.00", check["total"]
@@ -136,7 +166,7 @@ class Api::V1::Restaurant::TablesControllerTest < ActionDispatch::IntegrationTes
   end
 
   test "the overview is only for a boss" do
-    get_tables(users(:resto_manager))
+    get_tables(users(:resto_owner))
     overview = response.parsed_body["overview"]
     assert_equal 2, overview["open_checks"]
     assert_equal 2, overview["pending_comandas"]

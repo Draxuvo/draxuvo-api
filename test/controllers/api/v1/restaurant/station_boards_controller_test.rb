@@ -37,7 +37,7 @@ class Api::V1::Restaurant::StationBoardsControllerTest < ActionDispatch::Integra
   end
 
   test "a cancelled item shows as cancelled for a while" do
-    check_items(:item_new).update!(status: :cancelled, cancelled_at: Time.current, cancel_reason: "x", cancelled_by: users(:resto_manager))
+    check_items(:item_new).update!(status: :cancelled, cancelled_at: Time.current, cancel_reason: "x", cancelled_by: users(:resto_owner))
     board(stations(:kitchen))
 
     statuses = response.parsed_body["orders"].flat_map { |o| o["items"].map { |i| [ i["name"], i["status"] ] } }.to_h

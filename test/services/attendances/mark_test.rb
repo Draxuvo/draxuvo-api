@@ -35,7 +35,7 @@ class Attendances::MarkTest < ActiveSupport::TestCase
   # --- Spec 036: marca de otro con hora capturada ---
 
   def boss_mark
-    Attendances::Mark.new(@employee, actor: users(:pro_manager))
+    Attendances::Mark.new(@employee, actor: users(:pro_co_owner))
   end
 
   test "the actor is saved and own marks are not captured" do
@@ -51,7 +51,7 @@ class Attendances::MarkTest < ActiveSupport::TestCase
     attendance = @employee.attendances.last
     assert_in_delta at.to_f, attendance.checkin_at.to_f, 1
     assert attendance.checkin_captured
-    assert_equal users(:pro_manager), attendance.checkin_by
+    assert_equal users(:pro_co_owner), attendance.checkin_by
   end
 
   test "future times are rejected" do
@@ -72,7 +72,7 @@ class Attendances::MarkTest < ActiveSupport::TestCase
     attendance = boss_mark.check_out(at: 1.hour.ago, strict: true)
     assert_equal 120, attendance.duration_minutes
     assert attendance.checkout_captured
-    assert_equal users(:pro_manager), attendance.checkout_by
+    assert_equal users(:pro_co_owner), attendance.checkout_by
     assert attendance.checkout_recorded_at
   end
 
