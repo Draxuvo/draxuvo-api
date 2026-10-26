@@ -10,6 +10,7 @@ module Subscriptions
     end
 
     def call
+      Demo::Guard.restrict!(:plan_change) unless @immediate
       @immediate ? cancel_now : cancel_at_period_end
       @subscription
     end

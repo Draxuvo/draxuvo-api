@@ -27,6 +27,7 @@ Formato: `JSON`
 17. [Dashboard](#17-dashboard)
 18. [Reportes](#18-reportes)
 19. [Restaurante](#19-restaurante)
+20. [Demo por plan](#20-demo-por-plan)
 
 ---
 
@@ -1436,3 +1437,55 @@ POST /employees (con email)
   → usuario usa PUT /passwords/update_with_token
   → user.active = true, employee.status = "active"
 ```
+
+---
+
+## 20. Demo por plan
+
+Spec 039. Cada visita a la demo crea su propia empresa de demostración (`companies.demo = true`) con datos de ejemplo,
+un usuario dueño efímero (`demo-<aleatorio>@demo.invalid`) y un JWT que caduca con la demo (2 h por defecto). Detalle del
+contrato en `specs/039-demo-por-plan/contracts/api.md`.
+
+### `POST /demo_sessions` — público
+
+Abre una demo nueva. Límite por IP (`DEMO_RATE_LIMIT`, 10 por hora) y tope de demos activas (`DEMO_MAX_ACTIVE`).
+
+```json
+{ "plan": "pro", "scenario": "pro_restaurant", "locale": "es",
+  "contact": { "name": "Ana", "email": "ana@ejemplo.mx", "phone": "5512345678" } }
+```
+
+o, con una invitación del equipo comercial, `{ "invite_token": "…", "locale": "es" }` (manda el plan de la invitación).
+`scenario` es obligatorio solo en Pro (`pro_service` o `pro_restaurant`); `contact` y cada campo son opcionales.
+
+`201`: `{ "token", "user", "company_id", "plan", "scenario", "expires_at" }`. Errores: `400` plan o escenario inválidos,
+`404` invitación inexistente, `410` invitación vencida o revocada (`details.code`: `invite_expired` | `invite_revoked`),
+`422` contacto inválido, `429` límite por IP, `503` `demo_busy` (tope de demos o de aprovisionamientos simultáneos).
+
+### `GET /demo_invites/resolve?token=` — público
+
+`200`: `{ "plan", "scenario" }` sin crear nada. `404` o `410` como arriba.
+
+### `DELETE /demo_sessions/current` — usuario de la demo
+
+«Salir de la demo» o «Crear mi cuenta». Cuerpo `{ "reason": "left" | "signup" }`; marca `ended_at` y `ended_reason` y encola la
+purga. `204`; `403` si quien lo pide no está en una demo.
+
+### `GET /demo_invites`, `POST /demo_invites`, `POST /demo_invites/:id/revoke` — solo `super_admin`
+
+Invitaciones del equipo comercial. El token y la `url` solo viajan en la respuesta de `POST` (en la base queda la huella
+SHA-256). Filtros del listado: `status` (`active` | `expired` | `revoked`), `plan`, `search`.
+
+### `GET /demo_sessions` — solo `super_admin`
+
+Aperturas (de la más reciente a la más antigua) con `invite`, `contact`, `ended_reason` y fechas; filtros `plan`,
+`demo_invite_id`, `with_contact`, `from`, `to`, `search`. Nunca incluye IP ni agente de navegador.
+
+### Comportamiento dentro de una demo
+
+- `UserSerializer.companies[].demo` y `GET /subscription` (`demo: true`) marcan la empresa.
+- Pagos y cambios de plan (`/subscription` PATCH, DELETE, `checkout`, `portal`) responden `403` con
+  `details: { code: "demo_restricted", action: "payment" | "plan_change" }`.
+- El correo y WhatsApp no se envían: quedan simulados (`POST /tickets/:id/send_whatsapp` responde `demo: true`).
+- Una demo vencida o terminada responde `403` con `details.code = "demo_expired"` aunque el JWT siga vigente.
+- Las demos y sus usuarios no aparecen en `GET /companies` ni `GET /users` del super admin.

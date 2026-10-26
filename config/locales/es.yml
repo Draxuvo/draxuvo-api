@@ -70,6 +70,21 @@ es:
       rate_limited: "Demasiados intentos de registro. Intenta de nuevo más tarde."
     too_many_requests: "Demasiadas solicitudes. Intenta de nuevo más tarde."
 
+  demo:
+    errors:
+      invite_not_found: "No encontramos esta invitación a la demo."
+      invite_expired: "Esta invitación a la demo ya venció."
+      invite_revoked: "Esta invitación a la demo ya no está disponible."
+      scenario_required: "Elige el giro de la demo."
+      invalid_plan: "Ese plan no tiene demo."
+      invalid_scenario: "Ese giro no existe para el plan elegido."
+      invalid_contact: "Revisa tus datos de contacto."
+      demo_busy: "Hay muchas demos abiertas en este momento. Intenta de nuevo en unos minutos o crea tu cuenta con 30 días gratis."
+      rate_limited: "Abriste muchas demos seguidas. Intenta de nuevo más tarde o crea tu cuenta con 30 días gratis."
+      demo_expired: "Tu demostración terminó. Abre otra o crea tu cuenta con 30 días gratis."
+      demo_restricted: "No está disponible en la demostración."
+      not_a_demo: "Esta acción es solo para una demostración."
+
   auth:
     header_missing: "Encabezado de autorización faltante"
     invalid_credentials: "Credenciales de usuario inválidas"

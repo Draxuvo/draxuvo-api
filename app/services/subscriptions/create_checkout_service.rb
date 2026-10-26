@@ -12,6 +12,7 @@ module Subscriptions
     end
 
     def call
+      Demo::Guard.restrict!(:payment)
       ensure_not_suspended!
       ensure_no_paid_subscription!
       price_id    = PriceLookupService.price_id(@plan, @billing_cycle)

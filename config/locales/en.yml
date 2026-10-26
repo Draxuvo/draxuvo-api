@@ -70,6 +70,21 @@ en:
       rate_limited: "Too many sign-up attempts. Please try again later."
     too_many_requests: "Too many requests. Please try again later."
 
+  demo:
+    errors:
+      invite_not_found: "We couldn't find this demo invitation."
+      invite_expired: "This demo invitation has expired."
+      invite_revoked: "This demo invitation is no longer available."
+      scenario_required: "Choose the kind of business for the demo."
+      invalid_plan: "That plan has no demo."
+      invalid_scenario: "That business type doesn't exist for the chosen plan."
+      invalid_contact: "Check your contact details."
+      demo_busy: "Many demos are open right now. Try again in a few minutes or create your account with 30 free days."
+      rate_limited: "You opened many demos in a row. Try again later or create your account with 30 free days."
+      demo_expired: "Your demo has ended. Open another one or create your account with 30 free days."
+      demo_restricted: "Not available in the demo."
+      not_a_demo: "This action is only for a demo."
+
   auth:
     header_missing: "Authorization header is missing"
     invalid_credentials: "Invalid user credentials"

@@ -7,6 +7,7 @@ module Subscriptions
     end
 
     def call
+      Demo::Guard.restrict!(:payment)
       if @company.stripe_id.blank?
         raise ApiErrors::UnprocessableEntityError.new(
           details: { code: "no_billing_account", message: I18n.t("errors.subscription.no_billing_account") }

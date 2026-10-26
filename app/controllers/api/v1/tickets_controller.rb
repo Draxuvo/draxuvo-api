@@ -38,7 +38,9 @@ module Api
         raise ApiErrors::BadRequestError.new(details: I18n.t("ticket.phone_required")) if phone.blank?
 
         Whatsapp::TicketService.new(ticket, phone: phone).call
-        render json: { message: I18n.t("ticket.whatsapp_sent") }
+        body = { message: I18n.t("ticket.whatsapp_sent") }
+        body[:demo] = true if Demo::Guard.active?
+        render json: body
       end
 
       private

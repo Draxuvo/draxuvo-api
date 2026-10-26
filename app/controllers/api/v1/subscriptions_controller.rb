@@ -9,6 +9,7 @@ module Api
 
       before_action :require_admin!
       before_action :reject_branch_billing!, except: :show
+      before_action :restrict_in_demo, except: :show
 
       # GET /api/v1/subscription
       def show
@@ -77,6 +78,11 @@ module Api
       end
 
       private
+
+      # Spec 039: en una demo no hay pagos ni cambios de plan; la pantalla de suscripción es solo informativa.
+      def restrict_in_demo
+        Demo::Guard.restrict!(%w[update destroy].include?(action_name) ? :plan_change : :payment)
+      end
 
       def reject_branch_billing!
         return unless current_company.branch?

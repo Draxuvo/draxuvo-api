@@ -136,3 +136,13 @@ Dockerized with Kamal for orchestration. Also has `render.yaml` for Render.com d
 | `STRIPE_API_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe secret key and webhook signing secret |
 | `APP_HOST` / `ALLOWED_HOSTS` | Public host for links and extra allowed hosts in production |
 | Cloud storage keys | Cloudinary or S3-compatible credentials |
+
+### Demo por plan (spec 039)
+
+Cada visita crea una empresa efímera con `companies.demo = true` (`Demo::Provision`), un dueño efímero y los datos de uno de cuatro
+escenarios deterministas (`app/services/demo/scenarios/`: `basic_retail`, `pro_service`, `pro_restaurant`, `enterprise_restaurant`).
+`Demo::Purge` la borra por completo (sucursales y cuentas primero) y `Demo::PurgeJob` corre cada 10 minutos; la apertura
+(`demo_sessions`) sobrevive para el seguimiento comercial. `Current.demo` (que `BaseController` activa según `X-Company-Id`) hace que
+`ResendMailer`, `Whatsapp::*` y `Subscriptions::*` simulen o bloqueen todo efecto externo (`Demo::Guard`). Las demos se excluyen de las
+listas y métricas del super admin (`Company.real`, `User.real`). Límites: `DEMO_RATE_LIMIT`, `DEMO_MAX_ACTIVE`,
+`DEMO_MAX_PROVISIONING`, `DEMO_TTL_MINUTES` y `DEMO_INVITE_DAYS`. `bin/rails demo:benchmark` mide cuánto tarda cada escenario (objetivo: 5 s).

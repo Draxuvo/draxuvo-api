@@ -18,3 +18,8 @@ production:
     class: Subscriptions::EnforceJob
     queue: default
     schedule: every hour
+  # Spec 039: borra las demos vencidas o terminadas.
+  purge_demos:
+    class: Demo::PurgeJob
+    queue: default
+    schedule: every 10 minutes

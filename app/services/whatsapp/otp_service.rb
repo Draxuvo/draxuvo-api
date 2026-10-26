@@ -15,6 +15,12 @@ module Whatsapp
     # Genera un OTP, lo guarda en cache y lo envía por WhatsApp.
     # Retorna el código generado (útil para tests).
     def send_code
+      # Spec 039: en una demo no se envía nada; el código es fijo para que la verificación siga funcionando.
+      if Demo::Guard.active?
+        store_code(Demo::Guard::DEMO_OTP)
+        return Demo::Guard::DEMO_OTP
+      end
+
       validate_config!
       code = generate_code
       store_code(code)

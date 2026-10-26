@@ -8,6 +8,7 @@ module Api::V1
     # GET /api/v1/users
     def index
       users = User.includes(:companies)
+        .real
         .managing
         .by_email(params[:email])
         .by_role(params[:role])

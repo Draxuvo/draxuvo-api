@@ -23,6 +23,8 @@ class Company < ApplicationRecord
   has_many :payroll_adjustments, dependent: :destroy
   has_many :payroll_events, dependent: :delete_all
   has_one :subscription, dependent: :destroy
+  # Spec 039: la apertura de demo de esta empresa (solo la principal la tiene; la sucursal usa la de su principal).
+  has_one :own_demo_session, class_name: "DemoSession", dependent: :nullify
 
   # Sucursales del plan Empresa (R17): un solo nivel. Si la principal se borra, las sucursales
   # se quedan sin billing_company y quedan bloqueadas, sin borrar sus datos (FR-029).
@@ -43,6 +45,17 @@ class Company < ApplicationRecord
   before_validation :inherit_order_mode, on: :create
   after_create :create_trial_subscription, unless: :branch?
   after_create { ProductTypes::Defaults.create_missing(self) }
+
+  # Spec 039: las empresas de demostración (una por visita) y las reales, para no mezclarlas en lo interno.
+  scope :demo, -> { where(demo: true) }
+  scope :real, -> { where(demo: false) }
+
+  # Sesión de demo que rige a esta empresa: la propia o, si es una sucursal, la de su principal.
+  def demo_session
+    return nil unless demo?
+
+    own_demo_session || parent&.own_demo_session
+  end
 
   def branch?
     parent_company_id.present?
