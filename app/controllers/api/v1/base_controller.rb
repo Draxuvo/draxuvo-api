@@ -9,9 +9,11 @@ module Api
       rescue_from ApiErrors::BaseError,          with: :handle_api_error
       rescue_from ActiveRecord::RecordNotFound,  with: :handle_not_found
       rescue_from ActiveRecord::RecordInvalid,   with: :handle_invalid
+      rescue_from Demo::Restricted,              with: :handle_demo_restricted
 
       before_action :authenticate_request
       before_action :check_subscription!
+      before_action :enter_demo_context
 
       private
 
@@ -100,6 +102,26 @@ module Api
                     cancels_at: subscription.cancels_at }
         details[:pay_url] = subscription.pending_invoice_url if %w[owner admin].include?(current_role)
         raise ApiErrors::ForbiddenError.new(message: I18n.t("errors.subscription.suspended"), details: details)
+      end
+
+      # Spec 039: si la empresa activa es una demo, lo que sale al exterior (correo, WhatsApp, Stripe) se simula o se
+      # bloquea, y una demo vencida o terminada deja de servir aunque su token siga vigente. Se decide por la empresa
+      # del encabezado (el visitante es dueño y puede teclear datos de terceros). Va después de check_subscription!,
+      # que ya cargó `current_company`: no agrega consultas.
+      def enter_demo_context
+        return if request.headers["X-Company-Id"].blank?
+
+        Current.demo = current_company.demo?
+        return unless Current.demo
+        return if current_company.demo_session&.usable?
+
+        raise ApiErrors::ForbiddenError.new(message: I18n.t("demo.errors.demo_expired"), details: { code: "demo_expired" })
+      end
+
+      def handle_demo_restricted(error)
+        render json: ApiErrors::ForbiddenError.new(
+          message: I18n.t("demo.errors.demo_restricted"), details: { code: "demo_restricted", action: error.action }
+        ).as_json, status: :forbidden
       end
 
       def handle_invalid(e)

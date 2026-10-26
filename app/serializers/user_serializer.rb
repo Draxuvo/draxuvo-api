@@ -15,7 +15,7 @@ class UserSerializer < ActiveModel::Serializer
     object.ordered_memberships.map do |membership|
       company = membership.company
       { id: company.id, name: company.name, slug: company.slug, role: membership.role,
-        parent_company_id: company.parent_company_id, order_mode: company.order_mode }
+        parent_company_id: company.parent_company_id, order_mode: company.order_mode, demo: company.demo? }
     end
   end
 

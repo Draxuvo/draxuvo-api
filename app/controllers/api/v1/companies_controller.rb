@@ -7,7 +7,8 @@ module Api
 
       # GET /api/v1/companies — super_admin: lista todas las empresas
       def index
-        companies = Company.includes(:users).order(created_at: :desc)
+        # Spec 039: las demos (una por visita) no se mezclan con los clientes reales.
+        companies = Company.real.includes(:users).order(created_at: :desc)
         @pagy, companies = pagy(companies)
         serialized = ActiveModelSerializers::SerializableResource.new(companies).as_json
         render json: paginate_response(@pagy, serialized)

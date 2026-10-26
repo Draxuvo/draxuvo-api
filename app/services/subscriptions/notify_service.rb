@@ -10,6 +10,8 @@ module Subscriptions
     end
 
     def call
+      return false if company.demo? # Spec 039: una demo nunca manda avisos de cobro.
+
       column = SENT_COLUMN[@kind]
       return false if column && @subscription.public_send(column).present?
 

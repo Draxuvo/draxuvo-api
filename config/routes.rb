@@ -47,6 +47,15 @@ Rails.application.routes.draw do
       get "app_config", to: "app_config#show"
       resources :registrations, only: :create
 
+      # Demo por plan (spec 039): abrirla es público; salir de ella y las aperturas necesitan sesión
+      resources :demo_sessions, only: %i[create index] do
+        delete :current, on: :collection, action: :finish
+      end
+      resources :demo_invites, only: %i[index create] do
+        get :resolve, on: :collection
+        post :revoke, on: :member
+      end
+
       # Suscripción de la empresa actual
       resource :subscription, only: [ :show, :update, :destroy ] do
         collection do

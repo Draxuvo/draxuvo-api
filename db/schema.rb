@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_24_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_26_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -141,7 +141,46 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_24_120000) do
     t.bigint "parent_company_id"
     t.integer "order_mode", default: 0, null: false
     t.bigint "barcode_sequence", default: 0, null: false
+    t.boolean "demo", default: false, null: false
+    t.index ["demo"], name: "index_companies_on_demo_true", where: "demo"
     t.index ["parent_company_id"], name: "index_companies_on_parent_company_id"
+  end
+
+  create_table "demo_invites", force: :cascade do |t|
+    t.string "plan", null: false
+    t.string "scenario", null: false
+    t.string "label", null: false
+    t.string "token_digest", null: false
+    t.bigint "created_by_id"
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_demo_invites_on_created_by_id"
+    t.index ["token_digest"], name: "index_demo_invites_on_token_digest", unique: true
+  end
+
+  create_table "demo_sessions", force: :cascade do |t|
+    t.bigint "company_id"
+    t.bigint "user_id"
+    t.bigint "demo_invite_id"
+    t.string "plan", null: false
+    t.string "scenario", null: false
+    t.string "locale", null: false
+    t.string "contact_name"
+    t.string "contact_email"
+    t.string "contact_phone"
+    t.datetime "expires_at", null: false
+    t.datetime "ended_at"
+    t.string "ended_reason"
+    t.datetime "purged_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_demo_sessions_on_company_id"
+    t.index ["created_at"], name: "index_demo_sessions_on_created_at"
+    t.index ["demo_invite_id"], name: "index_demo_sessions_on_demo_invite_id"
+    t.index ["purged_at", "expires_at"], name: "index_demo_sessions_on_purged_at_and_expires_at"
+    t.index ["user_id"], name: "index_demo_sessions_on_user_id"
   end
 
   create_table "dining_tables", force: :cascade do |t|
@@ -831,6 +870,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_24_120000) do
   add_foreign_key "checks", "dining_tables"
   add_foreign_key "checks", "users", column: "opened_by_id"
   add_foreign_key "checks", "users", column: "waiter_id"
+  add_foreign_key "demo_invites", "users", column: "created_by_id"
+  add_foreign_key "demo_sessions", "companies", on_delete: :nullify
+  add_foreign_key "demo_sessions", "demo_invites"
+  add_foreign_key "demo_sessions", "users", on_delete: :nullify
   add_foreign_key "dining_tables", "companies"
   add_foreign_key "employees", "companies"
   add_foreign_key "employees", "users"

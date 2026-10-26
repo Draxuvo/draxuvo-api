@@ -25,6 +25,7 @@ class SubscriptionSerializer
       active_modules: @company.active_modules.map(&:to_s),
       available_modules: @company.available_modules.map(&:to_s),
       managed_by_parent: @company.branch?,
+      demo: @company.demo?,
       amount: @s.amount,
       iva_amount: @s.iva_amount,
       total_with_iva: @s.total_with_iva,

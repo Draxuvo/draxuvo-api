@@ -122,6 +122,12 @@ class ResendMailer
     end
 
     def send_email(params)
+      # Spec 039: una demo no manda correos reales; tampoco a las direcciones reservadas de sus usuarios efímeros.
+      if Demo::Guard.active? || params[:to].to_s.end_with?(".invalid")
+        log(:info, "#send_email simulado (demo) to=#{params[:to].inspect}")
+        return { "id" => "demo-simulated" }
+      end
+
       api_key = ENV["RESEND_API_KEY"]
       log(:warn, "#send_email RESEND_API_KEY present=#{api_key.present?}")
       log(:warn, "#send_email calling Resend::Emails.send to=#{params[:to].inspect} from=#{params[:from].inspect}")

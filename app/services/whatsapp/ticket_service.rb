@@ -14,6 +14,9 @@ module Whatsapp
     # Intenta enviar el PDF como documento.
     # Si falla por ventana de 24h (código 131026/131047), envía texto como fallback.
     def call
+      # Spec 039: una demo no manda WhatsApp reales.
+      return { "demo" => true } if Demo::Guard.active?
+
       log(:info, "START ticket_id=#{@ticket.id} folio=#{@ticket.folio} phone=#{@phone}")
       validate_config!
 

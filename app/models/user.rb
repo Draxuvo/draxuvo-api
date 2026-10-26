@@ -19,6 +19,8 @@ class User < ApplicationRecord
   scope :by_email, ->(email) { where("email LIKE ?", "%#{email}%") if email.present? }
   scope :by_role, ->(role) { where(role: role) if role.present? }
   scope :sorted, -> { order(created_at: :desc) }
+  # Spec 039: los usuarios efímeros de las demos no cuentan como usuarios reales (no aparecen en lo interno).
+  scope :real, -> { where.not(id: UserCompany.joins(:company).where(companies: { demo: true }).select(:user_id)) }
   scope :excluding_system_emails, -> { where.not(email: [ "draxuvo@mailinator.com" ]) }
   # Administrador global de usuarios (spec 036): quienes dirigen una empresa (administrador o dueño en
   # alguna) y quienes aún no tienen empresa. El personal de piso (solo staff) se ve en Personal de su empresa.

@@ -49,6 +49,18 @@ module ApiErrors
     end
   end
 
+  class GoneError < BaseError
+    def initialize(message: I18n.t("errors.gone", default: "Ya no está disponible"), details: nil)
+      super(status: :gone, message: message, details: details)
+    end
+  end
+
+  class ServiceUnavailableError < BaseError
+    def initialize(message: I18n.t("errors.service_unavailable", default: "Servicio no disponible"), details: nil)
+      super(status: :service_unavailable, message: message, details: details)
+    end
+  end
+
   class TooManyRequestsError < BaseError
     def initialize(message: I18n.t("errors.too_many_requests", default: "Demasiadas solicitudes"), details: nil)
       super(status: :too_many_requests, message: message, details: details)

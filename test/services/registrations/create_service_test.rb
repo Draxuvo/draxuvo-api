@@ -88,4 +88,18 @@ class Registrations::CreateServiceTest < ActiveSupport::TestCase
     assert result.user.staff?
     assert_equal "owner", result.user.role_in(result.company)
   end
+
+  test "a company registered after trying a demo is a real one: no demo flag, no sample data, 30-day trial (spec 039)" do
+    Demo::Provision.call(plan: "pro", scenario: "pro_restaurant", locale: "es")
+
+    result = register(plan: "pro")
+
+    company = result.company
+    assert_not company.demo?
+    assert_equal 0, company.employees.count
+    assert_equal 0, company.products.count
+    assert_equal 0, company.checks.count
+    assert result.subscription.trialing?
+    assert_in_delta Subscription::TRIAL_DAYS.days.from_now.to_i, result.subscription.trial_ends_at.to_i, 10
+  end
 end
