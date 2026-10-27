@@ -46,7 +46,7 @@ class Subscriptions::SyncServiceTest < ActiveSupport::TestCase
     sync(stripe_sub(id: "sub_pro", status: "active", lookup_key: "otro_precio"))
     subscription.reload
     assert subscription.pro?
-    assert_equal 70_000, subscription.amount_cents
+    assert_equal 79_900, subscription.amount_cents
   end
 
   test "copies the period and cancel_at_period_end" do

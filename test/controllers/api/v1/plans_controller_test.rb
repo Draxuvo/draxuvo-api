@@ -16,16 +16,16 @@ class Api::V1::PlansControllerTest < ActionDispatch::IntegrationTest
       "key" => "pro",
       "modules" => %w[employees attendance inventory work_orders tickets reports restaurant terminals],
       "prices" => {
-        "monthly" => { "amount_cents" => 70_000, "iva_cents" => 11_200, "total_cents" => 81_200 },
-        "annual" => { "amount_cents" => 700_000, "iva_cents" => 112_000, "total_cents" => 812_000 }
+        "monthly" => { "amount_cents" => 79_900, "iva_cents" => 12_784, "total_cents" => 92_684 },
+        "annual" => { "amount_cents" => 799_000, "iva_cents" => 127_840, "total_cents" => 926_840 }
       }
     },
     {
       "key" => "enterprise",
       "modules" => ALL_MODULES,
       "prices" => {
-        "monthly" => { "amount_cents" => 129_900, "iva_cents" => 20_784, "total_cents" => 150_684 },
-        "annual" => { "amount_cents" => 1_299_000, "iva_cents" => 207_840, "total_cents" => 1_506_840 }
+        "monthly" => { "amount_cents" => 159_900, "iva_cents" => 25_584, "total_cents" => 185_484 },
+        "annual" => { "amount_cents" => 1_599_000, "iva_cents" => 255_840, "total_cents" => 1_854_840 }
       }
     }
   ].freeze

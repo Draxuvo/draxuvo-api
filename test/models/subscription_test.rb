@@ -104,9 +104,9 @@ class SubscriptionTest < ActiveSupport::TestCase
   test "iva_cents y total_cents en centavos enteros para el plan pro mensual" do
     subscription = subscriptions(:pro_co)
 
-    assert_equal 70_000, subscription.amount_cents
-    assert_equal 11_200, subscription.iva_cents
-    assert_equal 81_200, subscription.total_cents
+    assert_equal 79_900, subscription.amount_cents
+    assert_equal 12_784, subscription.iva_cents
+    assert_equal 92_684, subscription.total_cents
   end
 
   test "iva_cents y total_cents para basic mensual y enterprise anual" do
@@ -115,8 +115,8 @@ class SubscriptionTest < ActiveSupport::TestCase
     assert_equal 46_284, basic.total_cents
 
     enterprise = subscriptions(:enterprise_co)
-    assert_equal 207_840, enterprise.iva_cents
-    assert_equal 1_506_840, enterprise.total_cents
+    assert_equal 255_840, enterprise.iva_cents
+    assert_equal 1_854_840, enterprise.total_cents
   end
 
   test "iva_cents y total_cents son enteros y valen cero en la prueba" do
@@ -131,9 +131,9 @@ class SubscriptionTest < ActiveSupport::TestCase
   test "amount, iva_amount y total_with_iva se conservan en pesos" do
     subscription = subscriptions(:pro_co)
 
-    assert_equal 700.0, subscription.amount
-    assert_equal 112.0, subscription.iva_amount
-    assert_equal 812.0, subscription.total_with_iva
+    assert_equal 799.0, subscription.amount
+    assert_equal 127.84, subscription.iva_amount
+    assert_equal 926.84, subscription.total_with_iva
   end
 
   test "amount_cents no puede ser negativo" do
