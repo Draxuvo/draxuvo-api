@@ -14,6 +14,20 @@ Crea tres productos en MXN: Básico, Pro y Empresa. Cada uno lleva un Price mens
 
 Los montos tienen que coincidir con `app/models/plan.rb`, porque la UI los muestra desde ahí. Para cambiar un precio, crea un Price nuevo, pásale el `lookup_key` (opción *transfer lookup key*) y actualiza `Plan`. El ID resuelto se guarda en cache una hora.
 
+## Tasa de IVA
+
+Los precios van sin IVA y Stripe suma el IVA aparte (spec 042). En cada cuenta de Stripe (prueba y real) crea una sola tasa de impuesto en *Product catalog → Tax rates*:
+
+| Campo | Valor |
+|---|---|
+| Nombre | `IVA` |
+| Porcentaje | `16` |
+| Tipo | No incluido en el precio (*exclusive*) |
+| País | México |
+| Metadata | `draxuvo_tax` = `iva_16` |
+
+La API la encuentra por esa metadata (no hay ID en variables de entorno) y la guarda en cache una hora. Al crear el checkout la pone como tasa predeterminada de la suscripción, por lo que **las renovaciones y los cambios de plan del Customer Portal la heredan** y la factura muestra el IVA como renglón aparte. Si la tasa no existe, el checkout responde 400 `stripe_not_configured` y no crea la sesión: es preferible no cobrar a cobrar sin IVA. Las suscripciones creadas antes de esta corrección no la tienen.
+
 ## Customer Portal
 
 En *Settings → Billing → Customer portal*, activa:
@@ -60,8 +74,9 @@ un cambio de claves y de IDs; no cambia código. Hazlo solo tras el recorrido de
 2. **Productos y precios reales.** Los IDs del modo prueba no existen en el modo real. Crea Básico, Pro y Empresa con los
    seis precios de la tabla de arriba y los mismos `lookup_key` (`draxuvo_<plan>_<monthly|annual>`), en MXN, recurrentes y
    sin IVA incluido (`tax_behavior: exclusive`). Como la API busca por `lookup_key`, no hay IDs que cambiar en ningún lado.
+   Crea también la **tasa de IVA** de la sección «Tasa de IVA»; sin ella el checkout no abre.
 3. **Clave restringida real** (`rk_live_…`) con los mismos permisos: Write en Customers, Checkout Sessions, Subscriptions y
-   Customer portal; Read en Prices; todo lo demás en None. Cópiala directo en Render, no la pegues en chats ni archivos.
+   Customer portal; Read en Prices y en Tax rates; todo lo demás en None. Cópiala directo en Render, no la pegues en chats ni archivos.
 4. **Customer Portal real** (Settings → Billing → Customer portal, ya en modo real): método de pago, historial de facturas,
    cancelar al final del periodo y cambiar de plan con los seis precios y prorrateo.
 5. **Webhook real:** endpoint `https://api.draxuvo.com/api/v1/stripe/webhooks` con los seis eventos de arriba. Su secreto

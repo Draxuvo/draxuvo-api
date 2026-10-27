@@ -62,6 +62,37 @@ class Subscriptions::CreateCheckoutServiceTest < ActiveSupport::TestCase
     end
   end
 
+  test "every plan and cycle is created with the IVA tax rate as the subscription default" do
+    Plan.all.product(Plan::CYCLES).each do |plan, cycle|
+      captured = with_memory_cache do
+        with_checkout_stubs { service(companies(:expired_co), billing_cycle: cycle.to_s).call }
+      end
+      assert_equal [ "txr_iva_16" ], captured.dig(:subscription_data, :default_tax_rates), "#{plan.key} #{cycle}"
+      assert_equal false, captured.dig(:automatic_tax, :enabled)
+    end
+  end
+
+  test "the IVA rate and the remaining trial days travel together in subscription_data" do
+    company = companies(:one)
+    ends_at = company.subscription.trial_ends_at
+    captured = with_memory_cache { with_checkout_stubs { service(company).call } }
+    assert_equal({ default_tax_rates: [ "txr_iva_16" ], trial_end: ends_at.to_i }, captured[:subscription_data])
+  end
+
+  test "without the IVA tax rate in Stripe it fails closed and does not create customer or session" do
+    company = companies(:one)
+    error = nil
+    captured = with_memory_cache do
+      with_checkout_stubs(tax_rates: false) do
+        error = assert_raises(ApiErrors::BadRequestError) { service(company).call }
+      end
+    end
+    assert_equal I18n.t("errors.subscription.stripe_not_configured"), error.details
+    assert_nil captured, "no debe crear la sesión de Checkout"
+    # El stub de Customer.create guardaría "cus_new" si se hubiera llamado.
+    assert_nil company.reload.stripe_id
+  end
+
   test "an invalid plan raises bad request" do
     assert_raises(ApiErrors::BadRequestError) do
       with_memory_cache do

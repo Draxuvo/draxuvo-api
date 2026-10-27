@@ -189,7 +189,8 @@ class Api::V1::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :ok
-    assert_nil captured[:subscription_data]
+    assert_nil captured.dig(:subscription_data, :trial_end)
+    assert_equal [ "txr_iva_16" ], captured.dig(:subscription_data, :default_tax_rates)
   end
 
   test "a suspended company cannot start another checkout" do

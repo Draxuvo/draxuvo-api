@@ -119,6 +119,15 @@ class SubscriptionTest < ActiveSupport::TestCase
     assert_equal 1_506_840, enterprise.total_cents
   end
 
+  test "el IVA de los seis precios del catálogo es exacto en centavos, igual al que cobra Stripe" do
+    Plan.all.product(Plan::CYCLES).each do |plan, cycle|
+      subscription = Subscription.new(plan: plan.key, billing_cycle: cycle, amount_cents: plan.amount_cents(cycle))
+
+      assert_equal subscription.amount_cents * 16, subscription.iva_cents * 100, "#{plan.key} #{cycle}"
+      assert_equal subscription.amount_cents + subscription.iva_cents, subscription.total_cents
+    end
+  end
+
   test "iva_cents y total_cents son enteros y valen cero en la prueba" do
     trial = subscriptions(:one)
 
