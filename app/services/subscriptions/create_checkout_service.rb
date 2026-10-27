@@ -16,6 +16,7 @@ module Subscriptions
       ensure_not_suspended!
       ensure_no_paid_subscription!
       price_id    = PriceLookupService.price_id(@plan, @billing_cycle)
+      tax_rate_id = TaxRateLookupService.tax_rate_id
       ensure_trial_plan_unchanged!
       customer_id = find_or_create_stripe_customer
 
@@ -27,7 +28,7 @@ module Subscriptions
         success_url: @success_url,
         cancel_url: @cancel_url,
         metadata: { company_id: @company.id, plan: @plan, billing_cycle: @billing_cycle },
-        **trial_options,
+        subscription_data: subscription_data(tax_rate_id),
         tax_id_collection: { enabled: true },
         # Stripe exige que el cliente existente acepte el nombre y la dirección fiscal capturados en el checkout.
         customer_update: { name: "auto", address: "auto" },
@@ -59,6 +60,12 @@ module Subscriptions
       )
     end
 
+    # El IVA (spec 042) se fija como tasa predeterminada de la suscripción: las renovaciones y los cambios
+    # de plan la heredan, y la factura lo desglosa aparte del precio, que va sin IVA.
+    def subscription_data(tax_rate_id)
+      { default_tax_rates: [ tax_rate_id ] }.merge(trial_options)
+    end
+
     # Pagar durante la prueba respeta los días que sobran: el primer cobro llega al terminar la prueba.
     # Stripe exige que trial_end esté al menos 48 h adelante; con menos, cobra al momento.
     def trial_options
@@ -66,7 +73,7 @@ module Subscriptions
       ends_at = subscription&.trialing? ? subscription.trial_ends_at : nil
       return {} unless ends_at && ends_at > 2.days.from_now + 1.minute
 
-      { subscription_data: { trial_end: ends_at.to_i } }
+      { trial_end: ends_at.to_i }
     end
 
     # Una suscripción pagada vigente se administra desde el portal, no con otro checkout.

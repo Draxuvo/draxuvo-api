@@ -30,9 +30,10 @@ module StripeHelpers
     }
   end
 
-  # Simula Stripe::Price.list (por lookup_keys), Stripe::Customer.create y
+  # Simula Stripe::Price.list (por lookup_keys), Stripe::TaxRate.list, Stripe::Customer.create y
   # Stripe::Checkout::Session.create. Devuelve los parámetros con que se creó la sesión.
-  def with_checkout_stubs(prices: ALL_LOOKUP_KEYS)
+  # `tax_rates: false` deja la cuenta sin la tasa de IVA.
+  def with_checkout_stubs(prices: ALL_LOOKUP_KEYS, tax_rates: true)
     captured = nil
 
     price_list = lambda do |params = {}, *_rest|
@@ -43,6 +44,13 @@ module StripeHelpers
         data: keys.map { |key| { id: "price_#{key}", object: "price", lookup_key: key, active: true } }
       )
     end
+    tax_rate_list = lambda do |*|
+      Stripe::ListObject.construct_from(
+        object: "list",
+        data: tax_rates ? [ { id: "txr_iva_16", object: "tax_rate", percentage: 16.0, inclusive: false, active: true,
+                              metadata: { draxuvo_tax: "iva_16" } } ] : []
+      )
+    end
     customer_create = ->(*) { Stripe::StripeObject.construct_from(id: "cus_new", object: "customer") }
     session_create = lambda do |params = {}, *_rest|
       captured = params.to_h.deep_symbolize_keys
@@ -51,9 +59,11 @@ module StripeHelpers
     end
 
     Stripe::Price.stub(:list, price_list) do
-      Stripe::Customer.stub(:create, customer_create) do
-        Stripe::Checkout::Session.stub(:create, session_create) do
-          yield
+      Stripe::TaxRate.stub(:list, tax_rate_list) do
+        Stripe::Customer.stub(:create, customer_create) do
+          Stripe::Checkout::Session.stub(:create, session_create) do
+            yield
+          end
         end
       end
     end
