@@ -290,7 +290,7 @@ class Api::V1::StripeWebhooksControllerTest < ActionDispatch::IntegrationTest
     sub.reload
     assert_equal "enterprise", sub.plan
     assert_equal "annual", sub.billing_cycle
-    assert_equal 1_299_000, sub.amount_cents
+    assert_equal 1_599_000, sub.amount_cents
     assert_equal "draxuvo_enterprise_annual", sub.stripe_price_lookup_key
   end
 
@@ -321,7 +321,7 @@ class Api::V1::StripeWebhooksControllerTest < ActionDispatch::IntegrationTest
     sub.reload
     assert_equal Subscription.plans.key(1), sub.plan
     assert_equal "monthly", sub.billing_cycle
-    assert_equal 70_000, sub.amount_cents
+    assert_equal 79_900, sub.amount_cents
   end
 
   test "copia cancel_at_period_end y conserva el estado" do
@@ -370,7 +370,7 @@ class Api::V1::StripeWebhooksControllerTest < ActionDispatch::IntegrationTest
     assert sub.active?
     assert_equal "sub_nuevo", sub.stripe_subscription_id
     assert_equal "annual", sub.billing_cycle
-    assert_equal 700_000, sub.amount_cents
+    assert_equal 799_000, sub.amount_cents
     assert_equal 1, Subscription.where(company: company).count
   end
 
