@@ -9,10 +9,10 @@ Crea tres productos en MXN: Básico, Pro y Empresa. Cada uno lleva un Price mens
 | Plan | Mensual | `lookup_key` mensual | Anual | `lookup_key` anual |
 |---|---|---|---|---|
 | Básico | 399.00 | `draxuvo_basic_monthly` | 3,990.00 | `draxuvo_basic_annual` |
-| Pro | 700.00 | `draxuvo_pro_monthly` | 7,000.00 | `draxuvo_pro_annual` |
-| Empresa | 1,299.00 | `draxuvo_enterprise_monthly` | 12,990.00 | `draxuvo_enterprise_annual` |
+| Pro | 799.00 | `draxuvo_pro_monthly` | 7,990.00 | `draxuvo_pro_annual` |
+| Empresa | 1,599.00 | `draxuvo_enterprise_monthly` | 15,990.00 | `draxuvo_enterprise_annual` |
 
-Los montos tienen que coincidir con `app/models/plan.rb`, porque la UI los muestra desde ahí. Para cambiar un precio, crea un Price nuevo, pásale el `lookup_key` (opción *transfer lookup key*) y actualiza `Plan`. El ID resuelto se guarda en cache una hora.
+Los montos tienen que coincidir con `app/models/plan.rb`, porque la UI los muestra desde ahí. Para cambiar un precio, crea un Price nuevo, pásale el `lookup_key` (opción *transfer lookup key*) y actualiza `Plan`. El ID resuelto se guarda en cache una hora. Al subir Pro y Empresa a 799 y 1,599 (spec 041) solo hacen falta Prices nuevos para esos dos planes, mensual y anual; el de Básico no cambia.
 
 ## Tasa de IVA
 

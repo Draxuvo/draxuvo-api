@@ -4,8 +4,8 @@ require "test_helper"
 class PlanTest < ActiveSupport::TestCase
   EXPECTED_PRICES = {
     basic:      { monthly: 39_900,  annual: 399_000 },
-    pro:        { monthly: 70_000,  annual: 700_000 },
-    enterprise: { monthly: 129_900, annual: 1_299_000 }
+    pro:        { monthly: 79_900,  annual: 799_000 },
+    enterprise: { monthly: 159_900, annual: 1_599_000 }
   }.freeze
 
   EXPECTED_MODULES = {

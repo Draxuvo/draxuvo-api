@@ -41,8 +41,8 @@ end
 Plan::CATALOG = [
   Plan.new(key: :basic, monthly_amount_cents: 39_900,
            modules: %i[employees attendance inventory reports].freeze),
-  Plan.new(key: :pro, monthly_amount_cents: 70_000,
+  Plan.new(key: :pro, monthly_amount_cents: 79_900,
            modules: %i[employees attendance inventory work_orders tickets reports restaurant terminals].freeze),
-  Plan.new(key: :enterprise, monthly_amount_cents: 129_900,
+  Plan.new(key: :enterprise, monthly_amount_cents: 159_900,
            modules: Plan::MODULES)
 ].index_by(&:key).freeze
