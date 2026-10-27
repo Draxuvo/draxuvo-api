@@ -22,11 +22,21 @@ module Demo
         [ "ABA-014", "Jabón de barra", "Limpieza", 9, 15, 70, 15 ]
       ].freeze
 
+      # Los tipos iniciales del giro «servicio» (Refacción, Material) no tienen sentido en una tienda de abarrotes.
+      TYPE_NAMES = { "sold" => "Servicio", "counted_sold" => "Mercancía", "supply" => "Insumo" }.freeze
+
       def build
+        rename_product_types
         employees = create_employees
         fill_attendance(employees)
         PRODUCTS.each { |row| create_product(row) }
         pay_last_month_payroll
+      end
+
+      private
+
+      def rename_product_types
+        TYPE_NAMES.each { |kind, name| company.product_types.find_by!(kind: kind).update!(name: name) }
       end
     end
   end

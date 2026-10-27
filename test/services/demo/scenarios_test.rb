@@ -40,6 +40,13 @@ class Demo::ScenariosTest < ActiveSupport::TestCase
     end
   end
 
+  test "basic_retail names its product types for a grocery store" do
+    company = provision("basic_retail").company
+
+    assert_equal %w[Insumo Mercancía Servicio], company.product_types.pluck(:name).sort
+    assert_equal [ "Mercancía" ], company.products.includes(:product_type).map { |p| p.product_type.name }.uniq
+  end
+
   test "basic_retail has no orders, restaurant or terminals" do
     company = provision("basic_retail").company
 
