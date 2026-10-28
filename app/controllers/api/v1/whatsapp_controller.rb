@@ -9,6 +9,11 @@ module Api
       def show
         render_state
       end
+
+      # GET /api/v1/whatsapp/guide — el texto exacto para crear cada plantilla en Meta (solo los tipos con plantilla).
+      def guide
+        render json: { results: ::Whatsapp::MessageTypes.with_template.map(&:guide) }
+      end
     end
   end
 end

@@ -472,6 +472,8 @@ en:
       not_authorized_recipient: "That number is not authorized in the Meta test account"
       template_missing: "The template does not exist in that language or is not approved"
       template_variables: "The template has a different number of variables than Draxuvo expects"
+      template_variables_count: "The template has %{found} variable(s) and Draxuvo expects %{expected}"
+      template_other_language: "It exists, but not in that language (languages: %{languages})"
       template_paused: "Meta paused or disabled the template"
       rate_limited: "Meta limited sending for a moment; try again later"
       unknown: "Meta rejected the request"

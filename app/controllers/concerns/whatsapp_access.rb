@@ -14,8 +14,14 @@ module WhatsappAccess
     WhatsappStateSerializer.new(user: current_user).as_json
   end
 
-  def render_state(status: :ok, extra: {})
-    render json: state_json.merge(extra), status: status
+  # `stale_kind`: el tipo cuya verificación no pudo hacerse (Meta sin respuesta); se marca con `stale: true` y conserva
+  # el último estado conocido.
+  def render_state(status: :ok, stale_kind: nil)
+    state = state_json
+    if stale_kind
+      state[:message_types] = state[:message_types].map { |type| type[:kind] == stale_kind ? type.merge(stale: true) : type }
+    end
+    render json: state, status: status
   end
 
   def render_stale_object

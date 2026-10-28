@@ -19,6 +19,8 @@ module Whatsapp
 
     def self.template_recovered!(type) = new.template_recovered!(type)
 
+    def self.template_unusable!(kind, status:, detail:) = new.template_unusable!(kind, status: status, detail: detail)
+
     def record_failure(kind, failure)
       return unless failure && Whatsapp::Config.current.panel?
 
@@ -44,6 +46,13 @@ module Whatsapp
       type.update!(problem_notified_at: nil) if type.problem_notified_at
     end
 
+    # Una verificación encontró la plantilla inutilizable (`status`: pending, rejected, not_found o incompatible). Si el tipo
+    # estaba encendido se apaga solo y se avisa; conserva el detalle que dio Meta.
+    def template_unusable!(kind, status:, detail:)
+      reason = TEMPLATE_STATUS_BY_REASON.key(status) || "template_paused"
+      template_failed(kind, Whatsapp::GraphClient::Failure.new(family: :template, reason: reason), status: status, detail: detail)
+    end
+
     private
 
     def connection_failed(failure)
@@ -63,17 +72,18 @@ module Whatsapp
       notify(problem: "connection", target: "connection", detail: detail, since: since)
     end
 
-    def template_failed(kind, failure)
+    def template_failed(kind, failure, status: nil, detail: nil)
       type = WhatsappMessageType.find_by(kind: kind.to_s)
       return unless type&.uses_template?
 
-      detail = reason_text(failure.reason)
+      detail ||= reason_text(failure.reason)
+      status ||= TEMPLATE_STATUS_BY_REASON.fetch(failure.reason, "rejected")
       since = Time.current
       auto_off = false
 
       type.with_lock do
         auto_off = type.enabled? && type.problem_notified_at.nil?
-        type.update!(template_status: TEMPLATE_STATUS_BY_REASON.fetch(failure.reason, "rejected"), template_detail: detail,
+        type.update!(template_status: status, template_detail: detail,
                      template_checked_at: since, enabled: false,
                      problem_notified_at: auto_off ? since : type.problem_notified_at)
       end

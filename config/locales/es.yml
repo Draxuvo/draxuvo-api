@@ -472,6 +472,8 @@ es:
       not_authorized_recipient: "Ese número no está autorizado en la cuenta de prueba de Meta"
       template_missing: "La plantilla no existe en ese idioma o no está aprobada"
       template_variables: "La plantilla tiene un número de variables distinto al que espera Draxuvo"
+      template_variables_count: "La plantilla tiene %{found} variable(s) y Draxuvo espera %{expected}"
+      template_other_language: "Existe, pero no en ese idioma (idiomas: %{languages})"
       template_paused: "Meta pausó o deshabilitó la plantilla"
       rate_limited: "Meta limitó los envíos por un momento; inténtalo más tarde"
       unknown: "Meta rechazó la petición"
