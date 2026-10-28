@@ -146,3 +146,16 @@ escenarios deterministas (`app/services/demo/scenarios/`: `basic_retail`, `pro_s
 `ResendMailer`, `Whatsapp::*` y `Subscriptions::*` simulen o bloqueen todo efecto externo (`Demo::Guard`). Las demos se excluyen de las
 listas y métricas del super admin (`Company.real`, `User.real`). Límites: `DEMO_RATE_LIMIT`, `DEMO_MAX_ACTIVE`,
 `DEMO_MAX_PROVISIONING`, `DEMO_TTL_MINUTES` y `DEMO_INVITE_DAYS`. `bin/rails demo:benchmark` mide cuánto tarda cada escenario (objetivo: 5 s).
+
+### Alertas operativas (spec 045)
+
+Dueño y administrador (`require_boss!`) ven lo que pide atención. **Las alertas no se guardan**: `Alerts::Collector` las arma al leer
+(`GET /alerts`, paginado con `{ info, results }` más `count` y `snoozed`) con una fuente por tipo en `app/services/alerts/sources/`
+(`KitchenWait`, `KitchenPreparing`, `WorkOrderStalled`, `TableOpen`, `LowStock`; cada una declara su `module_key`, y un tipo con el módulo apagado
+no se evalúa). Los límites salen de `AlertSetting` (`thresholds` anidado, solo lo que el negocio cambió; comandas por `Station#kind`);
+`POST/DELETE /alerts/snooze` pospone 30, 60 o 120 min (`AlertSnooze`, `low_stock` no se pospone; la `subject_key` lleva el origen del
+elemento y la posposición se borra al leer si el elemento avanzó). `GET/PATCH /alert_settings` y `/notification_preference`
+(`NotificationPreference` por persona y empresa). Stock bajo: `StockAlerts::ScanJob` (cada 5 min) detecta con `Scan`, espera
+`StockAlertState::GRACE` y manda agrupado con `Dispatch`/`Notify`; `DailySummaryJob` (cada hora) manda el resumen a la hora local de la empresa;
+`Alerts::Recipients` decide a quién; cada envío queda en `AlertDelivery`. Correo: `ResendMailer.stock_alert`; WhatsApp:
+`Whatsapp::StockAlertService` (plantilla, `unavailable` si no hay `WHATSAPP_*`). Demos y empresas sin acceso no mandan nada (`StockAlerts::Companies`).

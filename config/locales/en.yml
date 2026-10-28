@@ -47,6 +47,7 @@ en:
       greater_than: "must be greater than %{count}"
       taken: "has already been taken"
       phone_required: "needs a saved phone number"
+      invalid: "is invalid"
       inclusion: "is not valid"
       too_long: "is too long (maximum %{count} characters)"
       only_integer: "must be an integer"

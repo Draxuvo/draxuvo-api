@@ -58,6 +58,7 @@ class Api::V1::AlertSettingsControllerTest < ActionDispatch::IntegrationTest
       { kitchen_wait: { banquets: 5 } } ].each do |bad|
       patch_settings({ thresholds: bad })
       assert_response :unprocessable_entity, bad.inspect
+      assert_no_match(/translation missing/i, json.dig("error", "details").join, "el mensaje debe estar traducido: #{bad.inspect}")
     end
     patch_settings({ summary_hour: 24 })
     assert_response :unprocessable_entity

@@ -47,6 +47,7 @@ es:
       greater_than: "debe ser mayor que %{count}"
       taken: "ya está en uso"
       phone_required: "requiere un número de teléfono guardado"
+      invalid: "no es válido"
       inclusion: "no es válido"
       too_long: "es demasiado largo (máximo %{count} caracteres)"
       only_integer: "debe ser un número entero"

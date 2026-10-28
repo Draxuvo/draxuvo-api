@@ -91,6 +91,26 @@ WhatsApp responde 422 con "El envío por WhatsApp no está disponible por ahora.
 y el registro de empresas no depende de ella. Para activarlo después: definir `WHATSAPP_ACCESS_TOKEN` y
 `WHATSAPP_PHONE_NUMBER_ID` (y, si aplica, `WHATSAPP_OTP_TEMPLATE_NAME` / `WHATSAPP_OTP_TEMPLATE_LANG`) en Render.
 
+**Avisos de stock bajo (spec 045).** Son mensajes que inicia el negocio, así que fuera de la ventana de 24 h Meta solo
+acepta una **plantilla aprobada**. Antes de activar el canal:
+
+1. En Meta (WhatsApp Manager → Message templates) crea la plantilla `stock_bajo`, categoría *Utility*, idioma `es_MX`,
+   con tres variables en el cuerpo: `{{1}}` empresa, `{{2}}` número de productos y `{{3}}` los primeros nombres. Ejemplo:
+   «Stock bajo en {{1}}: {{2}} producto(s) llegaron a su mínimo ({{3}}). Revísalos en el inventario.»
+2. Espera la aprobación y define en Render `WHATSAPP_STOCK_TEMPLATE_NAME` (por omisión `stock_bajo`) y
+   `WHATSAPP_STOCK_TEMPLATE_LANG` (por omisión `es_MX`), además de `WHATSAPP_ACCESS_TOKEN` y `WHATSAPP_PHONE_NUMBER_ID`.
+
+Sin esas variables el canal queda como `unavailable`: no falla nada, el correo y la alerta del panel siguen funcionando y cada
+intento queda en `alert_deliveries`. Para revisar qué se mandó a quién (solo lectura):
+
+```bash
+bin/withenv prod bin/rails console --sandbox
+AlertDelivery.where(company_id: 1).order(id: :desc).limit(20).pluck(:created_at, :user_id, :channel, :kind, :status, :error)
+```
+
+Los avisos corren con dos trabajos recurrentes en `config/recurring.yml`: `StockAlerts::ScanJob` (cada 5 minutos) y
+`StockAlerts::DailySummaryJob` (cada hora en punto; manda el resumen a las empresas cuya hora local es la configurada).
+
 ## Versión mínima de la app móvil (FR-015)
 
 `MIN_APP_VERSION_IOS` y `MIN_APP_VERSION_ANDROID` en Render (semver). Subirlas obliga a actualizar sin publicar otra
