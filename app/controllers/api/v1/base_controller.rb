@@ -125,9 +125,9 @@ module Api
       end
 
       def handle_invalid(e)
-        render json: ApiErrors::UnprocessableEntityError.new(
-          details: e.record.errors.full_messages
-        ).as_json, status: :unprocessable_entity
+        details = e.record.errors.full_messages
+        details = [ e.message ] if details.empty?
+        render json: ApiErrors::UnprocessableEntityError.new(details: details).as_json, status: :unprocessable_entity
       end
     end
   end

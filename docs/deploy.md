@@ -27,7 +27,9 @@ arranca y el log dice cuáles (`RequiredEnv::MissingError`, `config/initializers
 - **Manual:** Render → `draxuvo-api` → **Manual Deploy → Deploy latest commit**.
 - Cada cambio de variables de entorno dispara un despliegue. Al cambiar varias, hazlo en un solo guardado.
 - Al arrancar, `bin/docker-entrypoint` corre `db:prepare`: aplica migraciones y, en una base vacía, los seeds (crea al
-  super admin con `SUPER_ADMIN_PASSWORD`). Los datos demo **no** se cargan en producción.
+  super admin con `SUPER_ADMIN_PASSWORD`). Los datos demo **no** se cargan en producción. Las unidades de medida (`units`, 9 filas) son datos de referencia: se
+  reponen solas al migrar (`SeedUnits`), en el arranque (`Unit.ensure_catalog!`) y al dar de alta una empresa. Si vacías
+  la base, verifica con `bin/rails runner 'puts Unit.count'` (debe dar 9); sin ellas fallaban las demos y el alta de empresas.
 
 ## Revertir (objetivo: menos de 15 minutos)
 

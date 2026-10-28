@@ -10,6 +10,8 @@ fi
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
   ./bin/rails db:seed
+  # Datos de referencia sin depender del seed del super admin (spec 044).
+  ./bin/rails runner 'Unit.ensure_catalog!'
 fi
 
 exec "${@}"

@@ -35,21 +35,6 @@ puts "Super admin creado/actualizado exitosamente!"
 # ─────────────────────────────────────────
 # UNITS
 # ─────────────────────────────────────────
-units_data = [
-  { key: "pza",  name: "Pieza",       group: "cantidad", position: 1 },
-  { key: "hr",   name: "Hora",        group: "tiempo",   position: 2 },
-  { key: "kg",   name: "Kilogramo",   group: "peso",     position: 3 },
-  { key: "lt",   name: "Litro",       group: "volumen",  position: 4 },
-  { key: "mts",  name: "Metro",       group: "longitud", position: 5 },
-  { key: "serv", name: "Servicio",    group: "servicio", position: 6 },
-  { key: "g",    name: "Gramo",       group: "peso",     position: 7 },
-  { key: "ml",   name: "Mililitro",   group: "volumen",  position: 8 },
-  { key: "paq",  name: "Paquete",     group: "cantidad", position: 9 }
-]
-units_data.each do |data|
-  Unit.find_or_create_by!(key: data[:key]) do |u|
-    u.assign_attributes(name: data[:name], group: data[:group], position: data[:position])
-  end
-end
-puts "  [ok] #{units_data.size} units"
+Unit.ensure_catalog!
+puts "  [ok] #{Unit::CATALOG.size} units"
 load Rails.root.join("db/seeds/demo.rb") if Rails.env.development?

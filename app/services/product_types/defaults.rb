@@ -17,6 +17,8 @@ module ProductTypes
 
     # Crea los tipos iniciales que le falten a la empresa (por `kind`, sin duplicar).
     def self.create_missing(company)
+      # Los tipos apuntan a unidades del catálogo: si faltan (base vaciada), se reponen antes (spec 044).
+      Unit.ensure_catalog!
       existing = company.product_types.where.not(kind: nil).pluck(:kind)
       DEFINITIONS.fetch(company.order_mode).each_with_index do |definition, index|
         next if existing.include?(definition[:kind])
