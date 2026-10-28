@@ -46,6 +46,8 @@ es:
       formats_limit: "Una empresa puede tener hasta %{count} formatos propios"
       greater_than: "debe ser mayor que %{count}"
       taken: "ya está en uso"
+      phone_required: "requiere un número de teléfono guardado"
+      invalid: "no es válido"
       inclusion: "no es válido"
       too_long: "es demasiado largo (máximo %{count} caracteres)"
       only_integer: "debe ser un número entero"
@@ -418,3 +420,18 @@ es:
       waiter_not_member: "Esa persona no es de la empresa"
       cancelled_item: "El artículo ya está cancelado"
     stock_note: "Cuenta #%{id}"
+  # Alertas operativas (spec 045)
+  alerts:
+    labels:
+      table: "Mesa %{name}"
+      takeout: "Para llevar (%{name})"
+      round: "%{where} · Comanda #%{number} · %{station}"
+      round_no_station: "%{where} · Comanda #%{number}"
+      work_order: "Orden #%{id} · %{title}"
+    errors:
+      invalid_minutes: "El plazo debe ser de 30 minutos, 1 hora o 2 horas"
+      not_snoozable: "Este tipo de alerta no se puede posponer"
+      phone_required: "Guarda tu número de teléfono para recibir avisos por WhatsApp"
+    email:
+      immediate_subject: "Stock bajo en %{company}"
+      daily_subject: "Resumen de stock bajo · %{company}"

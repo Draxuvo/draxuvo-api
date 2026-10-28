@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_27_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_28_100400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,46 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_120000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "alert_deliveries", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "user_id"
+    t.string "channel", null: false
+    t.string "kind", null: false
+    t.bigint "product_ids", default: [], null: false, array: true
+    t.string "status", null: false
+    t.text "error"
+    t.date "sent_on", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_alert_deliveries_on_company_id"
+    t.index ["user_id", "company_id", "channel", "sent_on"], name: "index_alert_deliveries_one_daily_per_day", unique: true, where: "((kind)::text = 'daily'::text)"
+    t.index ["user_id"], name: "index_alert_deliveries_on_user_id"
+  end
+
+  create_table "alert_settings", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.jsonb "thresholds", default: {}, null: false
+    t.integer "summary_hour", limit: 2, default: 8, null: false
+    t.string "time_zone", default: "America/Mexico_City", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_alert_settings_on_company_id", unique: true
+  end
+
+  create_table "alert_snoozes", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "subject_key", null: false
+    t.datetime "snoozed_until", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "kind", "subject_key"], name: "index_alert_snoozes_on_subject", unique: true
+    t.index ["company_id", "snoozed_until"], name: "index_alert_snoozes_on_company_id_and_snoozed_until"
+    t.index ["company_id"], name: "index_alert_snoozes_on_company_id"
+    t.index ["user_id"], name: "index_alert_snoozes_on_user_id"
   end
 
   create_table "attendances", force: :cascade do |t|
@@ -267,6 +307,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_120000) do
     t.index ["actor_id"], name: "index_module_changes_on_actor_id"
     t.index ["company_id", "created_at"], name: "index_module_changes_on_company_id_and_created_at"
     t.index ["company_id"], name: "index_module_changes_on_company_id"
+  end
+
+  create_table "notification_preferences", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "company_id", null: false
+    t.boolean "stock_email", default: true, null: false
+    t.boolean "stock_whatsapp", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_notification_preferences_on_company_id"
+    t.index ["user_id", "company_id"], name: "index_notification_preferences_on_user_and_company", unique: true
+    t.index ["user_id"], name: "index_notification_preferences_on_user_id"
   end
 
   create_table "payment_terminals", force: :cascade do |t|
@@ -593,6 +645,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_120000) do
     t.index ["company_id"], name: "index_stations_on_company_id"
   end
 
+  create_table "stock_alert_states", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "product_id", null: false
+    t.datetime "detected_at", null: false
+    t.datetime "notified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_stock_alert_states_on_company_id"
+    t.index ["product_id"], name: "index_stock_alert_states_on_product_id", unique: true
+  end
+
   create_table "stock_count_items", force: :cascade do |t|
     t.bigint "stock_count_id", null: false
     t.bigint "product_id", null: false
@@ -852,6 +915,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_120000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "alert_deliveries", "companies"
+  add_foreign_key "alert_deliveries", "users", on_delete: :nullify
+  add_foreign_key "alert_settings", "companies"
+  add_foreign_key "alert_snoozes", "companies"
+  add_foreign_key "alert_snoozes", "users", on_delete: :nullify
   add_foreign_key "attendances", "companies"
   add_foreign_key "attendances", "employees"
   add_foreign_key "attendances", "users", column: "checkin_by_id"
@@ -884,6 +952,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_120000) do
   add_foreign_key "label_formats", "companies"
   add_foreign_key "module_changes", "companies"
   add_foreign_key "module_changes", "users", column: "actor_id"
+  add_foreign_key "notification_preferences", "companies"
+  add_foreign_key "notification_preferences", "users", on_delete: :cascade
   add_foreign_key "payment_terminals", "companies"
   add_foreign_key "payroll_adjustments", "companies"
   add_foreign_key "payroll_adjustments", "payroll_payments"
@@ -915,6 +985,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_120000) do
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "stations", "companies"
+  add_foreign_key "stock_alert_states", "companies"
+  add_foreign_key "stock_alert_states", "products", on_delete: :cascade
   add_foreign_key "stock_count_items", "products"
   add_foreign_key "stock_count_items", "stock_counts"
   add_foreign_key "stock_counts", "companies"
