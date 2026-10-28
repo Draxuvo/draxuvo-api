@@ -242,6 +242,135 @@ class WhatsappMessageTypesControllerTest < ActionDispatch::IntegrationTest
     assert_equal true, type_json("ticket")["enabled"]
   end
 
+  def delivered = http_response(Net::HTTPOK, 200, "messages" => [ { "id" => "wamid.1" } ])
+
+  def post_test(kind, params = {}, headers: @headers)
+    post "/api/v1/whatsapp/message_types/#{kind}/test", params: params, headers: headers, as: :json
+  end
+
+  def log_tests(count, user: @super_admin)
+    count.times { WhatsappEvent.log!(action: "test_sent", target: "ticket", user: user, data: { to: "••••0000" }) }
+  end
+
+  test "a test message is sent after re-checking the template, masks the number and counts toward the limit" do
+    with_meta(listing, delivered) { post_test("stock_alert", { phone: "55 1234 5678" }) }
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal "sent", body["result"]
+    assert_equal "••••5678", body["to"]
+    assert_equal 4, body["tests_remaining"]
+    event = WhatsappEvent.find_by!(action: "test_sent", target: "stock_alert")
+    assert_equal "ok", event.result
+    assert_equal({ "to" => "••••5678" }, event.data)
+    assert_not_includes event.to_json, "5512345678"
+    assert_not_includes response.body, "5512345678"
+  end
+
+  test "it works with the channel off" do
+    assert_not WhatsappConnection.first.enabled?
+
+    with_meta(delivered) { post_test("ticket", { phone: "5512345678" }) }
+
+    assert_response :ok
+  end
+
+  test "it uses the profile phone when none is given" do
+    @super_admin.update_columns(phone: "5598765432")
+
+    with_meta(delivered) { post_test("ticket") }
+
+    assert_response :ok
+    assert_equal "••••5432", response.parsed_body["to"]
+  end
+
+  test "a phone that is not 10 to 15 digits answers 422 invalid_phone and calls nothing" do
+    http = with_meta { post_test("ticket", { phone: "12345" }) }
+
+    assert_response :unprocessable_entity
+    assert_equal "invalid_phone", response.parsed_body.dig("error", "details", "code")
+    assert_empty http.requests
+  end
+
+  test "the sixth test in an hour answers 429, per user" do
+    log_tests(5)
+
+    with_meta(delivered) { post_test("ticket", { phone: "5512345678" }) }
+
+    assert_response :too_many_requests
+    assert_equal "tests_limit", response.parsed_body.dig("error", "details", "code")
+
+    other = User.create!(first_name: "Otro", last_name: "Admin", email: "otro-admin@draxuvo.test", phone: "5511112222",
+                         password: "password123", active: true, role: :super_admin)
+    with_meta(delivered) { post_test("ticket", { phone: "5512345678" }, headers: auth_headers(other, nil)) }
+    assert_response :ok
+  end
+
+  test "tests older than an hour no longer count" do
+    log_tests(5)
+    WhatsappEvent.where(action: "test_sent").update_all(created_at: 2.hours.ago)
+
+    with_meta(delivered) { post_test("ticket", { phone: "5512345678" }) }
+
+    assert_response :ok
+  end
+
+  test "a template that is no longer approved blocks the test with 422" do
+    @stock.update_columns(enabled: false)
+    with_meta(listing(status: "PAUSED")) { post_test("stock_alert", { phone: "5512345678" }) }
+
+    assert_response :unprocessable_entity
+    assert_equal "template_not_approved", response.parsed_body.dig("error", "details", "code")
+    assert_not WhatsappEvent.exists?(action: "test_sent")
+  end
+
+  test "without a connection the test answers 422 not_connected" do
+    WhatsappConnection.first.update_columns(status: "not_connected")
+
+    post_test("ticket", { phone: "5512345678" })
+
+    assert_response :unprocessable_entity
+    assert_equal "not_connected", response.parsed_body.dig("error", "details", "code")
+  end
+
+  test "a recipient Meta rejects answers 422 with the reason, logs the failure and counts it" do
+    with_meta(http_response(Net::HTTPBadRequest, 400, "error" => { "code" => 131_030, "message" => "x" })) do
+      post_test("ticket", { phone: "5512345678" })
+    end
+
+    assert_response :unprocessable_entity
+    details = response.parsed_body.dig("error", "details")
+    assert_equal "test_failed", details["code"]
+    assert_equal "not_authorized_recipient", details["reason"]
+    assert_equal "131030", details["meta_code"]
+    assert WhatsappEvent.exists?(action: "test_sent", result: "failed")
+  end
+
+  test "with Meta down the test answers 503 and does not count" do
+    with_meta(Net::ReadTimeout) { post_test("ticket", { phone: "5512345678" }) }
+
+    assert_response :service_unavailable
+    assert_equal "meta_unreachable", response.parsed_body.dig("error", "details", "code")
+    assert_not WhatsappEvent.exists?(action: "test_sent")
+  end
+
+  test "a test is not a real send: it changes no switch" do
+    @stock.update_columns(enabled: false)
+
+    with_meta(listing, delivered) { post_test("stock_alert", { phone: "5512345678" }) }
+
+    assert_equal false, @stock.reload.enabled
+  end
+
+  test "owner, admin and staff cannot send tests" do
+    company = companies(:enterprise_co)
+    %w[owner admin staff].each do |role|
+      post_test("ticket", { phone: "5512345678" }, headers: auth_headers(create_member(company, role: role), company))
+
+      assert_response :forbidden, "test as #{role}"
+    end
+  end
+
   test "owner, admin and staff are forbidden" do
     company = companies(:enterprise_co)
     %w[owner admin staff].each do |role|

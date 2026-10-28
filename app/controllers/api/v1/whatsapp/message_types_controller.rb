@@ -23,7 +23,52 @@ module Api
           render_state(stale_kind: stale_kind(outcome))
         end
 
+        # POST /api/v1/whatsapp/message_types/:kind/test — mensaje de prueba (5 por hora por super admin).
+        def test
+          phone = test_phone
+          raise ApiErrors::TooManyRequestsError.new(message: I18n.t("whatsapp_admin.errors.tests_limit"), details: { code: "tests_limit" }) if ::Whatsapp::TestLimit.remaining(current_user).zero?
+
+          result = ::Whatsapp::TestMessage.call(@type, phone: phone, user: current_user)
+          masked = WhatsappEvent.mask_phone(phone)
+          log_test(result, masked)
+          raise_test_error(result) unless result.sent? || result.status == "simulated"
+
+          render json: { result: result.status, to: masked, tests_remaining: ::Whatsapp::TestLimit.remaining(current_user) }
+        end
+
         private
+
+        # Solo dígitos, de 10 a 15; si no viene, el del perfil de quien prueba.
+        def test_phone
+          digits = (params[:phone].presence || current_user.phone).to_s.gsub(/\D/, "")
+          return digits if digits.length.between?(10, 15)
+
+          raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("whatsapp_admin.errors.invalid_phone"), details: { code: "invalid_phone" })
+        end
+
+        # Solo cuentan para el límite las pruebas que llegaron a Meta (enviadas o rechazadas).
+        def log_test(result, masked)
+          return unless %w[sent failed].include?(result.status)
+
+          WhatsappEvent.log!(action: "test_sent", target: @type.kind, user: current_user, result: result.sent? ? "ok" : "failed",
+                             meta_code: result.meta_code, data: { to: masked, reason: result.reason }.compact)
+        end
+
+        def raise_test_error(result)
+          case result.status
+          when "unreachable"
+            raise ApiErrors::ServiceUnavailableError.new(message: I18n.t("whatsapp_admin.reasons.meta_unreachable"), details: { code: "meta_unreachable" })
+          when "blocked"
+            raise ApiErrors::UnprocessableEntityError.new(
+              message: I18n.t("whatsapp_admin.errors.#{result.reason}"), details: { code: result.reason, template_status: result.template_status }.compact
+            )
+          else
+            raise ApiErrors::UnprocessableEntityError.new(
+              message: I18n.t("whatsapp_admin.reasons.#{result.reason}", default: I18n.t("whatsapp_admin.reasons.unknown")),
+              details: { code: "test_failed", reason: result.reason, meta_code: result.meta_code&.to_s }
+            )
+          end
+        end
 
         def set_type
           raise ActiveRecord::RecordNotFound unless WhatsappMessageType::KINDS.include?(params[:kind])

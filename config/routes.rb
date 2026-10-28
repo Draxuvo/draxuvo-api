@@ -177,9 +177,11 @@ Rails.application.routes.draw do
           post :verify
         end
         resource :channel, only: :update
+        resources :events, only: :index
         resources :message_types, only: :update, param: :kind do
           member do
             post :verify
+            post :test
           end
         end
       end
