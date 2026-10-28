@@ -22,12 +22,11 @@ module Api
 
       # POST /api/v1/companies — super_admin: crea empresa (after_create abre la prueba Pro)
       def create
+        # save! deja subir el RecordInvalid de los after_create (suscripción, tipos de producto): `save` lo
+        # traga y devolvía 422 con details vacío (spec 044).
         company = Company.new(company_params)
-        if company.save
-          render json: company, status: :created
-        else
-          raise ApiErrors::UnprocessableEntityError.new(details: company.errors.full_messages)
-        end
+        company.save!
+        render json: company, status: :created
       end
 
       # PATCH /api/v1/company  (usuario actual)
