@@ -46,6 +46,7 @@ en:
       formats_limit: "A company can have up to %{count} custom formats"
       greater_than: "must be greater than %{count}"
       taken: "has already been taken"
+      phone_required: "needs a saved phone number"
       inclusion: "is not valid"
       too_long: "is too long (maximum %{count} characters)"
       only_integer: "must be an integer"
@@ -418,3 +419,18 @@ en:
       waiter_not_member: "That person does not belong to the company"
       cancelled_item: "The item is already cancelled"
     stock_note: "Check #%{id}"
+  # Operational alerts (spec 045)
+  alerts:
+    labels:
+      table: "Table %{name}"
+      takeout: "Takeout (%{name})"
+      round: "%{where} · Order #%{number} · %{station}"
+      round_no_station: "%{where} · Order #%{number}"
+      work_order: "Work order #%{id} · %{title}"
+    errors:
+      invalid_minutes: "The delay must be 30 minutes, 1 hour or 2 hours"
+      not_snoozable: "This kind of alert cannot be snoozed"
+      phone_required: "Save your phone number to get WhatsApp notices"
+    email:
+      immediate_subject: "Low stock at %{company}"
+      daily_subject: "Low stock summary · %{company}"

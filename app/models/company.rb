@@ -22,6 +22,12 @@ class Company < ApplicationRecord
   has_many :payroll_payments, dependent: :destroy
   has_many :payroll_adjustments, dependent: :destroy
   has_many :payroll_events, dependent: :delete_all
+  # Spec 045: alertas operativas. Son datos propios de la empresa; se borran con ella (y con la purga de una demo).
+  has_one :alert_setting, dependent: :delete
+  has_many :alert_snoozes, dependent: :delete_all
+  has_many :notification_preferences, dependent: :delete_all
+  has_many :stock_alert_states, dependent: :delete_all
+  has_many :alert_deliveries, dependent: :delete_all
   has_one :subscription, dependent: :destroy
   # Spec 039: la apertura de demo de esta empresa (solo la principal la tiene; la sucursal usa la de su principal).
   has_one :own_demo_session, class_name: "DemoSession", dependent: :nullify

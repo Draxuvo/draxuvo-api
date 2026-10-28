@@ -159,6 +159,16 @@ Rails.application.routes.draw do
 
       get "dashboard", to: "dashboard#index"
 
+      # Alertas operativas (spec 045)
+      resource :alert_settings, only: %i[show update]
+      resource :notification_preference, only: %i[show update]
+      resources :alerts, only: :index do
+        collection do
+          post   :snooze, to: "alert_snoozes#create"
+          delete :snooze, to: "alert_snoozes#destroy"
+        end
+      end
+
       # Restaurante (spec 013): mesas, cuentas, comandas, estaciones y cobro
       namespace :restaurant do
         resources :stations, only: %i[index create update] do

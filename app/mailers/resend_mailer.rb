@@ -85,6 +85,27 @@ class ResendMailer
       false
     end
 
+    # Aviso de stock bajo para dueño y administrador (spec 045): `kind` es "immediate" (productos que acaban de bajar)
+    # o "daily" (resumen de todo lo que sigue bajo). Sin datos de clientes ni montos de cuentas (FR-025).
+    def stock_alert(user:, company_name:, kind:, products:, locale: "es")
+      raise ArgumentError, "User email is required" unless user&.email.present?
+
+      locale = I18n.available_locales.map(&:to_s).include?(locale.to_s) ? locale.to_s : "es"
+      send_email(
+        from:    sender_email(company_name),
+        to:      user.email,
+        subject: I18n.t("alerts.email.#{kind}_subject", company: company_name, locale: locale),
+        html:    ApplicationController.render(
+                   template: "resend_mailer/stock_alert",
+                   layout:   false,
+                   locals:   { user: user, company_name: company_name, kind: kind, products: products, locale: locale }
+                 )
+      )
+    rescue => e
+      handle_email_error(user, e)
+      false
+    end
+
     private
 
     def validate_parameters(user, reset_url)
