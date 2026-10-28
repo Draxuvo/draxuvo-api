@@ -158,4 +158,31 @@ elemento y la posposición se borra al leer si el elemento avanzó). `GET/PATCH 
 (`NotificationPreference` por persona y empresa). Stock bajo: `StockAlerts::ScanJob` (cada 5 min) detecta con `Scan`, espera
 `StockAlertState::GRACE` y manda agrupado con `Dispatch`/`Notify`; `DailySummaryJob` (cada hora) manda el resumen a la hora local de la empresa;
 `Alerts::Recipients` decide a quién; cada envío queda en `AlertDelivery`. Correo: `ResendMailer.stock_alert`; WhatsApp:
-`Whatsapp::StockAlertService` (plantilla, `unavailable` si no hay `WHATSAPP_*`). Demos y empresas sin acceso no mandan nada (`StockAlerts::Companies`).
+`Whatsapp::StockAlertService` (plantilla, `unavailable` si el canal no está disponible, ver spec 047). Demos y empresas sin acceso no mandan nada (`StockAlerts::Companies`).
+
+### Configurar WhatsApp (spec 047)
+
+El super admin conecta WhatsApp Business desde el panel (`/whatsapp` en `ui`); todo vive bajo `/api/v1/whatsapp`, **sin `X-Company-Id` y solo para el super admin**
+(`WhatsappAccess` concern: `require_super_admin!` y `StaleObjectError` → 409 `stale_object` con el estado vigente en `details.current`). Controladores en
+`Api::V1::Whatsapp::` (`ConnectionsController`, `ChannelsController`, `MessageTypesController`, `EventsController`) más `WhatsappController` (`show`, `guide`).
+**Dentro de `Api::V1` escribe `::Whatsapp::`**: el módulo `Api::V1::Whatsapp` de los controladores sombrearía a los servicios.
+
+- **Tablas**: `whatsapp_connections` (una sola fila; `access_token` cifrado con ActiveRecord::Encryption y claves derivadas de `SECRET_KEY_BASE` en
+  `config/initializers/active_record_encryption.rb`, `token_hint` con los últimos 4, `status` `not_connected|connected|error`, `managed`, `enabled`,
+  `problem_notified_at`, `lock_version`), `whatsapp_message_types` (`verification_code`, `stock_alert`, `ticket`; plantilla, idioma, estado, `enabled`) y
+  `whatsapp_events` (solo inserción; `WhatsappEvent.log!` borra de `data` cualquier clave secreta y los teléfonos van con `mask_phone`). La llave jamás se
+  serializa: `WhatsappConnection#serializable_hash` la excluye y la API solo da `token_present` y `token_hint`.
+- **`Whatsapp::Config`** es lo único que consultan los servicios de envío: `source` (`:panel` si `managed`, `:env` si el panel nunca se usó y hay `WHATSAPP_*`,
+  `:none`), `available?(kind)` (conexión válida, interruptor general, interruptor del tipo y plantilla aprobada; los tickets no usan plantilla),
+  `template_for`, `client`. El panel manda sobre las variables incluso tras desconectar.
+- **`Whatsapp::GraphClient`** es la única salida a Meta (timeouts 3 s/5 s) y clasifica los errores en familias `connection`, `template`, `recipient`,
+  `transient` y `other` (`Failure#user_message`). `ConnectionCheck`, `TemplateCheck`, `TemplateVerification` y `TestMessage` solo leen o mandan con ese cliente;
+  Draxuvo **no crea plantillas** en Meta.
+- **`Whatsapp::Health`** cambia estados con los fallos y éxitos reales (`record_failure`, `record_success`, `connection_recovered!`, `template_recovered!`,
+  `template_unusable!`): conexión → «Con error» (los interruptores no se tocan y el canal se reanuda al recuperarse), plantilla → se apaga **solo ese tipo**
+  (hay que volver a encenderlo a mano). Un correo por **cambio de estado** (`problem_notified_at`) a los super admin activos con `ResendMailer.whatsapp_alert`.
+  Los fallos de destinatario o de red no cambian nada.
+- **No hay revisión periódica**: se verifica al guardar, con «Verificar ahora» y antes de cada mensaje de prueba. Pruebas: 5 por hora por super admin
+  (`Whatsapp::TestLimit`, contadas con los eventos `test_sent`, 429).
+- **Pruebas**: Meta se simula con `Net::HTTP.stub(:new, …)` (los `FakeHttp` necesitan `open_timeout`); ninguna prueba llama a la red real. Si rotas `SECRET_KEY_BASE`
+  en producción la llave guardada queda ilegible (la conexión pasa a «Con error»). Despliegue y pasos de Meta: `docs/deploy.md`.
