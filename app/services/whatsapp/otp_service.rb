@@ -1,12 +1,7 @@
-require "net/http"
-require "json"
-
 module Whatsapp
   class OtpService
-    GRAPH_API_VERSION = "v25.0"
-    GRAPH_BASE        = "https://graph.facebook.com"
-    OTP_TTL           = 10.minutes
-    CACHE_PREFIX      = "whatsapp_otp"
+    OTP_TTL      = 10.minutes
+    CACHE_PREFIX = "whatsapp_otp"
 
     def initialize(phone)
       @phone = sanitize_phone(phone)
@@ -21,7 +16,7 @@ module Whatsapp
         return Demo::Guard::DEMO_OTP
       end
 
-      validate_config!
+      ensure_available!
       code = generate_code
       store_code(code)
       deliver(code)
@@ -50,6 +45,9 @@ module Whatsapp
 
     private
 
+    # Spec 047: la configuración sale de `Whatsapp::Config` (panel primero, variables de entorno de respaldo).
+    def config = @config ||= Whatsapp::Config.current
+
     def generate_code
       SecureRandom.random_number(100_000..999_999).to_s
     end
@@ -59,56 +57,28 @@ module Whatsapp
     end
 
     def deliver(code)
+      template = config.template_for(:verification_code)
       payload = {
         messaging_product: "whatsapp",
         to:                @phone,
         type:              "template",
         template: {
-          name:     ENV.fetch("WHATSAPP_OTP_TEMPLATE_NAME", "verification_code"),
-          language: { code: ENV.fetch("WHATSAPP_OTP_TEMPLATE_LANG", "es_MX") },
-          components: [
-            {
-              type:       "body",
-              parameters: [ { type: "text", text: code } ]
-            }
-          ]
+          name:       template.name,
+          language:   { code: template.language },
+          components: [ { type: "body", parameters: [ { type: "text", text: code } ] } ]
         }
       }
 
-      result = request(
-        path:         "/#{phone_number_id}/messages",
-        body:         payload.to_json,
-        content_type: "application/json"
-      )
+      result = config.client.post("/#{config.phone_number_id}/messages", payload)
+      return log(:info, "OTP delivered message_id=#{result.data.dig('messages', 0, 'id')} to=#{@phone}") if result.ok?
 
-      log(:info, "OTP delivered message_id=#{result.dig('messages', 0, 'id')} to=#{@phone}")
-      result
+      fail_delivery!(result.failure)
     end
 
-    def request(path:, body:, content_type:)
-      uri = URI("#{GRAPH_BASE}/#{GRAPH_API_VERSION}#{path}")
-
-      http              = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl      = true
-      http.read_timeout = 30
-
-      req                  = Net::HTTP::Post.new(uri)
-      req["Authorization"] = "Bearer #{access_token}"
-      req["Content-Type"]  = content_type
-      req.body             = body
-
-      res  = http.request(req)
-      data = JSON.parse(res.body)
-
-      log(:info, "POST #{uri} HTTP=#{res.code} body=#{data.to_json}")
-
-      unless res.is_a?(Net::HTTPSuccess)
-        msg = data.dig("error", "message") || "WhatsApp API error (HTTP #{res.code})"
-        log(:error, "OTP delivery failed: #{msg}")
-        raise ApiErrors::UnprocessableEntityError.new(details: msg)
-      end
-
-      data
+    def fail_delivery!(failure)
+      Whatsapp::Health.record_failure(:verification_code, failure)
+      log(:error, "OTP delivery failed: family=#{failure.family} code=#{failure.code}")
+      raise ApiErrors::UnprocessableEntityError.new(details: failure.user_message)
     end
 
     def cache_key
@@ -119,29 +89,18 @@ module Whatsapp
       phone.to_s.gsub(/\D/, "")
     end
 
-    def validate_config!
-      missing = []
-      missing << "WHATSAPP_ACCESS_TOKEN"   unless ENV["WHATSAPP_ACCESS_TOKEN"].present?
-      missing << "WHATSAPP_PHONE_NUMBER_ID" unless ENV["WHATSAPP_PHONE_NUMBER_ID"].present?
-      return if missing.empty?
+    # El canal apagado, sin conexión o sin plantilla aprobada se comporta como siempre: «no disponible por ahora».
+    # Al cliente solo se le dice eso; el motivo va al registro.
+    def ensure_available!
+      return if config.available?(:verification_code)
 
-      # WhatsApp está desactivado en el lanzamiento (spec 012): al cliente solo se le dice que no está
-      # disponible; los nombres de las variables van al log, no a la respuesta.
-      log(:warn, "WhatsApp no configurado, faltan: #{missing.join(', ')}")
+      log(:warn, "WhatsApp no disponible para códigos de verificación (origen=#{config.source})")
       raise ApiErrors::UnprocessableEntityError.new(details: I18n.t("whatsapp.not_configured"))
     end
 
     def log(level, msg)
       tagged = "[Whatsapp::OtpService] #{msg}"
       Rails.logger.public_send(level, tagged)
-    end
-
-    def phone_number_id
-      ENV["WHATSAPP_PHONE_NUMBER_ID"]
-    end
-
-    def access_token
-      ENV["WHATSAPP_ACCESS_TOKEN"]
     end
   end
 end
