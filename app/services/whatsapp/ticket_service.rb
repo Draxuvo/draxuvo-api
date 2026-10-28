@@ -105,7 +105,9 @@ module Whatsapp
     end
 
     def post_message(payload)
-      check!(config.client.post("/#{phone_number_id}/messages", payload))
+      data = check!(config.client.post("/#{phone_number_id}/messages", payload))
+      Whatsapp::Health.record_success(:ticket)
+      data
     end
 
     # Devuelve los datos de una respuesta correcta; ante un fallo lo reporta a `Whatsapp::Health` (si es de la conexión o

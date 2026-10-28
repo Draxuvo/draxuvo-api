@@ -12,6 +12,7 @@ module Api
         def update
           @type.lock_version = params[:lock_version] if params[:lock_version].present?
           outcome = change_template if template_params?
+          change_enabled if params.key?(:enabled)
           render_state(stale_kind: stale_kind(outcome))
         end
 
@@ -56,6 +57,22 @@ module Api
                              data: { from: from, to: { name: name, language: language } })
           WhatsappEvent.log!(action: "type_off", target: @type.kind, user: current_user, data: { from: true, to: false }) if was_enabled
           ::Whatsapp::TemplateVerification.call(@type, user: current_user)
+        end
+
+        # Apagar siempre se puede; encender exige conexión válida y, si usa plantilla, plantilla aprobada y compatible.
+        def change_enabled
+          enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
+          return if enabled == @type.enabled?
+
+          if enabled && (reason = @type.blocked_reason)
+            raise ApiErrors::UnprocessableEntityError.new(
+              message: I18n.t("whatsapp_admin.errors.#{reason}"), details: { code: reason, template_status: @type.template_status }
+            )
+          end
+
+          @type.update!(enabled: enabled, problem_notified_at: enabled ? nil : @type.problem_notified_at)
+          WhatsappEvent.log!(action: enabled ? "type_on" : "type_off", target: @type.kind, user: current_user,
+                             data: { from: !enabled, to: enabled })
         end
 
         # Meta no respondió (o no hay conexión): se conserva el último estado conocido y se avisa con `stale: true`.

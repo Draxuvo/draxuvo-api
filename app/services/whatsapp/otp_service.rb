@@ -70,9 +70,14 @@ module Whatsapp
       }
 
       result = config.client.post("/#{config.phone_number_id}/messages", payload)
-      return log(:info, "OTP delivered message_id=#{result.data.dig('messages', 0, 'id')} to=#{@phone}") if result.ok?
+      return delivered(result) if result.ok?
 
       fail_delivery!(result.failure)
+    end
+
+    def delivered(result)
+      Whatsapp::Health.record_success(:verification_code)
+      log(:info, "OTP delivered message_id=#{result.data.dig('messages', 0, 'id')} to=#{@phone}")
     end
 
     def fail_delivery!(failure)

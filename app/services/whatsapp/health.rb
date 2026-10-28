@@ -32,6 +32,19 @@ module Whatsapp
       Rails.logger.error("[Whatsapp::Health] #{e.class}: #{e.message}")
     end
 
+    # Un envío real salió bien: la conexión y la plantilla de ese tipo funcionan, así que se limpian sus errores.
+    def self.record_success(kind) = new.record_success(kind)
+
+    def record_success(kind)
+      return unless Whatsapp::Config.current.panel?
+
+      connection_recovered!
+      type = WhatsappMessageType.find_by(kind: kind.to_s)
+      template_recovered!(type) if type
+    rescue StandardError => e
+      Rails.logger.error("[Whatsapp::Health] #{e.class}: #{e.message}")
+    end
+
     # La conexión se verificó bien: sale del error y vuelve a poder avisar si falla otra vez.
     def connection_recovered!
       connection = WhatsappConnection.current

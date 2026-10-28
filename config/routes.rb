@@ -176,6 +176,7 @@ Rails.application.routes.draw do
         resource :connection, only: %i[update destroy] do
           post :verify
         end
+        resource :channel, only: :update
         resources :message_types, only: :update, param: :kind do
           member do
             post :verify

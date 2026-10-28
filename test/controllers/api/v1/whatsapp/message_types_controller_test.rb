@@ -180,6 +180,68 @@ class WhatsappMessageTypesControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal spanish, english
   end
 
+  test "turning a type on needs an approved template and logs type_on; turning it off is never blocked" do
+    @stock.update_columns(enabled: false)
+
+    patch_type("stock_alert", { enabled: true })
+    assert_response :ok
+    assert_equal true, type_json("stock_alert")["enabled"]
+    assert WhatsappEvent.exists?(action: "type_on", target: "stock_alert")
+
+    patch_type("stock_alert", { enabled: false })
+    assert_response :ok
+    assert_equal false, type_json("stock_alert")["enabled"]
+    assert WhatsappEvent.exists?(action: "type_off", target: "stock_alert")
+  end
+
+  test "turning a type on without an approved template answers 422 template_not_approved" do
+    @stock.update_columns(enabled: false, template_status: "pending")
+
+    patch_type("stock_alert", { enabled: true })
+
+    assert_response :unprocessable_entity
+    details = response.parsed_body.dig("error", "details")
+    assert_equal "template_not_approved", details["code"]
+    assert_equal "pending", details["template_status"]
+    assert_equal false, @stock.reload.enabled
+  end
+
+  test "turning a type on with an incompatible template answers 422 template_incompatible" do
+    @stock.update_columns(enabled: false, template_status: "incompatible")
+
+    patch_type("stock_alert", { enabled: true })
+
+    assert_response :unprocessable_entity
+    assert_equal "template_incompatible", response.parsed_body.dig("error", "details", "code")
+  end
+
+  test "turning a type on without a connection answers 422 not_connected" do
+    @stock.update_columns(enabled: false)
+    WhatsappConnection.first.update_columns(status: "not_connected")
+
+    patch_type("stock_alert", { enabled: true })
+
+    assert_response :unprocessable_entity
+    assert_equal "not_connected", response.parsed_body.dig("error", "details", "code")
+  end
+
+  test "tickets only need the connection to be turned on" do
+    patch_type("ticket", { enabled: true })
+
+    assert_response :ok
+    assert_equal true, type_json("ticket")["enabled"]
+    assert_equal true, type_json("ticket")["can_enable"]
+  end
+
+  test "turning one type off leaves the others as they were" do
+    WhatsappMessageType.find_by!(kind: "ticket").update_columns(enabled: true)
+
+    patch_type("stock_alert", { enabled: false })
+
+    assert_equal false, type_json("stock_alert")["enabled"]
+    assert_equal true, type_json("ticket")["enabled"]
+  end
+
   test "owner, admin and staff are forbidden" do
     company = companies(:enterprise_co)
     %w[owner admin staff].each do |role|

@@ -55,7 +55,10 @@ module Whatsapp
       }
 
       result = config.client.post("/#{config.phone_number_id}/messages", payload)
-      return Result.new(status: "sent") if result.ok?
+      if result.ok?
+        Whatsapp::Health.record_success(:stock_alert)
+        return Result.new(status: "sent")
+      end
 
       Whatsapp::Health.record_failure(:stock_alert, result.failure)
       Result.new(status: "failed", error: result.failure.user_message.truncate(200))
