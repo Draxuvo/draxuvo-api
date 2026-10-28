@@ -106,6 +106,27 @@ class ResendMailer
       false
     end
 
+    # Aviso al equipo de Draxuvo cuando WhatsApp necesita atención (spec 047, FR-019a): `problem` es "connection" (la
+    # conexión falló) o "template" (un tipo de mensaje se apagó solo por su plantilla). Sin la llave ni números completos.
+    def whatsapp_alert(user:, problem:, target:, detail:, since:, locale: "es")
+      raise ArgumentError, "User email is required" unless user&.email.present?
+
+      locale = I18n.available_locales.map(&:to_s).include?(locale.to_s) ? locale.to_s : "es"
+      send_email(
+        from:    sender_email,
+        to:      user.email,
+        subject: I18n.t("whatsapp_admin.mail.subject", locale: locale),
+        html:    ApplicationController.render(
+                   template: "resend_mailer/whatsapp_alert",
+                   layout:   false,
+                   locals:   { user: user, problem: problem, target: target, detail: detail, since: since, locale: locale }
+                 )
+      )
+    rescue => e
+      handle_email_error(user, e)
+      false
+    end
+
     private
 
     def validate_parameters(user, reset_url)

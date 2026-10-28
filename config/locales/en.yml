@@ -48,6 +48,10 @@ en:
       taken: "has already been taken"
       phone_required: "needs a saved phone number"
       invalid: "is invalid"
+      not_connected: "needs a valid WhatsApp connection"
+      connection_error: "cannot be turned on while the connection has an error"
+      template_not_approved: "needs an approved template"
+      template_incompatible: "needs a template with the expected variables"
       inclusion: "is not valid"
       too_long: "is too long (maximum %{count} characters)"
       only_integer: "must be an integer"
@@ -435,3 +439,62 @@ en:
     email:
       immediate_subject: "Low stock at %{company}"
       daily_subject: "Low stock summary · %{company}"
+  # Configure WhatsApp from Draxuvo (spec 047)
+  whatsapp_admin:
+    targets:
+      connection: "the WhatsApp connection"
+      verification_code: "verification codes"
+      stock_alert: "low stock notices"
+      ticket: "ticket sending"
+    guide:
+      verification_code:
+        body: "Your Draxuvo verification code is {{1}}. Do not share it with anyone."
+        variables:
+          - "The 6-digit code"
+      stock_alert:
+        body: "Low stock at {{1}}: {{2}} product(s) reached their minimum ({{3}}). Check them in the inventory."
+        variables:
+          - "Company name"
+          - "Number of products that dropped"
+          - "The first product names"
+    reasons:
+      invalid_token: "The key is not valid"
+      token_expired: "The key expired; generate a new one in Meta"
+      missing_permission: "The key lacks the required permissions (whatsapp_business_management and whatsapp_business_messaging)"
+      phone_not_in_account: "That number does not belong to the given WhatsApp Business account"
+      account_not_found: "The given WhatsApp Business account was not found"
+      invalid_number: "The phone number identifier is not valid"
+      account_restricted: "Meta restricted or disabled the WhatsApp Business account"
+      meta_unreachable: "Meta could not be reached; try again in a moment"
+      key_unreadable: "The stored key can no longer be read; enter it again"
+      recipient_invalid: "That number cannot be used for WhatsApp"
+      outside_24h_window: "The recipient has not written in the last 24 hours"
+      not_authorized_recipient: "That number is not authorized in the Meta test account"
+      template_missing: "The template does not exist in that language or is not approved"
+      template_variables: "The template has a different number of variables than Draxuvo expects"
+      template_variables_count: "The template has %{found} variable(s) and Draxuvo expects %{expected}"
+      template_other_language: "It exists, but not in that language (languages: %{languages})"
+      template_paused: "Meta paused or disabled the template"
+      rate_limited: "Meta limited sending for a moment; try again later"
+      unknown: "Meta rejected the request"
+    errors:
+      not_connected: "Connect the WhatsApp account first"
+      connection_error: "The WhatsApp connection has an error; verify it first"
+      template_not_approved: "The template is not approved yet"
+      template_incompatible: "The template has a different number of variables than expected"
+      confirmation_required: "Disconnecting turns off all WhatsApp messages; confirm to continue"
+      stale_object: "Someone changed this a moment ago; check the current value before saving"
+      token_required: "Enter the access key"
+      ticket_has_no_template: "Tickets do not use a template"
+      tests_limit: "You reached the hourly test limit; try again later"
+      invalid_phone: "Enter a number of 10 to 15 digits"
+    test:
+      company: "TEST Draxuvo"
+      products: "test message"
+      ticket: "Draxuvo WhatsApp test"
+    mail:
+      subject: "WhatsApp needs attention in Draxuvo"
+      connection: "The WhatsApp connection failed (%{detail})."
+      template: "%{target} was turned off because its template no longer works (%{detail})."
+      since: "Since %{time}."
+      open: "Open WhatsApp in Draxuvo"

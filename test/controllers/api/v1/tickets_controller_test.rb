@@ -95,6 +95,19 @@ class Api::V1::TicketsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "WHATSAPP_"
   end
 
+  test "send_whatsapp without the whatsapp module in the plan answers 403 module_not_in_plan" do
+    company = companies(:enterprise_co)
+    owner = users(:enterprise_co_owner)
+    company.update!(disabled_modules: %w[whatsapp])
+    order = company.work_orders.create!(title: "Sin módulo", created_by: owner, customer_phone: "5512345678")
+    ticket = Ticket.create!(work_order: order, company: company)
+
+    post "/api/v1/tickets/#{ticket.id}/send_whatsapp", headers: auth_headers(owner, company), as: :json
+
+    assert_response :forbidden
+    assert_equal "module_not_in_plan", response.parsed_body.dig("error", "details", "code")
+  end
+
   test "search with no match returns an empty page" do
     get "/api/v1/tickets", params: { search: "transmisión" }, headers: auth_headers(@owner, @company)
 

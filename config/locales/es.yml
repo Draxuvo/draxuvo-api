@@ -48,6 +48,10 @@ es:
       taken: "ya está en uso"
       phone_required: "requiere un número de teléfono guardado"
       invalid: "no es válido"
+      not_connected: "requiere una conexión de WhatsApp válida"
+      connection_error: "no se puede encender con la conexión en error"
+      template_not_approved: "requiere una plantilla aprobada"
+      template_incompatible: "requiere una plantilla con las variables esperadas"
       inclusion: "no es válido"
       too_long: "es demasiado largo (máximo %{count} caracteres)"
       only_integer: "debe ser un número entero"
@@ -435,3 +439,62 @@ es:
     email:
       immediate_subject: "Stock bajo en %{company}"
       daily_subject: "Resumen de stock bajo · %{company}"
+  # Configurar WhatsApp desde Draxuvo (spec 047)
+  whatsapp_admin:
+    targets:
+      connection: "la conexión de WhatsApp"
+      verification_code: "los códigos de verificación"
+      stock_alert: "los avisos de stock bajo"
+      ticket: "el envío de tickets"
+    guide:
+      verification_code:
+        body: "Tu código de verificación de Draxuvo es {{1}}. No lo compartas con nadie."
+        variables:
+          - "El código de 6 dígitos"
+      stock_alert:
+        body: "Stock bajo en {{1}}: {{2}} producto(s) llegaron a su mínimo ({{3}}). Revísalos en el inventario."
+        variables:
+          - "Nombre de la empresa"
+          - "Número de productos que bajaron"
+          - "Los primeros nombres de producto"
+    reasons:
+      invalid_token: "La llave no es válida"
+      token_expired: "La llave venció; genera una nueva en Meta"
+      missing_permission: "La llave no tiene los permisos necesarios (whatsapp_business_management y whatsapp_business_messaging)"
+      phone_not_in_account: "Ese número no pertenece a la cuenta de WhatsApp Business indicada"
+      account_not_found: "No se encontró la cuenta de WhatsApp Business indicada"
+      invalid_number: "El identificador del número no es válido"
+      account_restricted: "Meta restringió o deshabilitó la cuenta de WhatsApp Business"
+      meta_unreachable: "No se pudo contactar a Meta; inténtalo de nuevo en un momento"
+      key_unreadable: "La llave guardada ya no se puede leer; vuelve a capturarla"
+      recipient_invalid: "Ese número no se puede usar para WhatsApp"
+      outside_24h_window: "El destinatario no ha escrito en las últimas 24 horas"
+      not_authorized_recipient: "Ese número no está autorizado en la cuenta de prueba de Meta"
+      template_missing: "La plantilla no existe en ese idioma o no está aprobada"
+      template_variables: "La plantilla tiene un número de variables distinto al que espera Draxuvo"
+      template_variables_count: "La plantilla tiene %{found} variable(s) y Draxuvo espera %{expected}"
+      template_other_language: "Existe, pero no en ese idioma (idiomas: %{languages})"
+      template_paused: "Meta pausó o deshabilitó la plantilla"
+      rate_limited: "Meta limitó los envíos por un momento; inténtalo más tarde"
+      unknown: "Meta rechazó la petición"
+    errors:
+      not_connected: "Primero conecta la cuenta de WhatsApp"
+      connection_error: "La conexión de WhatsApp tiene un error; verifícala primero"
+      template_not_approved: "La plantilla aún no está aprobada"
+      template_incompatible: "La plantilla tiene un número de variables distinto al esperado"
+      confirmation_required: "Desconectar apaga todos los mensajes de WhatsApp; confirma para continuar"
+      stale_object: "Alguien cambió esto hace un momento; revisa el valor actual antes de guardar"
+      token_required: "Captura la llave de acceso"
+      ticket_has_no_template: "Los tickets no usan plantilla"
+      tests_limit: "Llegaste al límite de pruebas por hora; inténtalo más tarde"
+      invalid_phone: "Escribe un número de 10 a 15 dígitos"
+    test:
+      company: "PRUEBA Draxuvo"
+      products: "mensaje de prueba"
+      ticket: "Prueba de WhatsApp de Draxuvo"
+    mail:
+      subject: "WhatsApp necesita atención en Draxuvo"
+      connection: "La conexión de WhatsApp falló (%{detail})."
+      template: "Se apagó %{target} porque su plantilla ya no sirve (%{detail})."
+      since: "Desde %{time}."
+      open: "Abrir WhatsApp en Draxuvo"

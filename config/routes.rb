@@ -169,6 +169,23 @@ Rails.application.routes.draw do
         end
       end
 
+      # Configurar WhatsApp (spec 047): solo super admin, sin empresa
+      get "whatsapp", to: "whatsapp#show"
+      get "whatsapp/guide", to: "whatsapp#guide"
+      namespace :whatsapp do
+        resource :connection, only: %i[update destroy] do
+          post :verify
+        end
+        resource :channel, only: :update
+        resources :events, only: :index
+        resources :message_types, only: :update, param: :kind do
+          member do
+            post :verify
+            post :test
+          end
+        end
+      end
+
       # Restaurante (spec 013): mesas, cuentas, comandas, estaciones y cobro
       namespace :restaurant do
         resources :stations, only: %i[index create update] do

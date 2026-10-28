@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_28_100400) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_29_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -838,6 +838,53 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_100400) do
     t.string "color_mode", default: "system", null: false
   end
 
+  create_table "whatsapp_connections", force: :cascade do |t|
+    t.string "phone_number_id"
+    t.string "waba_id"
+    t.text "access_token"
+    t.string "token_hint", limit: 4
+    t.string "status", default: "not_connected", null: false
+    t.string "error_code"
+    t.text "error_message"
+    t.string "verified_name"
+    t.string "display_phone_number"
+    t.datetime "last_verified_at"
+    t.boolean "enabled", default: false, null: false
+    t.boolean "managed", default: false, null: false
+    t.datetime "problem_notified_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "whatsapp_events", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.string "target", null: false
+    t.jsonb "data", default: {}, null: false
+    t.string "result", default: "ok", null: false
+    t.string "meta_code"
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_whatsapp_events_on_created_at", order: :desc
+    t.index ["user_id", "action", "created_at"], name: "index_whatsapp_events_on_user_action_and_time"
+    t.index ["user_id"], name: "index_whatsapp_events_on_user_id"
+  end
+
+  create_table "whatsapp_message_types", force: :cascade do |t|
+    t.string "kind", null: false
+    t.boolean "enabled", default: false, null: false
+    t.string "template_name"
+    t.string "template_language", default: "es_MX", null: false
+    t.string "template_status", default: "unknown", null: false
+    t.text "template_detail"
+    t.datetime "template_checked_at"
+    t.datetime "problem_notified_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["kind"], name: "index_whatsapp_message_types_on_kind", unique: true
+  end
+
   create_table "work_order_attachments", force: :cascade do |t|
     t.bigint "work_order_id", null: false
     t.string "uploaded_by_type", null: false
@@ -1008,6 +1055,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_28_100400) do
   add_foreign_key "tickets", "work_orders"
   add_foreign_key "user_companies", "companies"
   add_foreign_key "user_companies", "users"
+  add_foreign_key "whatsapp_events", "users", on_delete: :nullify
   add_foreign_key "work_order_attachments", "work_orders"
   add_foreign_key "work_order_events", "work_orders"
   add_foreign_key "work_order_items", "products"

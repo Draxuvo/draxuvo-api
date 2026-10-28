@@ -4,7 +4,7 @@ class Whatsapp::OtpServiceTest < ActiveSupport::TestCase
   ENV_VARS = { "WHATSAPP_ACCESS_TOKEN" => "token-falso", "WHATSAPP_PHONE_NUMBER_ID" => "12345" }.freeze
 
   FakeHttp = Struct.new(:response, :requests) do
-    attr_accessor :use_ssl, :read_timeout
+    attr_accessor :use_ssl, :open_timeout, :read_timeout
 
     def request(req)
       requests << req

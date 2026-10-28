@@ -86,21 +86,42 @@ La contraseña inicial salió de un generador aleatorio de 28 caracteres, no de 
 
 ## WhatsApp
 
-Desactivado en el lanzamiento (FR-009): las variables `WHATSAPP_*` no están definidas a propósito. Enviar un ticket por
-WhatsApp responde 422 con "El envío por WhatsApp no está disponible por ahora." Ningún cliente usa la verificación por OTP
-y el registro de empresas no depende de ella. Para activarlo después: definir `WHATSAPP_ACCESS_TOKEN` y
-`WHATSAPP_PHONE_NUMBER_ID` (y, si aplica, `WHATSAPP_OTP_TEMPLATE_NAME` / `WHATSAPP_OTP_TEMPLATE_LANG`) en Render.
+Desde la spec 047 **WhatsApp se configura desde el panel**, sin tocar variables de entorno en Render: el super admin entra a
+`/whatsapp` y ahí conecta la cuenta, elige y verifica las plantillas, enciende los interruptores, manda un mensaje de
+prueba y ve el historial. Mientras no se conecte, el canal queda como no disponible: enviar un ticket responde 422 con
+"El envío por WhatsApp no está disponible por ahora.", y el correo y las alertas del panel siguen funcionando.
+
+**Cómo conectarlo (una vez):**
+
+1. En Meta crea una **llave de acceso** de preferencia de *usuario del sistema* (no vence) con los permisos
+   `whatsapp_business_messaging` y `whatsapp_business_management`, y anota el **identificador del número** (Phone number ID)
+   y el **identificador de la cuenta** (WhatsApp Business Account ID).
+2. En `/whatsapp` → «Conectar» captura los tres datos. Draxuvo los verifica con Meta **antes** de guardarlos; si Meta los
+   rechaza no se guarda nada y la pantalla dice el motivo.
+3. Crea las plantillas en Meta (WhatsApp Manager → Message templates) con los datos exactos de «Cómo crearla en Meta»
+   (`/whatsapp` → guía): nombre, idioma, categoría *Utility* y texto con sus variables. Draxuvo **solo lee y verifica**
+   plantillas, no las crea. Códigos de verificación: 1 variable; stock bajo: 3 variables (`{{1}}` empresa, `{{2}}` número
+   de productos, `{{3}}` los primeros nombres).
+4. Espera la aprobación, pulsa «Verificar ahora» en cada tipo y enciende primero el interruptor del tipo y luego el general.
+   Se recomienda empezar por «Aviso de stock bajo» y probarlo con «Enviar prueba».
+
+**Las variables `WHATSAPP_*` quedan solo de respaldo.** Mientras el panel nunca se haya usado, si existen
+`WHATSAPP_ACCESS_TOKEN` y `WHATSAPP_PHONE_NUMBER_ID` (y, opcionalmente, `WHATSAPP_OTP_TEMPLATE_NAME` / `_LANG` y
+`WHATSAPP_STOCK_TEMPLATE_NAME` / `_LANG`) el envío funciona como siempre. En cuanto se conecta desde el panel, **el panel
+manda y las variables se ignoran**, incluso si después se desconecta (para no reactivar unas variables viejas sin avisar).
+
+**Cifrado de la llave.** La llave se guarda cifrada con claves derivadas de `SECRET_KEY_BASE`. **Rotar `SECRET_KEY_BASE`
+deja ilegible la llave guardada**: la conexión pasa a «Con error» (la pantalla pide volver a capturar la llave) y hay que
+reemplazarla en `/whatsapp`. Nunca se muestra completa ni queda en el historial, los registros o las respuestas de la API.
+
+**Fallos reales.** Si Meta rechaza la llave en un envío, la conexión pasa a «Con error» y se manda **un** correo a los super
+admin activos (otro solo si se recupera y vuelve a fallar); si rechaza una plantilla, se apaga solo ese tipo de mensaje y hay
+que volver a encenderlo a mano cuando esté aprobada. No hay revisión automática periódica: se verifica al guardar, con
+«Verificar ahora» y en cada mensaje de prueba.
 
 **Avisos de stock bajo (spec 045).** Son mensajes que inicia el negocio, así que fuera de la ventana de 24 h Meta solo
-acepta una **plantilla aprobada**. Antes de activar el canal:
-
-1. En Meta (WhatsApp Manager → Message templates) crea la plantilla `stock_bajo`, categoría *Utility*, idioma `es_MX`,
-   con tres variables en el cuerpo: `{{1}}` empresa, `{{2}}` número de productos y `{{3}}` los primeros nombres. Ejemplo:
-   «Stock bajo en {{1}}: {{2}} producto(s) llegaron a su mínimo ({{3}}). Revísalos en el inventario.»
-2. Espera la aprobación y define en Render `WHATSAPP_STOCK_TEMPLATE_NAME` (por omisión `stock_bajo`) y
-   `WHATSAPP_STOCK_TEMPLATE_LANG` (por omisión `es_MX`), además de `WHATSAPP_ACCESS_TOKEN` y `WHATSAPP_PHONE_NUMBER_ID`.
-
-Sin esas variables el canal queda como `unavailable`: no falla nada, el correo y la alerta del panel siguen funcionando y cada
+acepta una **plantilla aprobada** (por omisión `stock_bajo`, `es_MX`, tres variables). Sin canal disponible el aviso queda
+como `unavailable`: no falla nada, el correo y la alerta del panel siguen funcionando y cada
 intento queda en `alert_deliveries`. Para revisar qué se mandó a quién (solo lectura):
 
 ```bash

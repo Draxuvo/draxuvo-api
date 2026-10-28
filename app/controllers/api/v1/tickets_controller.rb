@@ -37,7 +37,7 @@ module Api
         phone  = params[:phone].presence || ticket.work_order&.customer_phone.presence
         raise ApiErrors::BadRequestError.new(details: I18n.t("ticket.phone_required")) if phone.blank?
 
-        Whatsapp::TicketService.new(ticket, phone: phone).call
+        ::Whatsapp::TicketService.new(ticket, phone: phone).call
         body = { message: I18n.t("ticket.whatsapp_sent") }
         body[:demo] = true if Demo::Guard.active?
         render json: body

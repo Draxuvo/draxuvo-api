@@ -1,10 +1,7 @@
-require "net/http"
-require "json"
-
 module Whatsapp
   class TicketService
-    GRAPH_API_VERSION = "v25.0"
-    GRAPH_BASE        = "https://graph.facebook.com"
+    # Subir el PDF puede tardar más que una consulta normal.
+    UPLOAD_READ_TIMEOUT = 30
 
     def initialize(ticket, phone:)
       @ticket = ticket
@@ -41,19 +38,19 @@ module Whatsapp
     # Error interno para detectar ventana de 24h cerrada
     class ConversationWindowError < StandardError; end
 
+    # Spec 047: la configuración sale de `Whatsapp::Config` (panel primero, variables de entorno de respaldo).
+    def config = @config ||= Whatsapp::Config.current
+
     def upload_media(pdf_bytes)
-      boundary = "WhatsApp#{SecureRandom.hex(10)}"
-      body     = multipart_body(pdf_bytes, boundary)
+      log(:info, "uploading media phone_number_id=#{phone_number_id} body_size=#{pdf_bytes.bytesize} bytes")
 
-      log(:info, "uploading media phone_number_id=#{phone_number_id} body_size=#{body.bytesize} bytes")
-
-      result = request(
-        path:         "/#{phone_number_id}/media",
-        body:         body,
-        content_type: "multipart/form-data; boundary=#{boundary}"
+      result = config.client(read_timeout: UPLOAD_READ_TIMEOUT).post_multipart(
+        "/#{phone_number_id}/media",
+        fields: { messaging_product: "whatsapp" },
+        file: { filename: "ticket.pdf", content_type: "application/pdf", bytes: pdf_bytes }
       )
 
-      media_id = result.fetch("id")
+      media_id = check!(result).fetch("id")
       log(:info, "media uploaded media_id=#{media_id}")
       media_id
     end
@@ -72,11 +69,7 @@ module Whatsapp
 
       log(:info, "sending document to=#{@phone} media_id=#{media_id} filename=ticket-#{@ticket.folio}.pdf")
 
-      request(
-        path:         "/#{phone_number_id}/messages",
-        body:         payload.to_json,
-        content_type: "application/json"
-      )
+      post_message(payload)
     end
 
     # Mensaje de texto con los datos del ticket cuando no hay ventana de 24h abierta.
@@ -108,57 +101,28 @@ module Whatsapp
 
       log(:info, "sending text fallback to=#{@phone}")
 
-      request(
-        path:         "/#{phone_number_id}/messages",
-        body:         payload.to_json,
-        content_type: "application/json"
-      )
+      post_message(payload)
     end
 
-    def request(path:, body:, content_type:)
-      uri = URI("#{GRAPH_BASE}/#{GRAPH_API_VERSION}#{path}")
-      log(:info, "POST #{uri}")
-
-      http              = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl      = true
-      http.read_timeout = 30
-
-      req                  = Net::HTTP::Post.new(uri)
-      req["Authorization"] = "Bearer #{access_token}"
-      req["Content-Type"]  = content_type
-      req.body             = body
-
-      res  = http.request(req)
-      data = JSON.parse(res.body)
-
-      log(:info, "response HTTP=#{res.code} body=#{data.to_json}")
-
-      unless res.is_a?(Net::HTTPSuccess)
-        error_code = data.dig("error", "code")
-        msg        = data.dig("error", "message") || "WhatsApp API error (HTTP #{res.code})"
-        log(:error, "API error code=#{res.code} error_code=#{error_code} message=#{msg}")
-
-        # 131026 = recipient not in window, 131047 = business-initiated outside template
-        raise ConversationWindowError, msg if error_code.to_i.in?([ 131026, 131047 ])
-
-        raise ApiErrors::UnprocessableEntityError.new(details: msg)
-      end
-
+    def post_message(payload)
+      data = check!(config.client.post("/#{phone_number_id}/messages", payload))
+      Whatsapp::Health.record_success(:ticket)
       data
     end
 
-    def multipart_body(pdf_bytes, boundary)
-      crlf = "\r\n"
-      "".b.tap do |b|
-        b << "--#{boundary}#{crlf}".b
-        b << "Content-Disposition: form-data; name=\"messaging_product\"#{crlf}#{crlf}".b
-        b << "whatsapp#{crlf}".b
-        b << "--#{boundary}#{crlf}".b
-        b << "Content-Disposition: form-data; name=\"file\"; filename=\"ticket.pdf\"#{crlf}".b
-        b << "Content-Type: application/pdf#{crlf}#{crlf}".b
-        b << pdf_bytes
-        b << "#{crlf}--#{boundary}--#{crlf}".b
-      end
+    # Devuelve los datos de una respuesta correcta; ante un fallo lo reporta a `Whatsapp::Health` (si es de la conexión o
+    # de la plantilla) y lanza el error de siempre.
+    def check!(result)
+      return result.data if result.ok?
+
+      failure = result.failure
+      log(:error, "API error code=#{failure.code} family=#{failure.family}")
+
+      # 131026 = destinatario fuera de ventana, 131047 = mensaje iniciado por el negocio sin plantilla: se cae a texto
+      raise ConversationWindowError, failure.user_message if failure.code.to_i.in?([ 131026, 131047 ])
+
+      Whatsapp::Health.record_failure(:ticket, failure)
+      raise ApiErrors::UnprocessableEntityError.new(details: failure.user_message)
     end
 
     def ticket_caption
@@ -169,15 +133,11 @@ module Whatsapp
       phone.to_s.gsub(/\D/, "")
     end
 
+    # Canal apagado, sin conexión o sin configurar: al cliente solo se le dice que no está disponible; el motivo va al log.
     def validate_config!
-      missing = []
-      missing << "WHATSAPP_ACCESS_TOKEN"   unless ENV["WHATSAPP_ACCESS_TOKEN"].present?
-      missing << "WHATSAPP_PHONE_NUMBER_ID" unless ENV["WHATSAPP_PHONE_NUMBER_ID"].present?
-      return if missing.empty?
+      return if config.available?(:ticket)
 
-      # WhatsApp está desactivado en el lanzamiento (spec 012): al cliente solo se le dice que no está
-      # disponible; los nombres de las variables van al log, no a la respuesta.
-      log(:warn, "WhatsApp no configurado, faltan: #{missing.join(', ')}")
+      log(:warn, "WhatsApp no disponible para tickets (origen=#{config.source})")
       raise ApiErrors::UnprocessableEntityError.new(details: I18n.t("whatsapp.not_configured"))
     end
 
@@ -195,12 +155,6 @@ module Whatsapp
       Rails.logger.public_send(level, tagged)
     end
 
-    def phone_number_id
-      ENV["WHATSAPP_PHONE_NUMBER_ID"]
-    end
-
-    def access_token
-      ENV["WHATSAPP_ACCESS_TOKEN"]
-    end
+    def phone_number_id = config.phone_number_id
   end
 end

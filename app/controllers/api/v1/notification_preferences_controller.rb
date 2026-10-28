@@ -30,7 +30,7 @@ module Api
       def payload(preference)
         {
           stock_email: preference.stock_email, stock_whatsapp: preference.stock_whatsapp,
-          phone_present: current_user.phone.present?, whatsapp_available: Whatsapp::StockAlertService.configured?
+          phone_present: current_user.phone.present?, whatsapp_available: ::Whatsapp::StockAlertService.configured?
         }
       end
     end

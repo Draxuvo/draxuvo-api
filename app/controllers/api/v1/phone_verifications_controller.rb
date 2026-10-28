@@ -6,7 +6,7 @@ module Api
       def send_code
         phone = params.require(:phone)
 
-        Whatsapp::OtpService.new(phone).send_code
+        ::Whatsapp::OtpService.new(phone).send_code
 
         render json: { message: "Código enviado al número #{mask_phone(phone)}" }
       rescue ActionController::ParameterMissing
@@ -19,7 +19,7 @@ module Api
         phone = params.require(:phone)
         code  = params.require(:code)
 
-        result = Whatsapp::OtpService.new(phone).verify(code)
+        result = ::Whatsapp::OtpService.new(phone).verify(code)
 
         if result[:verified]
           render json: { verified: true, message: "Número verificado correctamente" }
