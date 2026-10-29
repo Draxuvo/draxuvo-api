@@ -1,7 +1,8 @@
 module StockAlerts
-  # Manda el aviso de stock bajo a cada destinatario por sus canales y deja un registro por envío (spec 045, FR-011,
-  # FR-014 y FR-015). Un fallo de un canal o de una persona no detiene a los demás. El resumen diario no se repite el
-  # mismo día: el índice único de `alert_deliveries` lo impide y ese envío se omite.
+  # Manda el aviso de stock bajo por correo a cada destinatario y deja un registro por envío (spec 045, FR-011, FR-014
+  # y FR-015). Desde la spec 048 el único canal es el correo (WhatsApp ya no se usa; los registros anteriores con canal
+  # `whatsapp` se conservan). Un fallo de una persona no detiene a las demás. El resumen diario no se repite el mismo
+  # día: el índice único de `alert_deliveries` lo impide y ese envío se omite.
   class Notify
     def self.call(**args) = new(**args).call
 
@@ -18,7 +19,6 @@ module StockAlerts
 
       @recipients.each do |recipient|
         deliver(recipient, "email") { email(recipient.user) } if recipient.email
-        deliver(recipient, "whatsapp") { whatsapp(recipient.user) } if recipient.whatsapp
       end
     end
 
@@ -48,13 +48,6 @@ module StockAlerts
       return [ "failed", "email" ] unless response
 
       [ response["id"] == "demo-simulated" ? "simulated" : "sent" ]
-    end
-
-    def whatsapp(user)
-      return [ "simulated" ] if @company.demo?
-
-      result = Whatsapp::StockAlertService.new(phone: user.phone, company_name: @company.name, products: @products).call
-      [ result.status, result.error ]
     end
 
     def record(user, channel, status, error)

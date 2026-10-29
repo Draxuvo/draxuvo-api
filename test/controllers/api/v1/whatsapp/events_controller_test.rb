@@ -58,6 +58,19 @@ class WhatsappEventsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil first["created_at"]
   end
 
+  test "events of the retired low stock type are still listed with their target (spec 048)" do
+    WhatsappEvent.log!(action: "template_changed", target: "stock_alert", user: @super_admin,
+                       data: { from: { name: "stock_bajo" }, to: { name: "stock_bajo_v2" } })
+    WhatsappEvent.log!(action: "auto_off", target: "stock_alert", result: "failed", meta_code: 132_001, data: { reason: "template_missing" })
+    WhatsappEvent.log!(action: "channel_on", target: "connection", user: @super_admin)
+
+    get "/api/v1/whatsapp/events", params: { page_size: 10 }, headers: @headers
+
+    assert_response :ok
+    assert_equal 3, response.parsed_body.dig("info", "total")
+    assert_equal 2, events.count { |event| event["target"] == "stock_alert" }
+  end
+
   test "it paginates" do
     3.times { WhatsappEvent.log!(action: "channel_on", target: "connection", user: @super_admin) }
 

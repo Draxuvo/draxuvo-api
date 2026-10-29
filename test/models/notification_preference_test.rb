@@ -6,21 +6,20 @@ class NotificationPreferenceTest < ActiveSupport::TestCase
     @user = create_member(@company, role: :owner)
   end
 
-  test "defaults are email on and WhatsApp off" do
+  test "the default is email on" do
     preference = NotificationPreference.for(@user, @company)
     assert preference.new_record?
     assert preference.stock_email
-    assert_not preference.stock_whatsapp
   end
 
-  test "WhatsApp needs a phone number" do
+  test "an old WhatsApp value needs no phone and never blocks saving (spec 048)" do
     @user.update_column(:phone, nil)
     preference = NotificationPreference.new(user: @user, company: @company, stock_whatsapp: true)
-    assert_not preference.valid?
-    assert preference.errors.of_kind?(:stock_whatsapp, :phone_required)
 
-    @user.update_column(:phone, "5512340000")
-    assert NotificationPreference.new(user: @user.reload, company: @company, stock_whatsapp: true).valid?
+    assert preference.valid?
+    assert preference.save
+    assert preference.update(stock_email: false), "apagar el correo debe poder guardarse con el valor histórico"
+    assert preference.reload.stock_whatsapp, "el valor histórico se conserva"
   end
 
   test "one row per person and company, so the same person can differ between companies" do

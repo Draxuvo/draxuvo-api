@@ -1,7 +1,8 @@
 module Whatsapp
   # Catálogo de los tipos de mensaje que manda Draxuvo por WhatsApp (spec 047): cuántas variables espera la plantilla de
   # cada uno, el nombre y el idioma que se sugieren al crearla en Meta y su guía (texto y significado de cada variable).
-  # Es solo lectura: lo que el super admin cambia vive en `WhatsappMessageType`.
+  # Es solo lectura: lo que el super admin cambia vive en `WhatsappMessageType`. Desde la spec 048 el aviso de stock bajo
+  # ya no es un tipo (sale por correo y por el panel y la app): solo quedan el código de verificación y el ticket.
   class MessageTypes
     Definition = Struct.new(:kind, :uses_template, :expected_variables, :suggested_name, :suggested_language, :category, keyword_init: true) do
       def uses_template? = uses_template
@@ -26,8 +27,6 @@ module Whatsapp
     DEFINITIONS = {
       "verification_code" => Definition.new(kind: "verification_code", uses_template: true, expected_variables: 1,
                                             suggested_name: "verification_code", suggested_language: "es_MX", category: "UTILITY"),
-      "stock_alert" => Definition.new(kind: "stock_alert", uses_template: true, expected_variables: 3,
-                                      suggested_name: "stock_bajo", suggested_language: "es_MX", category: "UTILITY"),
       "ticket" => Definition.new(kind: "ticket", uses_template: false, expected_variables: nil,
                                  suggested_name: nil, suggested_language: nil, category: nil)
     }.freeze

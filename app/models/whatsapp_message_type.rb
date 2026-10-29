@@ -1,7 +1,8 @@
-# Un tipo de mensaje de WhatsApp que manda Draxuvo (spec 047): código de verificación, aviso de stock bajo o ticket.
-# Cada uno tiene su interruptor y, si usa plantilla de Meta, su plantilla con el estado que Meta le da.
+# Un tipo de mensaje de WhatsApp que manda Draxuvo (spec 047): código de verificación o ticket. Cada uno tiene su
+# interruptor y, si usa plantilla de Meta, su plantilla con el estado que Meta le da. El aviso de stock bajo se retiró
+# en la spec 048: su fila (si existe) se conserva apagada y oculta, y `ensure_all!` ya no la crea ni la devuelve.
 class WhatsappMessageType < ApplicationRecord
-  KINDS = %w[verification_code stock_alert ticket].freeze
+  KINDS = %w[verification_code ticket].freeze
   TEMPLATE_STATUSES = %w[unknown approved pending rejected not_found incompatible].freeze
 
   validates :kind, inclusion: { in: KINDS }, uniqueness: true
@@ -11,7 +12,7 @@ class WhatsappMessageType < ApplicationRecord
   validate :tickets_have_no_template
   validate :enabling_is_allowed, if: -> { will_save_change_to_enabled?(to: true) }
 
-  # Crea los tres tipos con los nombres sugeridos si faltan (primer uso).
+  # Crea los tipos vigentes con los nombres sugeridos si faltan (primer uso) y devuelve solo esos.
   def self.ensure_all!
     KINDS.each do |kind|
       next if exists?(kind: kind)
@@ -19,7 +20,7 @@ class WhatsappMessageType < ApplicationRecord
       definition = Whatsapp::MessageTypes.fetch(kind)
       create!(kind: kind, template_name: definition.suggested_name, template_language: definition.suggested_language || "es_MX")
     end
-    order(:id)
+    where(kind: KINDS).order(:id)
   end
 
   def uses_template? = kind != "ticket"

@@ -1,6 +1,8 @@
 module Api
   module V1
-    # Canales de la persona autenticada para los avisos de stock bajo en la empresa activa (spec 045, FR-017 y FR-018).
+    # Canal de correo de la persona autenticada para los avisos de stock bajo en la empresa activa (spec 045, FR-017 y
+    # FR-018). Desde la spec 048 es el único canal externo: `stock_whatsapp` ya no se lee, no se escribe ni se devuelve
+    # (si un cliente antiguo lo manda, se ignora sin error).
     class NotificationPreferencesController < BaseController
       before_action :require_boss!
 
@@ -9,29 +11,18 @@ module Api
         render json: payload(NotificationPreference.for(current_user, current_company))
       end
 
-      # PATCH /api/v1/notification_preference { stock_email: false, stock_whatsapp: true }
+      # PATCH /api/v1/notification_preference { stock_email: false }
       def update
         preference = NotificationPreference.for(current_user, current_company)
         preference.stock_email = params[:stock_email] if params.key?(:stock_email)
-        preference.stock_whatsapp = params[:stock_whatsapp] if params.key?(:stock_whatsapp)
-
-        unless preference.save
-          if preference.errors.of_kind?(:stock_whatsapp, :phone_required)
-            raise ApiErrors::UnprocessableEntityError.new(details: [ { code: "phone_required" } ])
-          end
-
-          preference.save!
-        end
+        preference.save!
         render json: payload(preference)
       end
 
       private
 
       def payload(preference)
-        {
-          stock_email: preference.stock_email, stock_whatsapp: preference.stock_whatsapp,
-          phone_present: current_user.phone.present?, whatsapp_available: ::Whatsapp::StockAlertService.configured?
-        }
+        { stock_email: preference.stock_email }
       end
     end
   end

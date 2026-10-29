@@ -1,9 +1,11 @@
 module Alerts
-  # Quién recibe los avisos de stock bajo de una empresa (spec 045): dueños y administradores activos, con el canal
-  # encendido. El correo está encendido por omisión; el WhatsApp solo si la persona lo activó y tiene teléfono.
+  # Quién recibe por correo los avisos de stock bajo de una empresa (spec 045): dueños y administradores activos con el
+  # correo encendido (por omisión sí) y con correo registrado. Desde la spec 048 WhatsApp ya no es un canal de avisos:
+  # una preferencia vieja de WhatsApp no cuenta (ni siquiera el teléfono). Quien tenga el correo apagado no recibe nada
+  # externo, pero la alerta sigue en el panel y en la app (`Alerts::Collector`).
   # Se calcula al enviar, así que quien deja de ser jefe o se da de baja deja de recibir.
   class Recipients
-    Recipient = Struct.new(:user, :email, :whatsapp, keyword_init: true)
+    Recipient = Struct.new(:user, :email, keyword_init: true)
 
     def self.call(company) = new(company).call
 
@@ -21,8 +23,7 @@ module Alerts
 
         preference = preferences[user.id]
         email = (preference ? preference.stock_email : true) && user.email.present?
-        whatsapp = preference&.stock_whatsapp && user.phone.present?
-        Recipient.new(user: user, email: email, whatsapp: whatsapp) if email || whatsapp
+        Recipient.new(user: user, email: true) if email
       end
     end
 

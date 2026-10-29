@@ -46,7 +46,6 @@ en:
       formats_limit: "A company can have up to %{count} custom formats"
       greater_than: "must be greater than %{count}"
       taken: "has already been taken"
-      phone_required: "needs a saved phone number"
       invalid: "is invalid"
       not_connected: "needs a valid WhatsApp connection"
       connection_error: "cannot be turned on while the connection has an error"
@@ -435,7 +434,6 @@ en:
     errors:
       invalid_minutes: "The delay must be 30 minutes, 1 hour or 2 hours"
       not_snoozable: "This kind of alert cannot be snoozed"
-      phone_required: "Save your phone number to get WhatsApp notices"
     email:
       immediate_subject: "Low stock at %{company}"
       daily_subject: "Low stock summary · %{company}"
@@ -444,19 +442,12 @@ en:
     targets:
       connection: "the WhatsApp connection"
       verification_code: "verification codes"
-      stock_alert: "low stock notices"
       ticket: "ticket sending"
     guide:
       verification_code:
         body: "Your Draxuvo verification code is {{1}}. Do not share it with anyone."
         variables:
           - "The 6-digit code"
-      stock_alert:
-        body: "Low stock at {{1}}: {{2}} product(s) reached their minimum ({{3}}). Check them in the inventory."
-        variables:
-          - "Company name"
-          - "Number of products that dropped"
-          - "The first product names"
     reasons:
       invalid_token: "The key is not valid"
       token_expired: "The key expired; generate a new one in Meta"
@@ -490,8 +481,6 @@ en:
       tests_limit: "You reached the hourly test limit; try again later"
       invalid_phone: "Enter a number of 10 to 15 digits"
     test:
-      company: "TEST Draxuvo"
-      products: "test message"
       ticket: "Draxuvo WhatsApp test"
     mail:
       subject: "WhatsApp needs attention in Draxuvo"

@@ -157,8 +157,10 @@ no se evalúa). Los límites salen de `AlertSetting` (`thresholds` anidado, solo
 elemento y la posposición se borra al leer si el elemento avanzó). `GET/PATCH /alert_settings` y `/notification_preference`
 (`NotificationPreference` por persona y empresa). Stock bajo: `StockAlerts::ScanJob` (cada 5 min) detecta con `Scan`, espera
 `StockAlertState::GRACE` y manda agrupado con `Dispatch`/`Notify`; `DailySummaryJob` (cada hora) manda el resumen a la hora local de la empresa;
-`Alerts::Recipients` decide a quién; cada envío queda en `AlertDelivery`. Correo: `ResendMailer.stock_alert`; WhatsApp:
-`Whatsapp::StockAlertService` (plantilla, `unavailable` si el canal no está disponible, ver spec 047). Demos y empresas sin acceso no mandan nada (`StockAlerts::Companies`).
+`Alerts::Recipients` decide a quién (solo por correo); cada envío queda en `AlertDelivery`. Correo: `ResendMailer.stock_alert`. **Desde la spec 048
+el stock bajo ya no sale por WhatsApp** (se borró `Whatsapp::StockAlertService`): solo correo y alerta del panel y de la app; `NotificationPreference.stock_whatsapp`,
+las filas `alert_deliveries` con canal `whatsapp` y los `whatsapp_events` del tipo retirado se conservan como historial pero ya no se leen ni se escriben
+(`GET/PATCH /notification_preference` solo habla de `stock_email` y ignora `stock_whatsapp`). Demos y empresas sin acceso no mandan nada (`StockAlerts::Companies`).
 
 ### Configurar WhatsApp (spec 047)
 
@@ -169,7 +171,7 @@ El super admin conecta WhatsApp Business desde el panel (`/whatsapp` en `ui`); t
 
 - **Tablas**: `whatsapp_connections` (una sola fila; `access_token` cifrado con ActiveRecord::Encryption y claves derivadas de `SECRET_KEY_BASE` en
   `config/initializers/active_record_encryption.rb`, `token_hint` con los últimos 4, `status` `not_connected|connected|error`, `managed`, `enabled`,
-  `problem_notified_at`, `lock_version`), `whatsapp_message_types` (`verification_code`, `stock_alert`, `ticket`; plantilla, idioma, estado, `enabled`) y
+  `problem_notified_at`, `lock_version`), `whatsapp_message_types` (`verification_code` y `ticket`; el tipo `stock_alert` se retiró en la spec 048: su fila se conserva apagada y `ensure_all!` ya no la crea ni la devuelve; plantilla, idioma, estado, `enabled`) y
   `whatsapp_events` (solo inserción; `WhatsappEvent.log!` borra de `data` cualquier clave secreta y los teléfonos van con `mask_phone`). La llave jamás se
   serializa: `WhatsappConnection#serializable_hash` la excluye y la API solo da `token_present` y `token_hint`.
 - **`Whatsapp::Config`** es lo único que consultan los servicios de envío: `source` (`:panel` si `managed`, `:env` si el panel nunca se usó y hay `WHATSAPP_*`,

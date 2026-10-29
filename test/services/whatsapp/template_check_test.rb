@@ -23,7 +23,7 @@ class Whatsapp::TemplateCheckTest < ActiveSupport::TestCase
     end
   end
 
-  def template(status: "APPROVED", language: "es_MX", name: "stock_bajo", text: "Stock bajo en {{1}}: {{2}} ({{3}})", reason: nil)
+  def template(status: "APPROVED", language: "es_MX", name: "verification_code", text: "Tu código es {{1}}", reason: nil)
     row = { "name" => name, "language" => language, "status" => status,
             "components" => [ { "type" => "HEADER", "text" => "Hola {{1}}" }, { "type" => "BODY", "text" => text } ] }
     row["rejected_reason"] = reason if reason
@@ -40,7 +40,7 @@ class Whatsapp::TemplateCheckTest < ActiveSupport::TestCase
     http_response(Net::HTTPBadRequest, 400, "error" => { "code" => 100, "error_subcode" => 2_388_339, "message" => "Invalid parameter" })
   end
 
-  def check(*responses, name: "stock_bajo", language: "es_MX", expected: 3)
+  def check(*responses, name: "verification_code", language: "es_MX", expected: 1)
     http = FakeHttp.new(responses, [])
     result = nil
     Net::HTTP.stub(:new, ->(*) { http }) do
@@ -56,7 +56,7 @@ class Whatsapp::TemplateCheckTest < ActiveSupport::TestCase
     assert_equal "approved", result.status
     assert_nil result.detail
     assert_match "/#{WABA}/message_templates", http.requests.first.path
-    assert_match "name=stock_bajo", http.requests.first.path
+    assert_match "name=verification_code", http.requests.first.path
   end
 
   test "pending and in-appeal templates are pending" do
@@ -91,15 +91,14 @@ class Whatsapp::TemplateCheckTest < ActiveSupport::TestCase
   end
 
   test "a different number of variables is incompatible even if approved" do
-    result, = check(listing(template(text: "Hola {{1}}")))
+    result, = check(listing(template(text: "Hola {{1}} {{2}}")))
 
     assert_equal "incompatible", result.status
-    assert_includes result.detail, "1"
-    assert_includes result.detail, "3"
+    assert_equal I18n.t("whatsapp_admin.reasons.template_variables_count", found: 2, expected: 1), result.detail
   end
 
   test "repeated variables count once and only the body counts" do
-    result, = check(listing(template(text: "{{1}} {{2}} {{3}} {{1}}")))
+    result, = check(listing(template(text: "{{1}} {{1}}")))
 
     assert_equal "approved", result.status
   end
