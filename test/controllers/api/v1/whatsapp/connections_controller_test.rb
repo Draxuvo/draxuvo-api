@@ -58,6 +58,23 @@ class WhatsappConnectionsControllerTest < ActionDispatch::IntegrationTest
     { access_token: TOKEN, phone_number_id: PHONE, waba_id: WABA }.merge(extra)
   end
 
+  test "PUT connects a Meta test account and warns that templates cannot be checked" do
+    with_meta(phone_ok, meta_error(100, subcode: 2_388_339)) { put PATH, params: body_params, headers: @headers, as: :json }
+
+    assert_response :ok
+    assert_equal "connected", WhatsappConnection.first.status
+    assert_equal "test_account", response.parsed_body["notice"]
+    assert_equal true, WhatsappEvent.find_by!(action: "connected").data["test_account"]
+    assert_not_includes response.body, TOKEN
+  end
+
+  test "a regular connection carries no notice" do
+    with_meta(phone_ok, numbers_ok) { put PATH, params: body_params, headers: @headers, as: :json }
+
+    assert_nil response.parsed_body["notice"]
+    assert_nil WhatsappEvent.find_by!(action: "connected").data["test_account"]
+  end
+
   test "PUT saves a verified connection as connected and managed, and never returns the key" do
     with_meta(phone_ok, numbers_ok) { put PATH, params: body_params, headers: @headers, as: :json }
 

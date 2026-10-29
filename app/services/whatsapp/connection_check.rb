@@ -10,9 +10,12 @@ module Whatsapp
     # Meta responde 100 cuando el identificador no existe o no se puede consultar con esa llave.
     OBJECT_NOT_FOUND = 100
 
-    Result = Struct.new(:ok, :reason, :meta_code, :unreachable, :verified_name, :display_phone_number, keyword_init: true) do
+    # `test_account`: Meta no deja listar los números de una cuenta de prueba, así que no se pudo comprobar que el número
+    # pertenece a la cuenta. La llave y el número sí se comprobaron; se acepta y se avisa.
+    Result = Struct.new(:ok, :reason, :meta_code, :unreachable, :verified_name, :display_phone_number, :test_account, keyword_init: true) do
       def ok? = ok == true
       def unreachable? = unreachable == true
+      def test_account? = test_account == true
 
       def message = I18n.t("whatsapp_admin.reasons.#{reason}", default: I18n.t("whatsapp_admin.reasons.unknown"))
     end
@@ -32,16 +35,22 @@ module Whatsapp
       return failed(phone.failure, not_found: "invalid_number") unless phone.ok?
 
       numbers = @client.get("/#{@waba_id}/phone_numbers", fields: "id", limit: 100)
+      return accepted(phone, test_account: true) if !numbers.ok? && numbers.failure.unsupported_account?
       return failed(numbers.failure, not_found: "account_not_found") unless numbers.ok?
       return rejected("phone_not_in_account") unless belongs?(numbers.data)
 
-      Result.new(ok: true, verified_name: phone.data["verified_name"], display_phone_number: phone.data["display_phone_number"])
+      accepted(phone)
     end
 
     private
 
     def belongs?(data)
       Array(data["data"]).any? { |row| row["id"].to_s == @phone_number_id }
+    end
+
+    def accepted(phone, test_account: false)
+      Result.new(ok: true, test_account: test_account, verified_name: phone.data["verified_name"],
+                 display_phone_number: phone.data["display_phone_number"])
     end
 
     def rejected(reason, meta_code: nil) = Result.new(ok: false, reason: reason, meta_code: meta_code)

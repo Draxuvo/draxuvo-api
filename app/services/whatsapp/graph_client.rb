@@ -18,10 +18,15 @@ module Whatsapp
     OPEN_TIMEOUT = 3
     READ_TIMEOUT = 5
 
+    # Subcódigo con que Meta responde 100 («esta API no se soporta para esta cuenta de WhatsApp Business») cuando se
+    # consulta una **cuenta de prueba**: no permite listar sus números ni sus plantillas (comprobado con una cuenta real).
+    UNSUPPORTED_ACCOUNT_SUBCODE = 2_388_339
+
     Failure = Struct.new(:family, :reason, :code, :subcode, :message, :http_status, keyword_init: true) do
       def connection? = family == :connection
       def template? = family == :template
       def transient? = family == :transient
+      def unsupported_account? = code == 100 && subcode == UNSUPPORTED_ACCOUNT_SUBCODE
 
       # Texto para quien llamó: el mensaje de Meta, uno genérico con el HTTP si no trae mensaje, o «no se pudo contactar a
       # Meta» cuando ni siquiera hubo respuesta (red, tiempo agotado).

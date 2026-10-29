@@ -22,8 +22,8 @@ module Api
           replaced = token.present? && connection.token_present?
           save_connection(connection, token: token, phone_number_id: phone_number_id, waba_id: waba_id, check: check)
           WhatsappEvent.log!(action: replaced ? "token_replaced" : "connected", target: "connection", user: current_user,
-                             data: { phone_number_id: phone_number_id, waba_id: waba_id })
-          render_state
+                             data: { phone_number_id: phone_number_id, waba_id: waba_id, test_account: check.test_account? }.compact_blank)
+          render_state(notice: check.test_account? ? "test_account" : nil)
         end
 
         # POST /api/v1/whatsapp/connection/verify — «Verificar ahora» con la llave guardada.
@@ -37,7 +37,7 @@ module Api
           return render_unreachable if check.unreachable?
 
           check.ok? ? mark_verified(connection, check) : mark_failed(check)
-          render_state
+          render_state(notice: check.ok? && check.test_account? ? "test_account" : nil)
         end
 
         # DELETE /api/v1/whatsapp/connection — borra la llave y apaga el canal; conserva las plantillas elegidas.
