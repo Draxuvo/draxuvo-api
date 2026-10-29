@@ -34,7 +34,7 @@ module Whatsapp
       return Result.new(status: "not_found", detail: I18n.t("whatsapp_admin.reasons.template_missing")) if @name.blank?
 
       result = list(FIELDS)
-      result = list(FIELDS_WITHOUT_REASON) if !result.ok? && result.failure.code == INVALID_FIELD
+      result = list(FIELDS_WITHOUT_REASON) if !result.ok? && result.failure.code == INVALID_FIELD && !result.failure.unsupported_account?
       return failed(result.failure) unless result.ok?
 
       interpret(Array(result.data["data"]))
@@ -49,6 +49,9 @@ module Whatsapp
 
       # Un fallo de la conexión no dice nada de la plantilla: no hay estado nuevo y el fallo va a `Whatsapp::Health`.
       return Result.new(failure: failure) if failure.connection?
+
+      # Una cuenta de prueba de Meta no deja consultar plantillas: no se sabe su estado (no es «no encontrada»).
+      return Result.new(status: "unknown", detail: I18n.t("whatsapp_admin.reasons.template_test_account")) if failure.unsupported_account?
 
       Result.new(status: "not_found", detail: failure.user_message)
     end

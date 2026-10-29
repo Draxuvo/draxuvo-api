@@ -16,8 +16,11 @@ module WhatsappAccess
 
   # `stale_kind`: el tipo cuya verificación no pudo hacerse (Meta sin respuesta); se marca con `stale: true` y conserva
   # el último estado conocido.
-  def render_state(status: :ok, stale_kind: nil)
+  # `notice`: aviso para la pantalla que no cambia el estado guardado (p. ej. `test_account`: Meta no deja comprobar
+  # la pertenencia del número ni las plantillas de una cuenta de prueba).
+  def render_state(status: :ok, stale_kind: nil, notice: nil)
     state = state_json
+    state[:notice] = notice if notice
     if stale_kind
       state[:message_types] = state[:message_types].map { |type| type[:kind] == stale_kind ? type.merge(stale: true) : type }
     end

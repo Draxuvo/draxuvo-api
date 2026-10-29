@@ -36,6 +36,10 @@ class Whatsapp::TemplateCheckTest < ActiveSupport::TestCase
     http_response(Net::HTTPBadRequest, http, "error" => { "code" => code, "message" => "msg" })
   end
 
+  def unsupported_account_error
+    http_response(Net::HTTPBadRequest, 400, "error" => { "code" => 100, "error_subcode" => 2_388_339, "message" => "Invalid parameter" })
+  end
+
   def check(*responses, name: "stock_bajo", language: "es_MX", expected: 3)
     http = FakeHttp.new(responses, [])
     result = nil
@@ -119,6 +123,14 @@ class Whatsapp::TemplateCheckTest < ActiveSupport::TestCase
 
     assert result.unreachable?
     assert_nil result.status
+  end
+
+  test "a Meta test account that does not allow listing templates is unknown, not not_found, and is not retried" do
+    result, http = check(unsupported_account_error, unsupported_account_error)
+
+    assert_equal "unknown", result.status
+    assert_equal I18n.t("whatsapp_admin.reasons.template_test_account"), result.detail
+    assert_equal 1, http.requests.size
   end
 
   test "a connection failure is handed back so Health can record it" do

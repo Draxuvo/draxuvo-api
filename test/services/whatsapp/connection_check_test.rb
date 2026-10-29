@@ -46,6 +46,37 @@ class Whatsapp::ConnectionCheckTest < ActiveSupport::TestCase
     [ result, http ]
   end
 
+  test "a Meta test account that cannot list its numbers is accepted and flagged as a test account" do
+    # Respuesta real de Meta (2026-10-28): 100 con subcódigo 2388339, «API no soportada para esta cuenta».
+    result, = check(phone_ok, meta_error(100, subcode: 2_388_339))
+
+    assert result.ok?
+    assert result.test_account?
+    assert_equal "Draxuvo", result.verified_name
+    assert_equal "+52 55 1234 5678", result.display_phone_number
+  end
+
+  test "a regular account is not flagged as a test account" do
+    result, = check(phone_ok, numbers_ok(PHONE))
+
+    assert result.ok?
+    assert_not result.test_account?
+  end
+
+  test "a plain 100 on the account (no access or does not exist) is still rejected" do
+    result, = check(phone_ok, meta_error(100, subcode: 33))
+
+    assert_not result.ok?
+    assert_equal "account_not_found", result.reason
+  end
+
+  test "a plain 100 on the number says the key may have no access, not only that the id is wrong" do
+    result, = check(meta_error(100, subcode: 33))
+
+    assert_equal "invalid_number", result.reason
+    assert_match(/no tiene acceso/, result.message)
+  end
+
   test "a valid key, number and account are accepted with the visible name and number" do
     result, http = check(phone_ok, numbers_ok("1", PHONE))
 

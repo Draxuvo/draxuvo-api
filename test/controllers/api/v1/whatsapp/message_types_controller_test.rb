@@ -128,6 +128,20 @@ class WhatsappMessageTypesControllerTest < ActionDispatch::IntegrationTest
     assert WhatsappEvent.exists?(action: "verified", target: "stock_alert", result: "ok")
   end
 
+  test "verify on a Meta test account says templates cannot be checked there and keeps the type off" do
+    @stock.update_columns(enabled: false, template_status: "unknown")
+    unsupported = http_response(Net::HTTPBadRequest, 400, "error" => { "code" => 100, "error_subcode" => 2_388_339, "message" => "Invalid parameter" })
+
+    with_meta(unsupported) { post "/api/v1/whatsapp/message_types/stock_alert/verify", headers: @headers, as: :json }
+
+    assert_response :ok
+    stock = type_json("stock_alert")
+    assert_equal "unknown", stock["template_status"]
+    assert_equal I18n.t("whatsapp_admin.reasons.template_test_account"), stock["template_detail"]
+    assert_equal false, stock["enabled"]
+    assert_equal false, stock["can_enable"]
+  end
+
   test "verify on an enabled type whose template is no longer usable turns it off and warns the team once" do
     mails = []
     ResendMailer.stub(:whatsapp_alert, ->(**args) { mails << args }) do
