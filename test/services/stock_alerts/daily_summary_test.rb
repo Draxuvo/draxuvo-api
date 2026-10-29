@@ -22,6 +22,16 @@ class StockAlerts::DailySummaryTest < ActiveSupport::TestCase
     assert_equal [ [ "email", "daily", "sent" ] ], @company.alert_deliveries.pluck(:channel, :kind, :status)
   end
 
+  test "an old WhatsApp preference adds nothing: the summary goes only by email and never reaches Meta" do
+    NotificationPreference.create!(user: @owner, company: @company, stock_email: true, stock_whatsapp: true)
+    no_meta = ->(*) { flunk "el resumen de stock bajo no debe llegar a Meta" }
+
+    Net::HTTP.stub(:new, no_meta) { summary(@eight) }
+
+    assert_equal 1, @emails.size
+    assert_equal [ [ "email", "daily", "sent" ] ], @company.alert_deliveries.pluck(:channel, :kind, :status)
+  end
+
   test "it includes products already notified earlier but still low" do
     StockAlertState.create!(company: @company, product: products(:resto_cola), detected_at: 1.day.ago, notified_at: 1.day.ago)
     summary(@eight)

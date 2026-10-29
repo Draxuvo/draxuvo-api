@@ -46,7 +46,6 @@ es:
       formats_limit: "Una empresa puede tener hasta %{count} formatos propios"
       greater_than: "debe ser mayor que %{count}"
       taken: "ya está en uso"
-      phone_required: "requiere un número de teléfono guardado"
       invalid: "no es válido"
       not_connected: "requiere una conexión de WhatsApp válida"
       connection_error: "no se puede encender con la conexión en error"
@@ -435,7 +434,6 @@ es:
     errors:
       invalid_minutes: "El plazo debe ser de 30 minutos, 1 hora o 2 horas"
       not_snoozable: "Este tipo de alerta no se puede posponer"
-      phone_required: "Guarda tu número de teléfono para recibir avisos por WhatsApp"
     email:
       immediate_subject: "Stock bajo en %{company}"
       daily_subject: "Resumen de stock bajo · %{company}"
@@ -444,19 +442,12 @@ es:
     targets:
       connection: "la conexión de WhatsApp"
       verification_code: "los códigos de verificación"
-      stock_alert: "los avisos de stock bajo"
       ticket: "el envío de tickets"
     guide:
       verification_code:
         body: "Tu código de verificación de Draxuvo es {{1}}. No lo compartas con nadie."
         variables:
           - "El código de 6 dígitos"
-      stock_alert:
-        body: "Stock bajo en {{1}}: {{2}} producto(s) llegaron a su mínimo ({{3}}). Revísalos en el inventario."
-        variables:
-          - "Nombre de la empresa"
-          - "Número de productos que bajaron"
-          - "Los primeros nombres de producto"
     reasons:
       invalid_token: "La llave no es válida"
       token_expired: "La llave venció; genera una nueva en Meta"
@@ -490,8 +481,6 @@ es:
       tests_limit: "Llegaste al límite de pruebas por hora; inténtalo más tarde"
       invalid_phone: "Escribe un número de 10 a 15 dígitos"
     test:
-      company: "PRUEBA Draxuvo"
-      products: "mensaje de prueba"
       ticket: "Prueba de WhatsApp de Draxuvo"
     mail:
       subject: "WhatsApp necesita atención en Draxuvo"

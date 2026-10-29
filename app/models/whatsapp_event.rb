@@ -3,6 +3,7 @@
 class WhatsappEvent < ApplicationRecord
   ACTIONS = %w[connected token_replaced disconnected channel_on channel_off type_on type_off template_changed verified
                test_sent auto_off connection_error alert_sent].freeze
+  # `stock_alert` ya no es un tipo (spec 048), pero se conserva aquí para que los eventos históricos sigan siendo válidos.
   TARGETS = %w[connection verification_code stock_alert ticket].freeze
   RESULTS = %w[ok failed].freeze
   # Claves que nunca se guardan en `data`, a cualquier profundidad.

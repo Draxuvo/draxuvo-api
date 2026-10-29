@@ -10,7 +10,7 @@ class Whatsapp::ConfigTest < ActiveSupport::TestCase
   def config = Whatsapp::Config.current
 
   # Deja el panel conectado, con el canal y el tipo encendidos y la plantilla aprobada.
-  def panel_ready!(kind: "stock_alert")
+  def panel_ready!(kind: "verification_code")
     WhatsappConnection.current.update!(access_token: "EAAGdelpanel0000", phone_number_id: "104512345678901", waba_id: "109876543210987",
                                        status: "connected", managed: true)
     WhatsappMessageType.find_by!(kind: kind).update!(template_status: "approved") if kind != "ticket"
@@ -64,12 +64,12 @@ class Whatsapp::ConfigTest < ActiveSupport::TestCase
   test "a type is available only with the connection, the general switch, its own switch and an approved template" do
     with_env(NO_ENV) do
       panel_ready!
-      assert config.available?("stock_alert")
-      assert config.available?(:stock_alert)
-      assert_not config.available?("verification_code"), "el otro tipo sigue apagado"
+      assert config.available?("verification_code")
+      assert config.available?(:verification_code)
+      assert_not config.available?("ticket"), "el otro tipo sigue apagado"
 
-      WhatsappMessageType.find_by!(kind: "stock_alert").update!(enabled: false)
-      assert_not config.available?("stock_alert")
+      WhatsappMessageType.find_by!(kind: "verification_code").update!(enabled: false)
+      assert_not config.available?("verification_code")
     end
   end
 
@@ -78,16 +78,16 @@ class Whatsapp::ConfigTest < ActiveSupport::TestCase
       panel_ready!
       WhatsappConnection.current.update!(enabled: false)
 
-      assert_not config.available?("stock_alert")
-      assert WhatsappMessageType.find_by!(kind: "stock_alert").enabled
+      assert_not config.available?("verification_code")
+      assert WhatsappMessageType.find_by!(kind: "verification_code").enabled
     end
   end
 
   test "a type whose template stopped being approved is unavailable" do
     with_env(NO_ENV) do
       panel_ready!
-      WhatsappMessageType.find_by!(kind: "stock_alert").update_columns(template_status: "rejected")
-      assert_not config.available?("stock_alert")
+      WhatsappMessageType.find_by!(kind: "verification_code").update_columns(template_status: "rejected")
+      assert_not config.available?("verification_code")
     end
   end
 
@@ -96,7 +96,7 @@ class Whatsapp::ConfigTest < ActiveSupport::TestCase
       panel_ready!
       WhatsappConnection.current.update!(status: "error")
 
-      assert_not config.available?("stock_alert")
+      assert_not config.available?("verification_code")
       assert WhatsappConnection.current.enabled
     end
   end
@@ -112,19 +112,24 @@ class Whatsapp::ConfigTest < ActiveSupport::TestCase
   test "templates come from the panel, or from the environment with their defaults and overrides" do
     with_env(NO_ENV) do
       panel_ready!
-      WhatsappMessageType.find_by!(kind: "stock_alert").update_columns(template_name: "mi_plantilla", template_language: "en_US")
-      assert_equal %w[mi_plantilla en_US], config.template_for("stock_alert").to_a
+      WhatsappMessageType.find_by!(kind: "verification_code").update_columns(template_name: "mi_plantilla", template_language: "en_US")
+      assert_equal %w[mi_plantilla en_US], config.template_for("verification_code").to_a
     end
 
     with_env(ENV_VARS) do
       WhatsappConnection.current.update_columns(managed: false)
-      assert_equal %w[stock_bajo es_MX], config.template_for("stock_alert").to_a
       assert_equal %w[verification_code es_MX], config.template_for("verification_code").to_a
     end
 
-    with_env(ENV_VARS.merge("WHATSAPP_STOCK_TEMPLATE_NAME" => "otra", "WHATSAPP_OTP_TEMPLATE_LANG" => "es")) do
-      assert_equal %w[otra es_MX], config.template_for("stock_alert").to_a
-      assert_equal %w[verification_code es], config.template_for("verification_code").to_a
+    with_env(ENV_VARS.merge("WHATSAPP_OTP_TEMPLATE_NAME" => "otra", "WHATSAPP_OTP_TEMPLATE_LANG" => "es")) do
+      assert_equal %w[otra es], config.template_for("verification_code").to_a
+    end
+  end
+
+  test "the old low stock template variables are ignored (spec 048)" do
+    with_env(ENV_VARS.merge("WHATSAPP_STOCK_TEMPLATE_NAME" => "otra", "WHATSAPP_STOCK_TEMPLATE_LANG" => "en_US")) do
+      assert_equal %w[verification_code es_MX], config.template_for("verification_code").to_a
+      assert_not_includes Whatsapp::Config::ENV_TEMPLATES.keys, "stock_alert"
     end
   end
 
@@ -135,7 +140,7 @@ class Whatsapp::ConfigTest < ActiveSupport::TestCase
 
       assert config.key_unreadable?
       assert_nil config.access_token
-      assert_not config.available?("stock_alert")
+      assert_not config.available?("verification_code")
     end
   end
 
@@ -144,7 +149,7 @@ class Whatsapp::ConfigTest < ActiveSupport::TestCase
     WhatsappMessageType.delete_all
 
     assert_no_difference [ "WhatsappConnection.count", "WhatsappMessageType.count" ] do
-      with_env(NO_ENV) { config.available?("stock_alert") }
+      with_env(NO_ENV) { config.available?("verification_code") }
     end
   end
 

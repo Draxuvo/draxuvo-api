@@ -73,11 +73,11 @@ class WhatsappConnectionTest < ActiveSupport::TestCase
 
   test "disconnecting wipes the key and the connection data, turns everything off and keeps the templates" do
     WhatsappMessageType.ensure_all!
-    stock = WhatsappMessageType.find_by!(kind: "stock_alert")
-    stock.update!(template_name: "mi_plantilla", template_status: "approved")
+    code = WhatsappMessageType.find_by!(kind: "verification_code")
+    code.update!(template_name: "mi_plantilla", template_status: "approved")
     connection = connect!
     connection.update!(enabled: true)
-    stock.update!(enabled: true)
+    code.update!(enabled: true)
 
     connection.disconnect!
 
@@ -85,9 +85,9 @@ class WhatsappConnectionTest < ActiveSupport::TestCase
     assert_equal [ nil, nil, nil, nil, nil, nil ], [ connection.phone_number_id, connection.waba_id, connection.token_hint, connection.verified_name, connection.display_phone_number, connection.error_code ]
     assert_not connection.token_present?
     assert_equal [ "not_connected", false, true ], [ connection.status, connection.enabled, connection.managed ]
-    stock.reload
-    assert_not stock.enabled
-    assert_equal [ "mi_plantilla", "approved" ], [ stock.template_name, stock.template_status ]
+    code.reload
+    assert_not code.enabled
+    assert_equal [ "mi_plantilla", "approved" ], [ code.template_name, code.template_status ]
   end
 
   test "the optimistic lock rejects a stale write" do

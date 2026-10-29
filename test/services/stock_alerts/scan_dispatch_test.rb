@@ -8,22 +8,14 @@ class StockAlerts::ScanDispatchTest < ActiveSupport::TestCase
     @cola = products(:resto_cola) # stock 2, mínimo 3: ya está bajo
     @tacos = products(:resto_tacos) # stock 10, mínimo 3
     @emails = []
-    @whatsapps = []
   end
 
-  # Corre el bloque con los dos canales simulados y recoge lo que se mandó.
+  # Corre el bloque con el correo simulado y recoge lo que se mandó. Los avisos de stock ya no salen por WhatsApp
+  # (spec 048): si algo intenta llegar a Meta, la prueba falla.
   def with_channels(&block)
     mail = ->(user:, company_name:, kind:, products:, **) { @emails << { user: user, kind: kind, products: products.map(&:name) }; { "id" => "em_1" } }
-    ResendMailer.stub(:stock_alert, mail) do
-      Whatsapp::StockAlertService.stub(:new, ->(**args) { FakeWhatsapp.new(@whatsapps, args) }, &block)
-    end
-  end
-
-  FakeWhatsapp = Struct.new(:log, :args) do
-    def call
-      log << args
-      Whatsapp::StockAlertService::Result.new(status: "sent")
-    end
+    no_meta = ->(*) { flunk "un aviso de stock bajo no debe llegar a Meta" }
+    ResendMailer.stub(:stock_alert, mail) { Net::HTTP.stub(:new, no_meta, &block) }
   end
 
   def scan_at(time) = StockAlerts::Scan.call(@company, now: time)
@@ -87,16 +79,48 @@ class StockAlerts::ScanDispatchTest < ActiveSupport::TestCase
     assert_equal 2, @emails.first[:products].size
   end
 
-  test "WhatsApp goes only to people who turned it on and have a phone" do
+  test "the notice goes out only by email: an old WhatsApp preference adds nothing" do
+    NotificationPreference.create!(user: @owner, company: @company, stock_email: true, stock_whatsapp: true)
+    t0 = Time.current
+    scan_at(t0)
+
+    with_channels { dispatch_at(t0 + 6.minutes) }
+    assert_equal 1, @emails.size
+    assert_equal [ [ "email", "sent" ] ], @company.alert_deliveries.pluck(:channel, :status)
+  end
+
+  test "with WhatsApp on and the email off nothing goes out, but the alert is still in the panel" do
     NotificationPreference.create!(user: @owner, company: @company, stock_email: false, stock_whatsapp: true)
     t0 = Time.current
     scan_at(t0)
 
     with_channels { dispatch_at(t0 + 6.minutes) }
     assert_empty @emails
-    assert_equal 1, @whatsapps.size
-    assert_equal @owner.phone, @whatsapps.first[:phone]
-    assert_equal [ [ "whatsapp", "sent" ] ], @company.alert_deliveries.pluck(:channel, :status)
+    assert_equal 0, @company.alert_deliveries.count
+    assert_equal 1, @company.stock_alert_states.notified.count
+    assert_equal 1, Alerts::Collector.new(@company).call.results.count { |alert| alert.kind == "low_stock" }
+  end
+
+  test "WhatsApp deliveries recorded before the change are still readable and untouched" do
+    old = AlertDelivery.create!(company: @company, user: @owner, channel: "whatsapp", kind: "immediate", status: "sent",
+                                product_ids: [ @cola.id ], sent_on: Date.current)
+    t0 = Time.current
+    scan_at(t0)
+
+    with_channels { dispatch_at(t0 + 6.minutes) }
+    assert_equal [ "email", "whatsapp" ], @company.alert_deliveries.order(:channel).pluck(:channel)
+    assert_equal "sent", old.reload.status
+  end
+
+  test "a demo company only simulates the email and sends nothing by WhatsApp" do
+    demo = Company.create!(name: "Demo Aviso", demo: true)
+    recipient = Alerts::Recipients::Recipient.new(user: @owner, email: true)
+
+    with_channels do
+      StockAlerts::Notify.call(company: demo, recipients: [ recipient ], products: [ @cola ], kind: "immediate", sent_on: Date.current)
+    end
+    assert_empty @emails
+    assert_equal [ [ "email", "simulated" ] ], demo.alert_deliveries.pluck(:channel, :status)
   end
 
   test "with nobody to notify the products are still marked as notified" do
@@ -109,7 +133,7 @@ class StockAlerts::ScanDispatchTest < ActiveSupport::TestCase
     assert_equal 1, @company.stock_alert_states.notified.count
   end
 
-  test "a time alert alone never sends an email or a WhatsApp" do
+  test "a time alert alone never sends an email" do
     Product.where(company_id: @company.id).update_all(stock: 1000)
     Check.where(id: checks(:open_check).id).update_all(opened_at: 5.hours.ago)
     assert_equal 1, Alerts::Collector.new(@company).call.results.count { |alert| alert.kind == "table_open" }
@@ -118,7 +142,6 @@ class StockAlerts::ScanDispatchTest < ActiveSupport::TestCase
     scan_at(t0)
     with_channels { dispatch_at(t0 + 30.minutes) }
     assert_empty @emails
-    assert_empty @whatsapps
     assert_equal 0, AlertDelivery.count
   end
 

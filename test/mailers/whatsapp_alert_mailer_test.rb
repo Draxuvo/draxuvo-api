@@ -26,9 +26,9 @@ class WhatsappAlertMailerTest < ActiveSupport::TestCase
   end
 
   test "a template problem names the type that was turned off" do
-    sent = send_mail(problem: "template", target: "stock_alert", detail: "La plantilla no existe en ese idioma o no está aprobada")
+    sent = send_mail(problem: "template", target: "verification_code", detail: "La plantilla no existe en ese idioma o no está aprobada")
 
-    assert_includes sent[:html], "Se apagó los avisos de stock bajo porque su plantilla ya no sirve"
+    assert_includes sent[:html], "Se apagó los códigos de verificación porque su plantilla ya no sirve"
     assert_includes sent[:html], "La plantilla no existe en ese idioma o no está aprobada"
   end
 

@@ -31,7 +31,7 @@ class WhatsappControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal "none", body["source"]
     assert_equal "not_connected", body.dig("connection", "status")
-    assert_equal %w[verification_code stock_alert ticket].sort, body["message_types"].map { |t| t["kind"] }.sort
+    assert_equal %w[verification_code ticket].sort, body["message_types"].map { |t| t["kind"] }.sort
     assert_equal 5, body["tests_remaining"]
     ticket = body["message_types"].find { |t| t["kind"] == "ticket" }
     assert_equal false, ticket["uses_template"]
@@ -68,8 +68,32 @@ class WhatsappControllerTest < ActionDispatch::IntegrationTest
   test "can_enable and blocked_reason explain why a switch is locked" do
     get "/api/v1/whatsapp", headers: auth_headers(@super_admin, nil)
 
-    stock = response.parsed_body["message_types"].find { |t| t["kind"] == "stock_alert" }
-    assert_equal false, stock["can_enable"]
-    assert_equal "not_connected", stock["blocked_reason"]
+    code = response.parsed_body["message_types"].find { |t| t["kind"] == "verification_code" }
+    assert_equal false, code["can_enable"]
+    assert_equal "not_connected", code["blocked_reason"]
+  end
+
+  test "an old stock_alert row (even a turned-on one) never appears in the state or changes the general switch (spec 048)" do
+    ActiveRecord::Base.connection.execute(
+      "INSERT INTO whatsapp_message_types (kind, enabled, template_name, template_language, template_status, lock_version, created_at, updated_at) " \
+      "VALUES ('stock_alert', TRUE, 'stock_bajo', 'es_MX', 'approved', 0, NOW(), NOW())"
+    )
+
+    get "/api/v1/whatsapp", headers: auth_headers(@super_admin, nil)
+
+    assert_response :ok
+    assert_equal %w[verification_code ticket].sort, response.parsed_body["message_types"].map { |t| t["kind"] }.sort
+    assert_equal false, response.parsed_body.dig("connection", "enabled")
+  end
+
+  test "the guide lists only the verification code template, in Spanish and in English" do
+    get "/api/v1/whatsapp/guide", headers: auth_headers(@super_admin, nil)
+
+    assert_equal %w[verification_code], response.parsed_body["results"].map { |item| item["kind"] }
+    spanish = response.parsed_body["results"].first["body"]
+    assert_not_includes response.body, "stock_bajo"
+
+    get "/api/v1/whatsapp/guide", headers: auth_headers(@super_admin, nil).merge("Accept-Language" => "en")
+    assert_not_equal spanish, response.parsed_body["results"].first["body"]
   end
 end

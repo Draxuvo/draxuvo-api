@@ -1,6 +1,6 @@
 module Whatsapp
   # Manda un mensaje de prueba de un tipo, por el mismo camino real que los envíos de verdad (spec 047, research R8),
-  # con datos que dejan claro que es una prueba: empresa «PRUEBA Draxuvo», 0 productos y código 000000.
+  # con datos que dejan claro que es una prueba: el código es 000000 y el ticket es un texto de prueba.
   #
   # No pasa por los interruptores (se puede probar con el canal apagado), pero sí exige una conexión válida y, si el tipo
   # usa plantilla, que **en ese momento** esté aprobada y sea compatible: antes de mandar se vuelve a consultar a Meta.
@@ -91,7 +91,6 @@ module Whatsapp
     def parameters
       case @type.kind
       when "verification_code" then [ VERIFICATION_CODE ]
-      when "stock_alert" then [ I18n.t("whatsapp_admin.test.company", locale: locale), "0", I18n.t("whatsapp_admin.test.products", locale: locale) ]
       end
     end
 

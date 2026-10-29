@@ -125,7 +125,7 @@ class WhatsappConnectionsControllerTest < ActionDispatch::IntegrationTest
   test "replacing only the key keeps the number and the chosen templates" do
     connect!
     WhatsappMessageType.ensure_all!
-    WhatsappMessageType.find_by!(kind: "stock_alert").update!(template_name: "mi_plantilla")
+    WhatsappMessageType.find_by!(kind: "verification_code").update!(template_name: "mi_plantilla")
 
     with_meta(phone_ok, numbers_ok) do
       put PATH, params: { access_token: NEW_TOKEN, lock_version: WhatsappConnection.first.lock_version }, headers: @headers, as: :json
@@ -135,7 +135,7 @@ class WhatsappConnectionsControllerTest < ActionDispatch::IntegrationTest
     connection = WhatsappConnection.first
     assert_equal NEW_TOKEN, connection.token
     assert_equal PHONE, connection.phone_number_id
-    assert_equal "mi_plantilla", WhatsappMessageType.find_by!(kind: "stock_alert").template_name
+    assert_equal "mi_plantilla", WhatsappMessageType.find_by!(kind: "verification_code").template_name
     assert WhatsappEvent.exists?(action: "token_replaced")
   end
 
@@ -208,8 +208,8 @@ class WhatsappConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "confirmation_required", response.parsed_body.dig("error", "details", "code")
     assert WhatsappConnection.first.enabled?
 
-    stock = WhatsappMessageType.find_by!(kind: "stock_alert")
-    stock.update!(template_name: "mi_plantilla")
+    code = WhatsappMessageType.find_by!(kind: "verification_code")
+    code.update!(template_name: "mi_plantilla")
     delete PATH, params: { confirm: true }, headers: @headers, as: :json
 
     assert_response :ok
@@ -218,7 +218,7 @@ class WhatsappConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "not_connected", connection.status
     assert_not connection.enabled?
     assert_not WhatsappMessageType.where(enabled: true).exists?
-    assert_equal "mi_plantilla", stock.reload.template_name
+    assert_equal "mi_plantilla", code.reload.template_name
     assert WhatsappEvent.exists?(action: "disconnected")
   end
 

@@ -14,8 +14,7 @@ module Whatsapp
 
     # Los nombres de plantilla de las variables de entorno de siempre y sus valores por omisión.
     ENV_TEMPLATES = {
-      "verification_code" => [ "WHATSAPP_OTP_TEMPLATE_NAME", "verification_code", "WHATSAPP_OTP_TEMPLATE_LANG" ],
-      "stock_alert" => [ "WHATSAPP_STOCK_TEMPLATE_NAME", "stock_bajo", "WHATSAPP_STOCK_TEMPLATE_LANG" ]
+      "verification_code" => [ "WHATSAPP_OTP_TEMPLATE_NAME", "verification_code", "WHATSAPP_OTP_TEMPLATE_LANG" ]
     }.freeze
 
     def self.current = new

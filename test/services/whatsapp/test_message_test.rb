@@ -39,8 +39,6 @@ class Whatsapp::TestMessageTest < ActiveSupport::TestCase
     http_response(Net::HTTPOK, 200, "data" => [ row ])
   end
 
-  STOCK_TEXT = "Stock bajo en {{1}}: {{2}} ({{3}})".freeze
-
   # Corre el servicio con Meta simulado: las respuestas se dan en orden (plantilla primero, envío después).
   def send_test(kind, *responses, phone: "5512345678", &after)
     http = FakeHttp.new(responses, [])
@@ -54,25 +52,17 @@ class Whatsapp::TestMessageTest < ActiveSupport::TestCase
 
   def body_of(request) = JSON.parse(request.body)
 
-  test "the stock alert test carries clearly test data and is sent after re-checking the template" do
-    result, http = send_test("stock_alert", listing(name: "stock_bajo", text: STOCK_TEXT), sent)
+  test "the verification code test uses 000000 and is sent after re-checking the template" do
+    result, http = send_test("verification_code", listing(name: "verification_code"), sent)
 
     assert result.sent?
     assert_equal 2, http.requests.size
     assert_match "/message_templates", http.requests.first.path
     payload = body_of(http.requests.last)
     assert_equal "template", payload["type"]
-    assert_equal "stock_bajo", payload["template"]["name"]
-    assert_equal [ "PRUEBA Draxuvo", "0", "mensaje de prueba" ],
-                 payload["template"]["components"].first["parameters"].map { |parameter| parameter["text"] }
+    assert_equal "verification_code", payload["template"]["name"]
+    assert_equal [ "000000" ], payload["template"]["components"].first["parameters"].map { |p| p["text"] }
     assert_equal "525512345678", payload["to"]
-  end
-
-  test "the verification code test uses 000000" do
-    result, http = send_test("verification_code", listing(name: "verification_code"), sent)
-
-    assert result.sent?
-    assert_equal [ "000000" ], body_of(http.requests.last)["template"]["components"].first["parameters"].map { |p| p["text"] }
   end
 
   test "the ticket test is a short text and needs no template" do
@@ -85,19 +75,20 @@ class Whatsapp::TestMessageTest < ActiveSupport::TestCase
     assert_equal I18n.t("whatsapp_admin.test.ticket", locale: :es), payload["text"]["body"]
   end
 
-  test "an English template gets English test texts" do
-    type("stock_alert").update!(template_language: "en_US")
+  test "an English template still sends the same test code" do
+    type("verification_code").update!(template_language: "en_US")
 
-    _, http = send_test("stock_alert", listing(name: "stock_bajo", language: "en_US", text: STOCK_TEXT), sent)
+    _, http = send_test("verification_code", listing(name: "verification_code", language: "en_US"), sent)
 
-    assert_equal [ "TEST Draxuvo", "0", "test message" ],
-                 body_of(http.requests.last)["template"]["components"].first["parameters"].map { |p| p["text"] }
+    payload = body_of(http.requests.last)
+    assert_equal "en_US", payload["template"]["language"]["code"]
+    assert_equal [ "000000" ], payload["template"]["components"].first["parameters"].map { |p| p["text"] }
   end
 
   test "it works with the channel off" do
     assert_not WhatsappConnection.first.enabled?
 
-    result, = send_test("stock_alert", listing(name: "stock_bajo", text: STOCK_TEXT), sent)
+    result, = send_test("verification_code", listing(name: "verification_code"), sent)
 
     assert result.sent?
   end
@@ -113,22 +104,22 @@ class Whatsapp::TestMessageTest < ActiveSupport::TestCase
   end
 
   test "a template that is no longer approved is blocked and nothing is sent" do
-    result, http = send_test("stock_alert", listing(name: "stock_bajo", status: "PAUSED", text: STOCK_TEXT))
+    result, http = send_test("verification_code", listing(name: "verification_code", status: "PAUSED"))
 
     assert_equal "blocked", result.status
     assert_equal "template_not_approved", result.reason
     assert_equal 1, http.requests.size
-    assert_equal "rejected", type("stock_alert").template_status
+    assert_equal "rejected", type("verification_code").template_status
   end
 
   test "an incompatible template is blocked" do
-    result, = send_test("stock_alert", listing(name: "stock_bajo", text: "solo {{1}}"))
+    result, = send_test("verification_code", listing(name: "verification_code", text: "{{1}} {{2}}"))
 
     assert_equal "template_incompatible", result.reason
   end
 
   test "Meta down while re-checking the template is unreachable and sends nothing" do
-    result, http = send_test("stock_alert", Net::ReadTimeout)
+    result, http = send_test("verification_code", Net::ReadTimeout)
 
     assert_equal "unreachable", result.status
     assert_equal 1, http.requests.size
@@ -150,7 +141,7 @@ class Whatsapp::TestMessageTest < ActiveSupport::TestCase
   end
 
   test "a key rejected while re-checking the template puts the connection in error" do
-    result, = send_test("stock_alert", meta_error(190))
+    result, = send_test("verification_code", meta_error(190))
 
     assert_equal "blocked", result.status
     assert_equal "connection_error", result.reason
@@ -169,11 +160,11 @@ class Whatsapp::TestMessageTest < ActiveSupport::TestCase
   end
 
   test "it never touches the real-send state of the type" do
-    type("stock_alert").update!(template_status: "approved")
-    before = type("stock_alert").enabled
+    type("verification_code").update!(template_status: "approved")
+    before = type("verification_code").enabled
 
-    send_test("stock_alert", listing(name: "stock_bajo", text: STOCK_TEXT), sent)
+    send_test("verification_code", listing(name: "verification_code"), sent)
 
-    assert_equal before, type("stock_alert").enabled
+    assert_equal before, type("verification_code").enabled
   end
 end

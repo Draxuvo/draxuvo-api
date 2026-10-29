@@ -15,19 +15,33 @@ class Alerts::RecipientsTest < ActiveSupport::TestCase
     found = recipients
     assert_equal [ @owner, @admin ].sort_by(&:id), found.keys.sort_by(&:id)
     assert found.values.all?(&:email)
-    assert found.values.none?(&:whatsapp)
   end
 
-  test "WhatsApp needs the preference and a phone" do
+  test "a recipient only carries the email channel, never WhatsApp" do
+    recipient = recipients.fetch(@owner)
+
+    assert_not_respond_to recipient, :whatsapp
+    assert_equal %i[email user], recipient.to_h.keys.sort
+  end
+
+  test "an old WhatsApp preference does not make anyone a recipient or change their email" do
     NotificationPreference.create!(user: @owner, company: @company, stock_whatsapp: true)
-    assert recipients.fetch(@owner).whatsapp
+    # Con el correo apagado, WhatsApp ya no la mantiene como destinatario.
+    NotificationPreference.create!(user: @admin, company: @company, stock_email: false, stock_whatsapp: true)
 
-    @owner.update_column(:phone, nil)
-    assert_not recipients.fetch(@owner).whatsapp
+    found = recipients
+    assert found.fetch(@owner).email
+    assert_not_includes found.keys, @admin
   end
 
-  test "a person with every channel off is not a recipient" do
-    NotificationPreference.create!(user: @admin, company: @company, stock_email: false, stock_whatsapp: false)
+  test "the phone no longer matters: someone without a phone still gets the email" do
+    @owner.update_column(:phone, nil)
+
+    assert recipients.fetch(@owner).email
+  end
+
+  test "a person with the email off is not a recipient" do
+    NotificationPreference.create!(user: @admin, company: @company, stock_email: false)
     assert_equal [ @owner ], recipients.keys
   end
 
