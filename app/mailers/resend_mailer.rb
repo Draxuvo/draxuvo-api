@@ -174,10 +174,18 @@ class ResendMailer
       log(:warn, "#send_email RESEND_API_KEY present=#{api_key.present?}")
       log(:warn, "#send_email calling Resend::Emails.send to=#{params[:to].inspect} from=#{params[:from].inspect}")
 
-      response = Resend::Emails.send(params)
+      response = normalize_response(Resend::Emails.send(params))
 
       log(:warn, "#send_email SUCCESS response=#{response.inspect}")
       response
+    end
+
+    # La gema `resend` devuelve un `HTTParty::Response` con las claves ya en símbolo (`{ id: "…" }`). Los servicios de correo
+    # revisan `response["id"]` en un Hash, así que un envío correcto se tomaba por fallido (422 «Failed to send email»
+    # aunque el correo llegaba). Se entrega siempre un Hash plano con claves de texto.
+    def normalize_response(response)
+      data = response.respond_to?(:parsed_response) ? response.parsed_response : response
+      data.is_a?(Hash) ? data.transform_keys(&:to_s) : data
     end
 
     def handle_email_error(user, error)
