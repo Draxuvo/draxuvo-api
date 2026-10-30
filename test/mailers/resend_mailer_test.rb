@@ -55,4 +55,41 @@ class ResendMailerTest < ActiveSupport::TestCase
     assert sent.all? { |mail| mail[:html].include?("https://invoice.stripe.com/i/x") && mail[:html].include?("Pagar ahora") }
     assert_includes sent[1][:html], "plan pro"
   end
+
+  # --- respuesta real de la gema `resend` ---
+
+  test "a real Resend response comes back as a plain Hash with string keys" do
+    result = Resend::Emails.stub(:send, ->(_params) { resend_response }) do
+      ResendMailer.password_reset(user: users(:pro_staff), reset_url: "https://app.test/r?token=x", company_name: "Mi Empresa")
+    end
+
+    assert_instance_of Hash, result
+    assert_equal "email_1", result["id"]
+  end
+
+  test "the other mails also return the normalized response" do
+    result = Resend::Emails.stub(:send, ->(_params) { resend_response }) do
+      ResendMailer.set_password(user: users(:pro_staff), set_password_url: "https://app.test/s?token=x", company_name: "Mi Empresa")
+    end
+
+    assert_equal "email_1", result["id"]
+  end
+
+  # --- correo en Gmail y Outlook: sin degradados ni rgba, el texto blanco quedaba sobre blanco ---
+
+  test "every gradient in the mail templates has a solid color as a fallback" do
+    Dir[Rails.root.join("app/views/resend_mailer/*.erb")].each do |path|
+      File.read(path).scan(/style="([^"]*linear-gradient[^"]*)"/m).flatten.each do |style|
+        assert_match(/background-color:\s*#[0-9a-fA-F]{3,6}/, style, "#{File.basename(path)}: degradado sin color sólido de respaldo")
+      end
+    end
+  end
+
+  test "the white circle behind the logo initial has a solid color too" do
+    Dir[Rails.root.join("app/views/resend_mailer/*.erb")].each do |path|
+      File.read(path).scan(/style="([^"]*background:\s*rgba[^"]*)"/m).flatten.each do |style|
+        flunk "#{File.basename(path)}: fondo rgba() sin color sólido: #{style.squish}"
+      end
+    end
+  end
 end

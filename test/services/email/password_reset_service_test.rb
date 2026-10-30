@@ -38,6 +38,18 @@ class Email::PasswordResetServiceTest < ActiveSupport::TestCase
     end
   end
 
+  test "a real Resend response (HTTParty, symbol keys) counts as sent" do
+    response = resend_response({ id: "01a18a23" })
+
+    result = with_env("FRONTEND_URL" => "https://app.test") do
+      Resend::Emails.stub(:send, ->(_params) { response }) do
+        Email::PasswordResetService.new(users(:pro_staff)).call
+      end
+    end
+
+    assert result[:success], result[:error]
+  end
+
   test "validates the user on initialization" do
     assert_raises(ArgumentError) { Email::PasswordResetService.new(nil) }
     assert_raises(ArgumentError) { Email::PasswordResetService.new(User.new(email: "a@b.test")) }

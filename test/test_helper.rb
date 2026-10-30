@@ -16,6 +16,7 @@ module ActiveSupport
     include StripeHelpers
     include CacheHelpers
     include EnvHelpers
+    include ResendHelpers
 
     # Headers de una request autenticada: JWT del usuario y la empresa activa.
     def auth_headers(user, company = user.companies.first)
