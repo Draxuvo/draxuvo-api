@@ -14,7 +14,9 @@ Crea tres productos en MXN: Básico, Pro y Empresa. Cada uno lleva un Price mens
 
 Los montos tienen que coincidir con `app/models/plan.rb`, porque la UI los muestra desde ahí. Para cambiar un precio, crea un Price nuevo, pásale el `lookup_key` (opción *transfer lookup key*) y actualiza `Plan`. El ID resuelto se guarda en cache una hora. Al subir Pro y Empresa a 799 y 1,599 (spec 041) solo hacen falta Prices nuevos para esos dos planes, mensual y anual; el de Básico no cambia.
 
-## Módulos extra (spec 050)
+## Módulos extra (spec 050 y 053)
+
+> Desde la spec 053 el cliente no contrata el extra: solo el super admin lo enciende y apaga por empresa desde la hoja «Módulos» de `/empresas`. Los endpoints de abajo requieren super admin y la empresa va en `X-Company-Id`.
 
 Un módulo extra se cobra como un segundo renglón de la suscripción del plan. Crea un producto «Punto de venta» en MXN con dos Prices recurrentes y sin IVA, igual que los planes:
 
@@ -24,13 +26,14 @@ Un módulo extra se cobra como un segundo renglón de la suscripción del plan. 
 
 Los montos tienen que coincidir con `app/models/addon.rb`. Cómo se comporta:
 
-- **Contratar** (`POST /api/v1/subscription/addons`): la API agrega el renglón a la suscripción con el ciclo del plan (un Stripe no mezcla intervalos), `proration_behavior: always_invoice` y `payment_behavior: error_if_incomplete`. Se cobra al instante la parte proporcional del periodo con IVA (la tasa predeterminada de la suscripción ya aplica al renglón nuevo). Si el cobro falla, Stripe rechaza el alta, la API responde 402 `addon_payment_failed` y el módulo no se activa.
-- **En prueba**: el extra se contrata en el checkout (`addons: ["pos"]` suma un segundo `line_item`) y se activa cuando el webhook confirma la suscripción.
+- **Encender** (`POST /api/v1/subscription/addons`, super admin): la API agrega el renglón a la suscripción con el ciclo del plan (un Stripe no mezcla intervalos), `proration_behavior: always_invoice` y `payment_behavior: error_if_incomplete`. Se cobra al instante la parte proporcional del periodo con IVA (la tasa predeterminada de la suscripción ya aplica al renglón nuevo). Si el cobro falla, Stripe rechaza el alta, la API responde 402 `addon_payment_failed` y el módulo no se activa.
+- **En prueba**: el super admin lo enciende sin cobro y sin renglón de Stripe; el checkout lo suma como segundo `line_item` al primer pago del plan. Apagarlo en prueba lo quita al instante.
+- **Sin Prices no se enciende**: mientras no existan los dos Prices, la API responde 422 `addon_not_available` y la hoja lo explica.
 - **Baja** (`DELETE /api/v1/subscription/addons/pos`): la API quita el renglón con `proration_behavior: none` (sin reembolso) y deja el acceso hasta el fin del periodo ya pagado (`subscription_addons.ends_at`). La siguiente factura ya no lo trae.
 - **Reactivar** antes del fin: vuelve a agregar el renglón sin cobrar de nuevo.
 - **Sincronización**: `Subscriptions::SyncService` lee todos los renglones de la suscripción; el que trae un `lookup_key` de plan define plan y ciclo y los de `draxuvo_addon_*` definen los extras. Un cambio de plan en el portal conserva el extra.
 
-**Customer Portal**: el portal debe permitir cambiar de plan sin quitar el extra. En *Settings → Billing → Customer portal → Subscriptions*, deja el producto «Punto de venta» fuera de los productos intercambiables y sin cancelación de renglón individual: el extra se da de baja desde Suscripción en Draxuvo, no desde el portal. Verifícalo en modo prueba antes de publicar (tarea T060 de la spec 050).
+**Customer Portal**: el portal debe permitir cambiar de plan sin quitar el extra. En *Settings → Billing → Customer portal → Subscriptions*, deja el producto «Punto de venta» fuera de los productos intercambiables y sin cancelación de renglón individual: el extra lo apaga el super admin en Draxuvo, no el cliente desde el portal. Verifícalo en modo prueba antes de publicar (tarea T060 de la spec 050).
 
 ## Tasa de IVA
 

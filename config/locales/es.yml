@@ -545,3 +545,7 @@ es:
       already_ending:  "Este módulo ya tiene la baja programada."
       not_ending:      "Este módulo no tiene una baja programada."
       not_found:       "Este módulo no está contratado."
+      not_available:   "Este módulo todavía no se puede activar: faltan sus precios en la cuenta de cobro."
+    email:
+      subject_on: "Se activó %{module} en tu empresa"
+      subject_off: "Se desactivará %{module} en tu empresa"

@@ -1,35 +1,43 @@
-# Módulos extra de la suscripción (spec 050, contracts/api.md): contratar, dar de baja y reactivar. Solo dueño y
-# administrador; una sucursal no cobra (lo hace su principal); una demo no tiene pagos. Como Suscripción, no pasa por
+# Módulos extra de la suscripción (spec 050, contracts/api.md): encender, dar de baja y reactivar. Desde la spec 053 solo
+# el super admin (con `X-Company-Id` de la empresa), como los módulos del plan; una sucursal no cobra (lo hace su principal); una demo no tiene pagos. Como Suscripción, no pasa por
 # `check_subscription!`: se administra aunque la prueba haya vencido (el servicio pide una suscripción pagada).
 module Api
   module V1
     class SubscriptionAddonsController < BaseController
       skip_before_action :check_subscription!
 
-      before_action :require_admin!
+      before_action :require_super_admin!
       before_action :reject_branch_billing!
 
       # POST /api/v1/subscription/addons — { module: "pos" }
       def create
-        service.add(required_module)
+        row = service.add(required_module)
+        notify(row.addon, "on")
         render json: serialize, status: :created
       end
 
       # DELETE /api/v1/subscription/addons/:module
       def destroy
-        service.remove(params[:module])
+        row = service.remove(params[:module])
+        notify(row.addon, "off", effective_on: row.ends_at)
         render json: serialize
       end
 
       # POST /api/v1/subscription/addons/:module/reactivate
       def reactivate
-        service.reactivate(params[:module])
+        row = service.reactivate(params[:module])
+        notify(row.addon, "on")
         render json: serialize
       end
 
       private
 
       def service = Subscriptions::AddonService.new(company: current_company, actor: current_user)
+
+      # Spec 053 (FR-030): aviso a dueño y administradores; no revierte el cambio si el correo falla.
+      def notify(addon, action, effective_on: nil)
+        Subscriptions::AddonNoticeService.new(company: current_company, addon: addon, action: action, effective_on: effective_on).call
+      end
 
       def serialize
         subscription = current_company.billing_subscription.reload

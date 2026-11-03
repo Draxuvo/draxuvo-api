@@ -36,6 +36,7 @@ Rails.application.routes.draw do
       # Módulos activos de la empresa actual: PATCH /api/v1/company/modules
       # Equipo (owner/admin) y sucursales (owner, plan Empresa) de la empresa actual
       resource :company, only: [] do
+        get   :modules, to: "company_modules#show"
         patch :modules, to: "company_modules#update"
         patch :order_mode, to: "company_order_modes#update"
         resources :members, controller: "company_members", param: :user_id, only: [ :index, :create, :update, :destroy ]

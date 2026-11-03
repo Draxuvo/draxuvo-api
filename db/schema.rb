@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_03_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_03_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -304,6 +304,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_03_200000) do
     t.string "module", null: false
     t.boolean "enabled", null: false
     t.datetime "created_at", null: false
+    t.integer "amount_before_cents"
+    t.integer "amount_after_cents"
     t.index ["actor_id"], name: "index_module_changes_on_actor_id"
     t.index ["company_id", "created_at"], name: "index_module_changes_on_company_id_and_created_at"
     t.index ["company_id"], name: "index_module_changes_on_company_id"

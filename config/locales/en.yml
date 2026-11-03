@@ -545,3 +545,7 @@ en:
       already_ending:  "This module is already set to end."
       not_ending:      "This module is not set to end."
       not_found:       "This module is not subscribed."
+      not_available:   "This module cannot be turned on yet: its prices are missing from the billing account."
+    email:
+      subject_on: "%{module} was turned on for your company"
+      subject_off: "%{module} will be turned off for your company"

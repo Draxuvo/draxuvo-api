@@ -78,11 +78,37 @@ class Subscriptions::AddonServiceTest < ActiveSupport::TestCase
     assert_equal 1, @created.size
   end
 
-  test "needs a paid subscription: a trial uses the checkout" do
+  test "in the trial it is added without a charge or a Stripe item (spec 053)" do
     company = companies(:one)
-    error = error_of { stubs { service(company).add("pos") } }
-    assert_equal "subscription_not_paid", error.details[:code]
+    row = stubs { service(company).add("pos") }
+
     assert_empty @created
+    assert_nil row.stripe_item_id
+    assert_equal 19_900, row.amount_cents
+    assert company.reload.module_active?(:pos)
+  end
+
+  test "in the trial turning it off is immediate and deletes nothing in Stripe" do
+    company = companies(:one)
+    stubs { service(company).add("pos") }
+    stubs { service(company).remove("pos") }
+
+    assert_nil company.billing_subscription.addons.find_by(module: "pos")
+    assert_not company.reload.module_active?(:pos)
+    assert_empty @deleted
+  end
+
+  test "it is not added while its prices are missing" do
+    error = with_env("ADDON_POS_ENABLED" => "false") { error_of { stubs { service.add("pos") } } }
+    assert_equal "addon_not_available", error.details[:code]
+    assert_empty @created
+  end
+
+  test "records the history with the price before and after" do
+    stubs { service.add("pos") }
+    stubs { service.remove("pos") }
+    changes = @company.module_changes.where(module: "pos").order(:id).pluck(:enabled, :amount_before_cents, :amount_after_cents)
+    assert_equal [ [ true, 0, 19_900 ], [ false, 19_900, 0 ] ], changes
   end
 
   test "an expired or suspended subscription cannot add it" do

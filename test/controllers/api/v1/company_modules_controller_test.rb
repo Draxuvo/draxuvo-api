@@ -156,23 +156,36 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "plan", json["module_sources"]["inventory"]
   end
 
-  test "the super admin can turn off a contracted add-on and it is logged like any module" do
+  test "an add-on is not turned off with disabled_modules: it has its own route (spec 053)" do
     company = companies(:pos_co)
 
-    assert_difference -> { company.module_changes.where(module: "pos", enabled: false).count }, 1 do
+    assert_no_difference -> { company.module_changes.count } do
       patch PATH, params: { disabled_modules: %w[pos] }, headers: as_super_admin(company), as: :json
     end
 
     assert_response :ok
-    assert_not_includes json["active_modules"], "pos"
-    assert_includes json["available_modules"], "pos"
-    assert_not company.reload.module_active?(:pos)
+    assert_includes json["active_modules"], "pos"
+    assert_empty company.reload.disabled_modules
   end
 
-  test "an add-on that was not contracted cannot be turned off because it is not in the plan" do
-    patch PATH, params: { disabled_modules: %w[pos] }, headers: as_super_admin(companies(:basic_co)), as: :json
+  test "GET lists the add-ons with price and state, and the last changes" do
+    company = companies(:pos_co)
+    company.module_changes.create!(actor: users(:super_admin), module: "pos", enabled: true, amount_before_cents: 0, amount_after_cents: 19_900)
+    get PATH, headers: as_super_admin(company)
 
-    assert_response :unprocessable_entity
-    assert_equal "module_not_in_plan", json.dig("error", "details", "code")
+    assert_response :ok
+    pos = json["addons"].find { |a| a["key"] == "pos" }
+    assert_equal [ "inventory" ], pos["requires"]
+    assert_equal({ "monthly" => 19_900, "annual" => 199_000 }, pos["price"])
+    assert_equal "active", pos["state"]
+    assert_equal [ "pos", true, 19_900 ], json["changes"].first.values_at("module", "enabled", "amount_after_cents")
+  end
+
+  test "GET shows an add-on that was never turned on as off, and other roles get 403" do
+    get PATH, headers: as_super_admin(companies(:basic_co))
+    assert_equal "off", json["addons"].find { |a| a["key"] == "pos" }["state"]
+
+    get PATH, headers: auth_headers(users(:basic_co_owner), companies(:basic_co))
+    assert_response :forbidden
   end
 end

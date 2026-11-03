@@ -2,9 +2,10 @@ module Subscriptions
   # Crea una sesión de Stripe Checkout para el plan y ciclo elegidos (contracts/api.md, checkout).
   # No cambia la suscripción: el estado solo se actualiza por webhook (FR-007).
   class CreateCheckoutService
-    def initialize(company:, plan:, success_url:, cancel_url:, billing_cycle: nil, actor: nil, addons: [])
+    def initialize(company:, plan:, success_url:, cancel_url:, billing_cycle: nil, actor: nil)
       @actor         = actor
-      @addons        = Array(addons).map(&:to_s).reject(&:blank?).uniq
+      # Spec 053: los extras salen de la suscripción (los enciende el super admin), no de lo que mande el cliente.
+      @addons        = company.subscription&.addons&.current&.pluck(:module)&.map(&:to_s)&.uniq || []
       @company       = company
       @plan          = plan.to_s
       @billing_cycle = billing_cycle.presence&.to_s || "monthly"

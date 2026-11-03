@@ -1,0 +1,27 @@
+<%
+  months = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre]
+  date_label = ->(time) { time ? "#{time.to_date.day} de #{months[time.to_date.month - 1]} de #{time.to_date.year}" : nil }
+  total = format("$%.2f", total_cents.to_i / 100.0)
+  panel_url = "#{ENV.fetch("FRONTEND_URL", "http://localhost:4200").chomp("/")}/es/suscripcion"
+  title = action == "on" ? "Se activó #{module_name} en tu empresa" : "Se desactivará #{module_name} en tu empresa"
+  body = if action == "on"
+    "El equipo de Draxuvo activó #{module_name} en #{company_name}. Ya está disponible y tu suscripción ahora suma su costo: el total por periodo es #{total} (IVA incluido)."
+  else
+    "El equipo de Draxuvo desactivó #{module_name} en #{company_name}. Lo conservan hasta el #{date_label.call(effective_on)} y después deja de cobrarse; el total por periodo será #{total} (IVA incluido). Las ventas hechas se conservan."
+  end
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title><%= title %></title></head>
+<body style="margin:0; padding:24px 16px; background-color:#f0f2f5; font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:16px; padding:32px;">
+        <tr><td style="font-size:22px; font-weight:700; color:#141414; padding-bottom:12px;"><%= title %></td></tr>
+        <tr><td style="font-size:15px; line-height:1.6; color:#4a4f55; padding-bottom:24px;">Hola <%= user.first_name %>: <%= body %></td></tr>
+        <tr><td><a href="<%= panel_url %>" style="display:inline-block; background:#ff5a1f; color:#141414; font-weight:700; text-decoration:none; padding:14px 28px; border-radius:6px;">Ver mi suscripción</a></td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
