@@ -3,7 +3,7 @@ require "test_helper"
 class UserTest < ActiveSupport::TestCase
   def build_user(**attrs)
     User.new({ first_name: "Rosa", last_name: "Pérez", email: "rosa@example.test",
-               phone: "5511112222", password: "secret123" }.merge(attrs))
+               phone: "5511112222", password: "Clave-Segura-9" }.merge(attrs))
   end
 
   test "a complete user is valid and defaults to staff, anaquel and system" do
@@ -15,7 +15,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "requires first name, last name, email and phone" do
-    user = User.new(password: "secret123")
+    user = User.new(password: "Clave-Segura-9")
     assert_not user.valid?
     %i[first_name last_name email phone].each { |attr| assert user.errors[attr].any?, "#{attr} debería ser obligatorio" }
   end
@@ -35,10 +35,23 @@ class UserTest < ActiveSupport::TestCase
     assert_not build_user(email: "no-es-correo").valid?
   end
 
-  test "password needs at least 6 characters on create" do
-    assert_not build_user(password: "12345").valid?
+  test "password needs at least 8 characters, not only digits and not a common one (spec 052)" do
+    assert_not build_user(password: "Ab1234").valid?
     assert_not build_user(password: nil).valid?
-    assert build_user(password: "123456").valid?
+    assert_not build_user(password: "12345678").valid?
+    assert_not build_user(password: "password123").valid?
+    assert_not build_user(password: "QWERTY123").valid?
+    assert build_user(password: "Clave-Segura-9").valid?
+  end
+
+  test "weak password messages are translated" do
+    user = build_user(password: "12345678")
+    user.valid?
+    assert_equal [ I18n.t("auth.weak_password.only_digits") ], user.errors[:password]
+    I18n.with_locale(:en) do
+      user.valid?
+      assert_no_match(/translation missing/i, user.errors.full_messages.join)
+    end
   end
 
   test "an existing user can be updated without sending a password" do
@@ -55,7 +68,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "authenticates with the right password only" do
-    assert users(:pro_staff).authenticate("password123")
+    assert users(:pro_staff).authenticate("Clave-Segura-9")
     assert_not users(:pro_staff).authenticate("otra")
   end
 
@@ -96,15 +109,15 @@ class UserTest < ActiveSupport::TestCase
     assert user.errors[:current_password].any?
 
     user = User.find(user.id)
-    assert_not user.update_password("password123", "", "")
+    assert_not user.update_password("Clave-Segura-9", "", "")
     assert user.errors[:new_password].any?
 
     user = User.find(user.id)
-    assert_not user.update_password("password123", "123", "123")
-    assert_not User.find(user.id).update_password("password123", "nueva123", "otra123")
+    assert_not user.update_password("Clave-Segura-9", "123", "123")
+    assert_not User.find(user.id).update_password("Clave-Segura-9", "nueva123", "otra123")
 
     user = User.find(user.id)
-    assert user.update_password("password123", "nueva123", "nueva123")
+    assert user.update_password("Clave-Segura-9", "nueva123", "nueva123")
     assert user.reload.authenticate("nueva123")
   end
 
@@ -147,7 +160,7 @@ class UserTest < ActiveSupport::TestCase
     mixed = create_member(companies(:pro_co), role: :staff)
     create_member(companies(:one), role: :owner, user: mixed)
     create_member(companies(:two), role: :admin, user: mixed)
-    nobody = User.create!(first_name: "Sin", last_name: "Empresa", email: "sin-empresa@x.test", phone: "5512340000", password: "password123", active: true)
+    nobody = User.create!(first_name: "Sin", last_name: "Empresa", email: "sin-empresa@x.test", phone: "5512340000", password: "Clave-Segura-9", active: true)
 
     assert_includes User.managing, mixed
     assert_includes User.managing, nobody

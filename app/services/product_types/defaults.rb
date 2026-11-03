@@ -31,6 +31,16 @@ module ProductTypes
       company.product_types
     end
 
+    # Spec 052 (H-44): un negocio de mostrador (plan sin órdenes de trabajo ni restaurante) no se reconoce en
+    # «Refacción» ni «Material»; solo renombra los tipos iniciales que no ha tocado, las reglas quedan igual.
+    RETAIL_NAMES = { "sold" => "Servicio", "counted_sold" => "Mercancía", "supply" => "Insumo" }.freeze
+
+    def self.use_retail_names(company)
+      company.product_types.where(kind: RETAIL_NAMES.keys).find_each do |type|
+        type.update!(name: RETAIL_NAMES.fetch(type.kind), icon: type.icon) unless type.name == RETAIL_NAMES.fetch(type.kind)
+      end
+    end
+
     # Tipo para un producto sin tipo (misma regla que la migración): no disponible → insumo; controla inventario →
     # se vende y se cuenta; en servicio, con existencia o mínimo → se vende y se cuenta; lo demás → se vende sin contar.
     def self.classify(company, product)

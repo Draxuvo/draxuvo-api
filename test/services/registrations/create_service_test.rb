@@ -3,7 +3,7 @@ require "test_helper"
 class Registrations::CreateServiceTest < ActiveSupport::TestCase
   def params(**overrides)
     { company_name: "Café Ana", first_name: "Ana", last_name: "López", phone: "5511223344",
-      email: "ana@cafe-ana.test", password: "secreto123", plan: "pro", billing_cycle: "monthly" }.merge(overrides)
+      email: "ana@cafe-ana.test", password: "Clave-Segura-9", plan: "pro", billing_cycle: "monthly" }.merge(overrides)
   end
 
   def register(**overrides)
@@ -21,6 +21,15 @@ class Registrations::CreateServiceTest < ActiveSupport::TestCase
     assert result.subscription.trialing?
     assert result.subscription.pro?
     assert result.subscription.monthly?
+  end
+
+  test "a Basic company gets retail product type names, a Pro one keeps the service names (spec 052, H-44)" do
+    basic = register(plan: "basic", email: "b@tienda.test", company_name: "Tienda Uno").company
+    assert_equal %w[Insumo Mercancía Servicio], basic.product_types.where.not(kind: nil).pluck(:name).sort
+    assert_equal %w[counted_sold], basic.product_types.where(name: "Mercancía").pluck(:kind)
+
+    pro = register(plan: "pro", email: "p@taller.test", company_name: "Taller Uno").company
+    assert_includes pro.product_types.pluck(:name), "Refacción"
   end
 
   test "applies the chosen plan and billing cycle to the subscription" do

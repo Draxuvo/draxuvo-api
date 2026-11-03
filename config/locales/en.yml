@@ -40,6 +40,11 @@ en:
       not_a_number: "is not a number"
       greater_than_or_equal_to: "must be greater than or equal to %{count}"
       less_than_or_equal_to: "must be less than or equal to %{count}"
+      other_than: "must not be %{count}"
+      less_than: "must be less than %{count}"
+      out_of_range: "is out of range"
+      insufficient_stock: "Insufficient stock. Available: %{available}"
+      inclusion_movement: "is not a valid movement type"
       blank: "can't be blank"
       roll_single: "must be 1 on a roll"
       grid_too_wide: "The label grid does not fit the page width"
@@ -103,6 +108,12 @@ en:
     not_authorized: "You are not authorized to perform this action"
     employee_inactive: "Your access to this company is suspended because the employee was deactivated"
     no_company: "User has no company assigned"
+    account_inactive: "Your account is deactivated. Contact the administrator."
+    too_many_attempts: "Too many sign-in attempts. Wait a few minutes and try again, or reset your password."
+    weak_password:
+      too_short: "must be at least 8 characters"
+      only_digits: "cannot be only numbers"
+      common: "is too common; pick another"
 
   attendance:
     no_open: "You have no open check-in"
@@ -205,6 +216,7 @@ en:
       name_taken: "You already have a format with that name"
 
   products:
+    initial_stock_note: "Initial inventory"
     deleted: "Product deleted"
     insufficient_stock: "Insufficient stock. Available: %{available}"
     export:
@@ -323,6 +335,7 @@ en:
     whatsapp_sent: "Ticket successfully sent via WhatsApp"
 
   reports:
+    invalid_range: "The date range is not valid: make sure the start date is not after the end date."
     invalid_period: "Invalid period. Use: weekly, monthly or annual."
     invalid_group_by: "Invalid grouping. Use: week, month or year."
     period:

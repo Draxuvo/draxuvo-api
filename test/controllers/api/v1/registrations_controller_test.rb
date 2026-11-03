@@ -18,7 +18,7 @@ class Api::V1::RegistrationsControllerTest < ActionDispatch::IntegrationTest
         last_name: "López",
         phone: "5512345678",
         email: "Ana@Ejemplo.com",
-        password: "secreta123",
+        password: "Clave-Segura-9",
         company_name: "Café Ana",
         plan: "basic",
         billing_cycle: "annual"

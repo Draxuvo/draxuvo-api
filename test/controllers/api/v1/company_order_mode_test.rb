@@ -43,7 +43,7 @@ class Api::V1::CompanyOrderModeTest < ActionDispatch::IntegrationTest
   test "order_mode appears in user.companies on login and me" do
     @company.update!(order_mode: :order)
 
-    post "/api/v1/auth/login", params: { email: @owner.email, password: "password123" }, as: :json
+    post "/api/v1/auth/login", params: { email: @owner.email, password: "Clave-Segura-9" }, as: :json
     assert_response :ok
     listed = json.dig("user", "companies").find { |c| c["id"] == @company.id }
     assert_equal "order", listed["order_mode"]

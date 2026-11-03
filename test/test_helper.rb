@@ -31,7 +31,7 @@ module ActiveSupport
     def create_member(company, role:, email: nil, user: nil, employee: true)
       user ||= User.create!(first_name: "Miembro", last_name: role.to_s.camelize,
                             email: email || "#{role}-#{SecureRandom.hex(4)}@member.test",
-                            phone: "5512340000", password: "password123", active: true)
+                            phone: "5512340000", password: "Clave-Segura-9", active: true)
       UserCompany.create!(user: user, company: company, role: role)
       company.employees.where(user_id: user.id).destroy_all unless employee
       user

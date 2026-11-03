@@ -21,9 +21,18 @@ class Product < ApplicationRecord
 
   before_validation { self.icon = icon.presence }
   validates :icon, inclusion: { in: ->(_) { ProductIcons.keys } }, allow_nil: true
+  before_validation { self.sku = sku.strip if sku.is_a?(String) }
   validates :name, :sku, presence: true
-  validates :sku, uniqueness: { scope: :company_id }
-  validates :stock, numericality: { greater_than_or_equal_to: 0 }
+  validates :name, length: { maximum: 120 }
+  validates :sku, length: { maximum: 60 }
+  validates :sku, uniqueness: { scope: :company_id, case_sensitive: false }
+  validates :stock, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 99_999_999 }
+  validates :unit_cost, :price, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 99_999_999.99 }, allow_nil: true
+  validates :min_stock, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 99_999_999 }, allow_nil: true
+
+  # Spec 052 (H-45): la existencia inicial deja su movimiento, para que el historial explique la existencia.
+  attr_accessor :initial_user, :skip_initial_movement
+  after_create :record_initial_stock
 
   # Nombre, SKU o cualquiera de sus códigos de barras (spec 034).
   scope :search,       ->(q)   {
@@ -67,6 +76,14 @@ class Product < ApplicationRecord
   def low_stock? = !!(counted? && min_stock.to_d.positive? && stock.to_d <= min_stock.to_d)
 
   private
+
+  def record_initial_stock
+    return unless stock.to_d.positive?
+    return if skip_initial_movement
+
+    stock_movements.create!(company: company, user: initial_user, movement_type: :entry, qty: stock,
+                            note: I18n.t("products.initial_stock_note"), initial: true)
+  end
 
   def station_in_company
     errors.add(:station, :invalid) if station && station.company_id != company_id

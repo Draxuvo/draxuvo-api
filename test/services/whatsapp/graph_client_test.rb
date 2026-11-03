@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Whatsapp::GraphClientTest < ActiveSupport::TestCase
-  TOKEN = "EAAGtokensecreto1234567890".freeze
+  TOKEN = "EAAGtokenClave-Segura-94567890".freeze
 
   FakeHttp = Struct.new(:response, :requests, :error) do
     attr_accessor :use_ssl, :open_timeout, :read_timeout

@@ -137,23 +137,19 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["icon"]
   end
 
-  test "a waiter cannot change the icon but still edits the other fields" do
+  test "a waiter cannot edit or create products (spec 052, H-02)" do
     resto = companies(:resto_co)
     product = products(:resto_tacos)
-    product.update!(icon: "taco")
     staff_h = auth_headers(users(:resto_waiter), resto)
 
-    patch "/api/v1/products/#{product.id}", params: { product: { icon: "pizza" } }, headers: staff_h, as: :json
-    assert_response :forbidden
-    assert_equal "taco", product.reload.icon
-
     patch "/api/v1/products/#{product.id}", params: { product: { description: "Con piña" } }, headers: staff_h, as: :json
-    assert_response :ok
-    assert_equal "Con piña", product.reload.description
+    assert_response :forbidden
+    assert_not_equal "Con piña", product.reload.description
 
-    patch "/api/v1/products/#{product.id}", params: { product: { icon: "taco", description: "Sin piña" } }, headers: staff_h, as: :json
-    assert_response :ok
-    assert_equal "taco", product.reload.icon
+    post "/api/v1/products", params: { product: { sku: "W-NEW", name: "Nuevo" } }, headers: staff_h, as: :json
+    assert_response :forbidden
+    delete "/api/v1/products/#{product.id}", headers: staff_h
+    assert_response :forbidden
   end
 
   test "a waiter cannot create a product with an icon, an admin can" do
@@ -333,9 +329,11 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "too_many_products", response.parsed_body.dig("error", "details", "code")
   end
 
-  test "generate_barcodes works for any member with the inventory module" do
+  test "generate_barcodes is for admins and owners (spec 052)" do
     generate_for([ products(:resto_sopa).id ], headers: auth_headers(users(:resto_waiter), companies(:resto_co)))
+    assert_response :forbidden
 
+    generate_for([ products(:resto_sopa).id ], headers: auth_headers(users(:resto_owner), companies(:resto_co)))
     assert_response :ok
     assert_equal 1, response.parsed_body["generated"]
   end

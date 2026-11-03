@@ -8,6 +8,9 @@ module Api
       requires_module :employees, except: %i[checkin checkout]
       requires_module :attendance, only: %i[checkin checkout]
       # Marcar a otro y dar o quitar acceso es de administrador, dueño y super admin (spec 036).
+      # Spec 052 (H-02): la ficha y los salarios son de quien dirige; el personal solo recibe la lista mínima de `index`
+      # (los formularios de orden la usan para asignar responsable).
+      before_action :require_boss!, except: :index
       before_action :require_admin!, only: %i[checkin checkout grant_access update_access revoke_access payroll_payments]
       before_action :set_employee, only: %i[show update destroy checkin checkout active]
       # El acceso y la nómina también aplican a quien ya dirige (administrador, dueño), que no figura en el equipo.
@@ -19,7 +22,7 @@ module Api
         employees = filter_by_access(employees)
         employees = apply_sort(employees, allowed: %i[name position department salary created_at], default: :name)
         @pagy, @employees = pagy(employees)
-        serialized = serialize(@employees)
+        serialized = boss? ? serialize(@employees) : @employees.map { |e| e.slice(:id, :user_id, :name, :status) }
         render json: paginate_response(@pagy, serialized)
       end
 
@@ -161,6 +164,10 @@ module Api
       def mark_error(code, key)
         render json: { error: { status: 422, code: code, message: I18n.t(key), details: { code: code } } },
                status: :unprocessable_entity
+      end
+
+      def boss?
+        Authorizable::BOSS_ROLES.include?(current_role)
       end
 
       def serialize(resource)

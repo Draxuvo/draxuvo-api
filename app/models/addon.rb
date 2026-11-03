@@ -22,6 +22,18 @@ Addon = Data.define(:key, :requires, :monthly_amount_cents) do
     end
   end
 
+  # Spec 052 (FR-031): el extra se ofrece solo si está habilitado y sus Prices existen en la cuenta de Stripe activa.
+  def available?
+    return false unless ENV.fetch("ADDON_#{key.to_s.upcase}_ENABLED", "true") == "true"
+    return true unless Rails.env.production?
+
+    Rails.cache.fetch("addon_available/#{key}", expires_in: 5.minutes) do
+      Plan::CYCLES.all? { |cycle| Subscriptions::PriceLookupService.addon_price_id(key, cycle).present? }
+    rescue StandardError
+      false
+    end
+  end
+
   def annual_amount_cents = monthly_amount_cents * 10
 
   def amount_cents(cycle)

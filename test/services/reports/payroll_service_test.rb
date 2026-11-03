@@ -67,7 +67,7 @@ class Reports::PayrollServiceTest < ActiveSupport::TestCase
   end
 
   test "runs summary adds paid and pending of the runs ending in the range" do
-    owner = User.create!(first_name: "Dueño", last_name: "Nómina", email: "dueno-nomina@test.dev", phone: "5512340000", password: "password123", active: true)
+    owner = User.create!(first_name: "Dueño", last_name: "Nómina", email: "dueno-nomina@test.dev", phone: "5512340000", password: "Clave-Segura-9", active: true)
     run = Payroll::BuildRun.call(company: @company, user: owner, period_type: :biweekly,
                                  starts_on: Date.new(2026, 3, 16), ends_on: Date.new(2026, 3, 31))
     run = Payroll::Approve.call(run: run, user: owner, lock_version: run.lock_version)

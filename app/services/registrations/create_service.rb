@@ -23,6 +23,7 @@ module Registrations
         UserCompany.create!(user: user, company: company, role: :owner)
         # Company crea la prueba Pro en su after_create; aquí queda en el plan elegido.
         company.subscription.update!(plan: plan, billing_cycle: cycle)
+        ProductTypes::Defaults.use_retail_names(company) unless (Plan.find(plan).modules & %i[work_orders restaurant]).any?
       end
 
       Result.new(user: user, company: company, subscription: company.subscription)

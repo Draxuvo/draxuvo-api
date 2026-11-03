@@ -18,12 +18,6 @@ module Api
       def create
         product = current_company.products.find(params[:product_id])
 
-        # Validar stock suficiente en salidas (con decimales en los tipos que los admiten, spec 016)
-        if params[:movement_type] == "exit" && product.stock < params[:qty].to_s.to_d.abs
-          return render json: { error: I18n.t("products.insufficient_stock", available: Product.quantity(product.stock)) },
-                        status: :unprocessable_entity
-        end
-
         movement = product.stock_movements.create!(
           movement_params.merge(company: current_company, user: current_user)
         )

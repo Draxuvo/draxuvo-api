@@ -2,7 +2,7 @@ require "test_helper"
 
 # Spec 047, US3: interruptor general del canal. Apagar siempre se puede; encender exige una conexión válida.
 class WhatsappChannelsControllerTest < ActionDispatch::IntegrationTest
-  TOKEN = "EAAGtokensecreto1234567890".freeze
+  TOKEN = "EAAGtokenClave-Segura-94567890".freeze
   PATH = "/api/v1/whatsapp/channel".freeze
 
   setup do

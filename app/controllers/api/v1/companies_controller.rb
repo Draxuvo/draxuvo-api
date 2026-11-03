@@ -4,20 +4,21 @@ module Api
     class CompaniesController < BaseController
       before_action :require_super_admin!, only: [ :index, :create, :destroy ]
       before_action :set_company, only: [ :show, :update, :destroy ]
+      before_action :require_admin!, only: [ :update ]
 
       # GET /api/v1/companies — super_admin: lista todas las empresas
       def index
         # Spec 039: las demos (una por visita) no se mezclan con los clientes reales.
         companies = Company.real.includes(:users).order(created_at: :desc)
         @pagy, companies = pagy(companies)
-        serialized = ActiveModelSerializers::SerializableResource.new(companies).as_json
+        serialized = ActiveModelSerializers::SerializableResource.new(companies, include_stripe: true).as_json
         render json: paginate_response(@pagy, serialized)
       end
 
       # GET /api/v1/company  (singular, usuario actual)
       # GET /api/v1/companies/:id  (super_admin por id)
       def show
-        render json: @company
+        render json: @company, include_stripe: include_stripe?
       end
 
       # POST /api/v1/companies — super_admin: crea empresa (after_create abre la prueba Pro)
@@ -26,14 +27,14 @@ module Api
         # traga y devolvía 422 con details vacío (spec 044).
         company = Company.new(company_params)
         company.save!
-        render json: company, status: :created
+        render json: company, status: :created, include_stripe: true
       end
 
       # PATCH /api/v1/company  (usuario actual)
       # PATCH /api/v1/companies/:id  (super_admin por id)
       def update
         @company.update!(company_params)
-        render json: @company
+        render json: @company, include_stripe: include_stripe?
       end
 
       # DELETE /api/v1/companies/:id — super_admin
@@ -48,6 +49,11 @@ module Api
       end
 
       private
+
+      # Spec 052 (H-01): el identificador de Stripe solo lo ve el dueño (o el super admin).
+      def include_stripe?
+        %w[owner super_admin].include?(current_role)
+      end
 
       def set_company
         if params[:id].present?

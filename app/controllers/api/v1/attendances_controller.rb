@@ -3,6 +3,8 @@ module Api
   module V1
     class AttendancesController < BaseController
       requires_module :attendance
+      # Spec 052 (H-02): la asistencia de todos es de quien dirige; cada quien ve la suya en my_attendance.
+      before_action :require_boss!
 
       # Filtros inválidos se ignoran (contracts/api.md): type fuera del enum, employee_id vacío
       # o fechas que no se pueden leer no aplican filtro.
@@ -27,7 +29,6 @@ module Api
 
       # GET /attendances/roster?date=YYYY-MM-DD — todos los empleados activos con su estado del día.
       def roster
-        require_boss!
         date = parse_day(params[:date]) || Time.zone.now
         rows = Attendances::Roster.call(current_company, date).map do |row|
           {

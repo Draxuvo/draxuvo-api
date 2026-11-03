@@ -34,9 +34,9 @@ class Whatsapp::HealthTest < ActiveSupport::TestCase
   end
 
   test "a connection failure sends one email to every active super admin and records it" do
-    second = User.create!(first_name: "Otro", last_name: "Admin", email: "otro-admin@draxuvo.test", phone: "5511112222", password: "password123", active: true, role: :super_admin)
+    second = User.create!(first_name: "Otro", last_name: "Admin", email: "otro-admin@draxuvo.test", phone: "5511112222", password: "Clave-Segura-9", active: true, role: :super_admin)
     users(:super_admin).update_column(:active, true)
-    User.create!(first_name: "Baja", last_name: "Admin", email: "baja@draxuvo.test", phone: "5511113333", password: "password123", active: false, role: :super_admin)
+    User.create!(first_name: "Baja", last_name: "Admin", email: "baja@draxuvo.test", phone: "5511113333", password: "Clave-Segura-9", active: false, role: :super_admin)
 
     record(:verification_code, failure(:connection, "token_expired", 190))
 
@@ -132,7 +132,7 @@ class Whatsapp::HealthTest < ActiveSupport::TestCase
   end
 
   test "one recipient failing does not stop the others, and the event counts what was delivered" do
-    User.create!(first_name: "Otro", last_name: "Admin", email: "otro-admin@draxuvo.test", phone: "5511112222", password: "password123", active: true, role: :super_admin)
+    User.create!(first_name: "Otro", last_name: "Admin", email: "otro-admin@draxuvo.test", phone: "5511112222", password: "Clave-Segura-9", active: true, role: :super_admin)
     users(:super_admin).update_column(:active, true)
     calls = 0
     flaky = ->(user:, **) { calls += 1; calls == 1 ? raise("boom") : { "id" => "m" } }

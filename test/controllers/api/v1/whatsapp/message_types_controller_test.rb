@@ -2,7 +2,7 @@ require "test_helper"
 
 # Spec 047, US2: elegir y verificar la plantilla de cada tipo, y la guía para crearlas en Meta. Meta se simula.
 class WhatsappMessageTypesControllerTest < ActionDispatch::IntegrationTest
-  TOKEN = "EAAGtokensecreto1234567890".freeze
+  TOKEN = "EAAGtokenClave-Segura-94567890".freeze
   PHONE = "104512345678901".freeze
   WABA = "109876543210987".freeze
 
@@ -337,7 +337,7 @@ class WhatsappMessageTypesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "tests_limit", response.parsed_body.dig("error", "details", "code")
 
     other = User.create!(first_name: "Otro", last_name: "Admin", email: "otro-admin@draxuvo.test", phone: "5511112222",
-                         password: "password123", active: true, role: :super_admin)
+                         password: "Clave-Segura-9", active: true, role: :super_admin)
     with_meta(delivered) { post_test("ticket", { phone: "5512345678" }, headers: auth_headers(other, nil)) }
     assert_response :ok
   end
