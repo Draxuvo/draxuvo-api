@@ -18,12 +18,15 @@ class SubscriptionSerializer
       status: @s.status,
       cancel_at_period_end: @s.cancel_at_period_end,
       amount_cents: @s.amount_cents,
+      addons: addons_json,
+      addons_cents: @s.addons_cents,
       iva_cents: @s.iva_cents,
       total_cents: @s.total_cents,
       trial_ends_at: @s.trial_ends_at,
       current_period_end: @s.current_period_end,
       active_modules: @company.active_modules.map(&:to_s),
       available_modules: @company.available_modules.map(&:to_s),
+      module_sources: @company.module_sources,
       managed_by_parent: @company.branch?,
       demo: @company.demo?,
       amount: @s.amount,
@@ -42,5 +45,14 @@ class SubscriptionSerializer
       past_due_since: @s.past_due_since,
       grace_ends_at: @s.grace_ends_at
     }
+  end
+
+  private
+
+  # Módulos extra contratados que siguen vigentes (spec 050): los que ya terminaron no salen.
+  def addons_json
+    @s.addons.select(&:current?).sort_by(&:started_at).map do |addon|
+      { module: addon.module, amount_cents: addon.amount_cents, started_at: addon.started_at, ends_at: addon.ends_at, status: addon.status }
+    end
   end
 end

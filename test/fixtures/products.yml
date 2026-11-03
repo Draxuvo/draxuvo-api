@@ -73,3 +73,71 @@ resto_agua:
   price: 25.00
   category: Bebidas
   available: true
+
+# Papelería (spec 050). `cuaderno` y `pluma` se cuentan; `copia` es un servicio; `resma` es insumo (no se vende).
+pos_cuaderno:
+  company: pos_co
+  product_type: pos_co_counted
+  sku: PAP-001
+  name: Cuaderno profesional
+  stock: 18
+  min_stock: 5
+  unit_cost: 25.00
+  price: 42.50
+  tracks_stock: true
+
+pos_pluma:
+  company: pos_co
+  product_type: pos_co_counted
+  sku: PAP-002
+  name: Pluma azul
+  stock: 3
+  min_stock: 2
+  unit_cost: 4.00
+  price: 9.00
+  tracks_stock: true
+
+pos_copia:
+  company: pos_co
+  product_type: pos_co_sold
+  sku: SER-001
+  name: Copia blanco y negro
+  stock: 0
+  price: 1.50
+  tracks_stock: false
+
+pos_resma:
+  company: pos_co
+  product_type: pos_co_supply
+  sku: INS-001
+  name: Resma de papel
+  stock: 10
+  unit_cost: 90.00
+  tracks_stock: true
+
+pos_sin_precio:
+  company: pos_co
+  product_type: pos_co_counted
+  sku: PAP-003
+  name: Marcador sin precio
+  stock: 5
+  tracks_stock: true
+
+pos_inactivo:
+  company: pos_co
+  product_type: pos_co_counted
+  sku: PAP-004
+  name: Goma descontinuada
+  stock: 5
+  price: 6.00
+  available: false
+  tracks_stock: true
+
+pos_liston:
+  company: pos_co
+  product_type: pos_co_meter
+  sku: PAP-005
+  name: Listón por metro
+  stock: 25.5
+  price: 8.00
+  tracks_stock: true

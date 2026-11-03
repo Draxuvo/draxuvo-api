@@ -144,4 +144,35 @@ class Api::V1::CompanyModulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal BASIC_MODULES, response.parsed_body["active_modules"]
     assert_not_includes response.parsed_body["active_modules"], "terminals"
   end
+
+  # --- módulos extra (spec 050) ---
+
+  test "the module lists say which modules come from the plan and which are add-ons" do
+    patch PATH, params: { disabled_modules: [] }, headers: as_super_admin(companies(:pos_co)), as: :json
+
+    assert_response :ok
+    assert_includes json["available_modules"], "pos"
+    assert_equal "addon", json["module_sources"]["pos"]
+    assert_equal "plan", json["module_sources"]["inventory"]
+  end
+
+  test "the super admin can turn off a contracted add-on and it is logged like any module" do
+    company = companies(:pos_co)
+
+    assert_difference -> { company.module_changes.where(module: "pos", enabled: false).count }, 1 do
+      patch PATH, params: { disabled_modules: %w[pos] }, headers: as_super_admin(company), as: :json
+    end
+
+    assert_response :ok
+    assert_not_includes json["active_modules"], "pos"
+    assert_includes json["available_modules"], "pos"
+    assert_not company.reload.module_active?(:pos)
+  end
+
+  test "an add-on that was not contracted cannot be turned off because it is not in the plan" do
+    patch PATH, params: { disabled_modules: %w[pos] }, headers: as_super_admin(companies(:basic_co)), as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "module_not_in_plan", json.dig("error", "details", "code")
+  end
 end

@@ -42,7 +42,8 @@ module Api
         {
           active_modules: current_company.active_modules,
           available_modules: current_company.available_modules,
-          disabled_modules: current_company.disabled_modules
+          disabled_modules: current_company.disabled_modules,
+          module_sources: current_company.module_sources
         }
       end
     end

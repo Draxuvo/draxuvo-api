@@ -183,7 +183,8 @@ class Api::V1::AttendancesControllerTest < ActionDispatch::IntegrationTest
     ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
       get "/api/v1/attendances/roster", headers: auth_headers(@owner, @company)
     end
-    assert_operator queries, :<=, 12
+    # 12 + 1: los módulos extra de la suscripción (spec 050) se cargan una vez por petición, no por empleado.
+    assert_operator queries, :<=, 13
   end
 
   # --- quien dirige no es personal ---

@@ -36,6 +36,7 @@ class TicketSerializer
   def as_json(*)
     order = @ticket.work_order
     check = @ticket.check
+    sale = @ticket.sale
     base = {
       id:           @ticket.id,
       folio:        @ticket.folio,
@@ -61,7 +62,8 @@ class TicketSerializer
         customer_name:  order.customer_name,
         customer_phone: order.customer_phone
       },
-      check: check && check_json(check)
+      check: check && check_json(check),
+      sale: sale && { id: sale.id, opened_by: self.class.person(sale.opened_by) }
     }
 
     base.merge!(detail(order, check)) if @detailed
@@ -76,6 +78,7 @@ class TicketSerializer
   end
 
   def detail(order, check)
+    return sale_detail(@ticket.sale) if @ticket.sale
     return check_detail(check) unless order
 
     {
@@ -85,6 +88,17 @@ class TicketSerializer
       end,
       employee: order.employee ? { id: order.employee.id, name: order.employee.name } : nil,
       payments: @ticket.ticket_payments.map { |payment| self.class.payment_json(payment) }
+    }
+  end
+
+  # Ticket de una venta de mostrador: los renglones con el nombre y el precio del momento.
+  def sale_detail(sale)
+    {
+      items: sale.sale_items.map do |item|
+        { description: item.name, quantity: Product.quantity(item.quantity), unit: nil, unit_price: item.unit_price, subtotal: item.subtotal }
+      end,
+      payments: @ticket.ticket_payments.map { |payment| self.class.payment_json(payment) },
+      employee: nil
     }
   end
 

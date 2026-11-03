@@ -73,3 +73,13 @@ resto_co:
   stripe_subscription_id: sub_resto
   current_period_start: <%= 5.days.ago.to_fs(:db) %>
   current_period_end: <%= 25.days.from_now.to_fs(:db) %>
+
+pos_co:
+  company: pos_co
+  plan: 0
+  status: 1
+  billing_cycle: 0
+  amount_cents: 39900
+  stripe_subscription_id: sub_pos
+  current_period_start: <%= 5.days.ago.to_fs(:db) %>
+  current_period_end: <%= 25.days.from_now.to_fs(:db) %>

@@ -172,4 +172,57 @@ class Reports::IncomeServiceTest < ActiveSupport::TestCase
 
     assert_equal [ 580.0 ], result[:by_terminal].map { |row| row[:total] } # 500 del fixture + 80
   end
+
+  # --- ventas de mostrador (spec 050) ---
+
+  test "counter sales count as income by method and appear in the breakdown with their cashier" do
+    pos = companies(:pos_co)
+    cashier = users(:pos_staff)
+    cash = charge_cash(open_sale(cashier, [ products(:pos_cuaderno), 2 ]), cashier, received: 100).sale
+    card = open_sale(cashier, [ products(:pos_pluma), 1 ])
+    Sales::Charge.call(card, cashier, lock_version: card.reload.lock_version, payments: [ { method: "card", amount: "9" } ])
+
+    result = Reports::IncomeService.new(pos, 1.day.ago..1.day.from_now, "day").call
+
+    assert_equal 94.0, result[:total_revenue]
+    assert_equal 2, result[:total_tickets]
+    assert_equal({ "cash" => 85.0, "card" => 9.0 }, result[:by_method].to_h { |row| [ row[:method], row[:total] ] })
+    row = result[:breakdown].find { |r| r[:id] == cash.ticket.id }
+    assert_equal "Venta de mostrador ##{cash.id}", row[:work_order][:title]
+    assert_equal cashier.full_name, row[:work_order][:employee]
+  end
+
+  test "a cancelled counter sale is not income" do
+    cashier = users(:pos_staff)
+    sale = charge_cash(open_sale(cashier, [ products(:pos_cuaderno), 2 ]), cashier, received: 100).sale
+    Sales::Cancel.call(sale, users(:pos_admin), "Error")
+
+    result = Reports::IncomeService.new(companies(:pos_co), 1.day.ago..1.day.from_now, "day").call
+    assert_equal 0.0, result[:total_revenue]
+    assert_empty result[:by_method]
+  end
+
+  test "tickets of a module that is turned off are not shown until it is back" do
+    company = companies(:pro_co)
+    range = 10.years.ago..1.day.from_now
+    before = Reports::IncomeService.new(company, range, "month").call
+    assert_operator before[:total_revenue], :>, 0
+
+    company.update!(disabled_modules: %w[work_orders])
+    hidden = Reports::IncomeService.new(company.reload, range, "month").call
+    assert_equal 0.0, hidden[:total_revenue]
+
+    company.update!(disabled_modules: [])
+    assert_equal before[:total_revenue], Reports::IncomeService.new(company.reload, range, "month").call[:total_revenue]
+  end
+
+  test "sales of a company that lost the module are kept but not reported" do
+    cashier = users(:pos_staff)
+    charge_cash(open_sale(cashier, [ products(:pos_cuaderno), 2 ]), cashier, received: 100)
+    company = companies(:pos_co)
+    company.update!(disabled_modules: %w[pos])
+
+    assert_equal 0.0, Reports::IncomeService.new(company.reload, 1.day.ago..1.day.from_now, "day").call[:total_revenue]
+    assert_equal 1, company.sales.status_paid.count
+  end
 end

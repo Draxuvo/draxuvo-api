@@ -13,3 +13,13 @@ resto_tacos:
   company: resto_co
   product: resto_tacos
   code: "7502000000002"
+
+pos_cuaderno:
+  company: pos_co
+  product: pos_cuaderno
+  code: "7509990000011"
+
+pos_pluma:
+  company: pos_co
+  product: pos_pluma
+  code: "7509990000028"

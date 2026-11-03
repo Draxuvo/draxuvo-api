@@ -5,7 +5,10 @@ class Api::V1::DemoSessionsControllerTest < ActionDispatch::IntegrationTest
   setup { Api::V1::DemoSessionsController::RATE_LIMIT_STORE.clear }
 
   def open_demo(params = {})
-    post "/api/v1/demo_sessions", params: { plan: "basic", locale: "es" }.merge(params), as: :json
+    body = { plan: "basic", locale: "es" }.merge(params)
+    # Básico tiene dos giros (abarrotes y papelería, spec 050): salvo que la prueba diga otra cosa, elige el de siempre.
+    body[:scenario] = "basic_retail" if body[:plan] == "basic" && !params.key?(:scenario)
+    post "/api/v1/demo_sessions", params: body, as: :json
   end
 
   test "opens a demo without a session and returns the signed-in user and when it ends" do
@@ -201,5 +204,21 @@ class Api::V1::DemoSessionsControllerTest < ActionDispatch::IntegrationTest
 
     get "/api/v1/demo_sessions", params: { search: "ana@" }, headers: headers
     assert_equal 1, response.parsed_body["results"].size
+  end
+
+  test "basic has two scenarios now, so one must be chosen (spec 050)" do
+    open_demo(scenario: nil)
+    assert_response :bad_request
+    assert_equal I18n.t("demo.errors.scenario_required"), response.parsed_body.dig("error", "details")
+  end
+
+  test "opens the stationery demo with the point of sale already contracted" do
+    open_demo(scenario: "basic_stationery")
+
+    assert_response :created
+    assert_equal "basic_stationery", response.parsed_body["scenario"]
+    company = Company.find(response.parsed_body["company_id"])
+    assert company.module_active?(:pos)
+    assert_operator company.sales.status_paid.count, :>=, 18
   end
 end

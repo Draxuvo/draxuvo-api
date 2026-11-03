@@ -51,6 +51,23 @@ class Api::V1::PlansControllerTest < ActionDispatch::IntegrationTest
     assert_equal ALL_MODULES, body["modules"]
   end
 
+  test "GET /plans lista los módulos extra con su precio y sus requisitos" do
+    get "/api/v1/plans"
+
+    pos = response.parsed_body["addons"].find { |addon| addon["key"] == "pos" }
+    assert_equal [ "inventory" ], pos["requires"]
+    assert_equal({ "amount_cents" => 19_900, "iva_cents" => 3_184, "total_cents" => 23_084 }, pos["prices"]["monthly"])
+    assert_equal({ "amount_cents" => 199_000, "iva_cents" => 31_840, "total_cents" => 230_840 }, pos["prices"]["annual"])
+  end
+
+  test "GET /plans no incluye ningún extra en los módulos de un plan" do
+    get "/api/v1/plans"
+
+    body = response.parsed_body
+    assert_not_includes body["modules"], "pos"
+    body["plans"].each { |plan| assert_not_includes plan["modules"], "pos" }
+  end
+
   test "GET /plans devuelve los planes en orden fijo basic, pro, enterprise" do
     get "/api/v1/plans"
 

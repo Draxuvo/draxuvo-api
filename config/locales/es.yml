@@ -19,6 +19,7 @@ es:
     terminals:     "Terminales"
     whatsapp:      "WhatsApp"
     multi_company: "Multiempresa"
+    pos:           "Punto de venta"
 
   errors:
     default: "Algo salió mal"
@@ -488,3 +489,46 @@ es:
       template: "Se apagó %{target} porque su plantilla ya no sirve (%{detail})."
       since: "Desde %{time}."
       open: "Abrir WhatsApp en Draxuvo"
+
+  # Punto de venta de mostrador (spec 050).
+  sale:
+    status:
+      open:      "Abierta"
+      paid:      "Cobrada"
+      cancelled: "Cancelada"
+    stock_note:        "Venta #%{id}"
+    breakdown_title:   "Venta de mostrador #%{id}"
+    stock_cancel_note: "Cancelación de venta #%{id}"
+    errors:
+      not_open:            "La venta ya no está abierta."
+      not_paid:            "Solo se puede hacer con una venta cobrada."
+      empty:               "Agrega al menos un artículo para cobrar."
+      reason_required:     "Escribe el motivo de la cancelación."
+      invalid_format:      "Formato de ticket inválido. Usa a4, thermal58 o thermal80."
+      product_not_found:   "No se encontró el producto."
+      product_not_sellable: "Este producto no se vende."
+      product_inactive:    "Este producto está inactivo."
+      product_without_price: "Este producto no tiene precio."
+      invalid_quantity:    "La cantidad no es válida."
+      item_not_found:      "El artículo no está en la venta."
+      stale_object:        "La venta cambió mientras la veías. Revísala y vuelve a cobrar."
+    pdf:
+      title:    "TICKET DE COMPRA"
+      cashier:  "Cajero"
+      sale:     "Venta"
+      cancelled: "CANCELADO"
+      cancel_reason: "Motivo"
+      change:   "Cambio"
+      received: "Recibido"
+      thanks:   "Gracias por su compra"
+  # Módulos extra contratables (spec 050).
+  addon:
+    errors:
+      unknown:         "Ese módulo no es un módulo extra."
+      requires_module: "Este módulo necesita que tengas activo %{module}."
+      already_active:  "Este módulo ya está contratado."
+      not_paid:        "Para contratar un módulo extra, primero paga tu suscripción."
+      payment_failed:  "No se pudo cobrar el módulo. Revisa tu método de pago."
+      already_ending:  "Este módulo ya tiene la baja programada."
+      not_ending:      "Este módulo no tiene una baja programada."
+      not_found:       "Este módulo no está contratado."

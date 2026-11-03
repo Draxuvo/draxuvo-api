@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_03_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -490,6 +490,45 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
     t.index ["station_id"], name: "index_products_on_station_id"
   end
 
+  create_table "sale_items", force: :cascade do |t|
+    t.bigint "sale_id", null: false
+    t.bigint "company_id", null: false
+    t.bigint "product_id"
+    t.string "name", null: false
+    t.string "sku"
+    t.decimal "unit_price", precision: 10, scale: 2, null: false
+    t.decimal "quantity", precision: 10, scale: 3, null: false
+    t.decimal "subtotal", precision: 10, scale: 2, null: false
+    t.decimal "stock_taken", precision: 10, scale: 3
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_sale_items_on_company_id"
+    t.index ["product_id"], name: "index_sale_items_on_product_id"
+    t.index ["sale_id", "product_id"], name: "index_sale_items_on_sale_and_product", unique: true, where: "(product_id IS NOT NULL)"
+    t.index ["sale_id"], name: "index_sale_items_on_sale_id"
+  end
+
+  create_table "sales", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.integer "status", default: 0, null: false
+    t.decimal "total", precision: 10, scale: 2, default: "0.0", null: false
+    t.bigint "opened_by_id", null: false
+    t.bigint "charged_by_id"
+    t.datetime "paid_at"
+    t.datetime "cancelled_at"
+    t.bigint "cancelled_by_id"
+    t.text "cancel_reason"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cancelled_by_id"], name: "index_sales_on_cancelled_by_id"
+    t.index ["charged_by_id"], name: "index_sales_on_charged_by_id"
+    t.index ["company_id", "opened_by_id", "status"], name: "index_sales_on_company_id_and_opened_by_id_and_status"
+    t.index ["company_id", "status", "created_at"], name: "index_sales_on_company_id_and_status_and_created_at"
+    t.index ["company_id"], name: "index_sales_on_company_id"
+    t.index ["opened_by_id"], name: "index_sales_on_opened_by_id"
+  end
+
   create_table "solid_cable_messages", force: :cascade do |t|
     t.binary "channel", null: false
     t.binary "payload", null: false
@@ -692,8 +731,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id"
+    t.bigint "sale_id"
     t.index ["company_id"], name: "index_stock_movements_on_company_id"
     t.index ["product_id"], name: "index_stock_movements_on_product_id"
+    t.index ["sale_id"], name: "index_stock_movements_on_sale_id"
     t.index ["user_id"], name: "index_stock_movements_on_user_id"
   end
 
@@ -704,6 +745,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["stripe_event_id"], name: "index_stripe_events_on_stripe_event_id", unique: true
+  end
+
+  create_table "subscription_addons", force: :cascade do |t|
+    t.bigint "subscription_id", null: false
+    t.bigint "company_id", null: false
+    t.string "module", null: false
+    t.string "stripe_item_id"
+    t.integer "amount_cents", default: 0, null: false
+    t.datetime "started_at", null: false
+    t.datetime "ends_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_subscription_addons_on_company_id"
+    t.index ["subscription_id", "module"], name: "index_subscription_addons_on_subscription_id_and_module", unique: true
+    t.index ["subscription_id"], name: "index_subscription_addons_on_subscription_id"
   end
 
   create_table "subscription_changes", force: :cascade do |t|
@@ -789,14 +845,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
     t.bigint "voided_by_id"
     t.text "void_reason"
     t.bigint "check_id"
+    t.bigint "sale_id"
     t.index ["charged_by_type", "charged_by_id"], name: "index_tickets_on_charged_by"
     t.index ["check_id"], name: "index_tickets_on_check_id", unique: true
     t.index ["company_id"], name: "index_tickets_on_company_id"
     t.index ["folio"], name: "index_tickets_on_folio", unique: true
+    t.index ["sale_id"], name: "index_tickets_on_sale_id", unique: true
     t.index ["status"], name: "index_tickets_on_status"
     t.index ["voided_by_type", "voided_by_id"], name: "index_tickets_on_voided_by"
     t.index ["work_order_id"], name: "index_tickets_on_work_order_id", unique: true
-    t.check_constraint "(work_order_id IS NULL) <> (check_id IS NULL)", name: "tickets_one_owner"
+    t.check_constraint "num_nonnulls(work_order_id, check_id, sale_id) = 1", name: "tickets_one_owner"
   end
 
   create_table "units", force: :cascade do |t|
@@ -1025,6 +1083,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
   add_foreign_key "products", "companies"
   add_foreign_key "products", "product_types"
   add_foreign_key "products", "stations"
+  add_foreign_key "sale_items", "companies"
+  add_foreign_key "sale_items", "products"
+  add_foreign_key "sale_items", "sales"
+  add_foreign_key "sales", "companies"
+  add_foreign_key "sales", "users", column: "cancelled_by_id"
+  add_foreign_key "sales", "users", column: "charged_by_id"
+  add_foreign_key "sales", "users", column: "opened_by_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
@@ -1041,7 +1106,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
   add_foreign_key "stock_counts", "users", column: "confirmed_by_id"
   add_foreign_key "stock_movements", "companies"
   add_foreign_key "stock_movements", "products"
+  add_foreign_key "stock_movements", "sales"
   add_foreign_key "stock_movements", "users"
+  add_foreign_key "subscription_addons", "companies"
+  add_foreign_key "subscription_addons", "subscriptions"
   add_foreign_key "subscription_changes", "companies"
   add_foreign_key "subscription_changes", "subscriptions"
   add_foreign_key "subscription_changes", "users", column: "actor_id"
@@ -1052,6 +1120,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_30_100000) do
   add_foreign_key "ticket_payments", "users", column: "created_by_id"
   add_foreign_key "tickets", "checks"
   add_foreign_key "tickets", "companies"
+  add_foreign_key "tickets", "sales"
   add_foreign_key "tickets", "work_orders"
   add_foreign_key "user_companies", "companies"
   add_foreign_key "user_companies", "users"

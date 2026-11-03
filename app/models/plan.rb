@@ -1,7 +1,11 @@
 # Catálogo de planes en código, sin tabla (research R8, data-model "Plan").
 # Los nombres visibles salen de i18n (plans.<key>); aquí no se guardan textos.
 Plan = Data.define(:key, :modules, :monthly_amount_cents) do
-  self::MODULES = %i[employees attendance inventory work_orders tickets reports restaurant terminals whatsapp multi_company].freeze
+  # Módulos que pueden venir en un plan.
+  self::PLAN_MODULES = %i[employees attendance inventory work_orders tickets reports restaurant terminals whatsapp multi_company].freeze
+  # Catálogo completo: los de plan más los extras contratables (spec 050). Sirve para validar disabled_modules
+  # y la bitácora de módulos; ningún plan incluye un extra.
+  self::MODULES = (self::PLAN_MODULES + Addon::KEYS).freeze
   self::CYCLES = %i[monthly annual].freeze
   self::LOOKUP_KEY_FORMAT = /\Adraxuvo_(basic|pro|enterprise)_(monthly|annual)\z/
 
@@ -44,5 +48,5 @@ Plan::CATALOG = [
   Plan.new(key: :pro, monthly_amount_cents: 79_900,
            modules: %i[employees attendance inventory work_orders tickets reports restaurant terminals].freeze),
   Plan.new(key: :enterprise, monthly_amount_cents: 159_900,
-           modules: Plan::MODULES)
+           modules: Plan::PLAN_MODULES)
 ].index_by(&:key).freeze

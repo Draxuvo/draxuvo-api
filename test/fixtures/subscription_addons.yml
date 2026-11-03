@@ -1,0 +1,8 @@
+# Módulos extra contratados (spec 050). `pos_co` tiene el punto de venta, activo.
+pos:
+  subscription: pos_co
+  company: pos_co
+  module: pos
+  stripe_item_id: si_pos
+  amount_cents: 19900
+  started_at: <%= 5.days.ago.to_fs(:db) %>

@@ -8,13 +8,19 @@ module Subscriptions
       new(plan_key: plan_key, cycle: cycle).call
     end
 
-    def initialize(plan_key:, cycle:)
+    # Price de un módulo extra (spec 050): `draxuvo_addon_<módulo>_<ciclo>`.
+    def self.addon_price_id(addon_key, cycle)
+      new(plan_key: addon_key, cycle: cycle, catalog: Addon).call
+    end
+
+    def initialize(plan_key:, cycle:, catalog: Plan)
       @plan_key = plan_key
       @cycle    = cycle
+      @catalog  = catalog
     end
 
     def call
-      lookup_key = Plan.find(@plan_key).lookup_key(@cycle)
+      lookup_key = @catalog.find(@plan_key).lookup_key(@cycle)
       price_id = Rails.cache.fetch(cache_key(lookup_key), expires_in: CACHE_TTL, skip_nil: true) do
         fetch_price_id(lookup_key)
       end

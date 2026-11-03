@@ -1,7 +1,7 @@
 # Un cambio de suscripción (spec 031, FR-016): cambio de plan de prueba por el super admin, suspensión,
 # reactivación o cancelación automática. Solo se inserta. `actor` es nulo cuando lo hace el sistema.
 class SubscriptionChange < ApplicationRecord
-  KINDS = %w[trial_plan_changed suspended reactivated auto_cancelled].freeze
+  KINDS = %w[trial_plan_changed suspended reactivated auto_cancelled addon_added addon_removed addon_reactivated].freeze
 
   belongs_to :company
   belongs_to :subscription

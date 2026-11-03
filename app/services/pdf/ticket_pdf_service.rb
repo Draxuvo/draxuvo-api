@@ -12,21 +12,36 @@ module Pdf
 
     Line = Struct.new(:description, :quantity, :unit, :unit_price, :subtotal)
 
-    def initialize(ticket)
+    # Formatos del ticket de una venta de mostrador (spec 050): carta y rollo de impresora térmica de 58 u 80 mm.
+    FORMATS = %w[a4 thermal58 thermal80].freeze
+    THERMAL_WIDTH_MM = { "thermal58" => 58, "thermal80" => 80 }.freeze
+    POINTS_PER_MM = 72 / 25.4
+    THERMAL_MARGIN = 8
+    THERMAL_PROBE_HEIGHT = 20_000
+
+    def initialize(ticket, format: "a4")
+      raise ArgumentError, "unknown ticket format: #{format.inspect}" unless FORMATS.include?(format.to_s)
+
       @ticket  = ticket
       @order   = ticket.work_order
       @check   = ticket.check
+      @sale    = ticket.sale
       @company = ticket.company
-      @items   = @order ? @order.work_order_items.to_a : check_lines
+      @format  = format.to_s
+      @items   = @order ? @order.work_order_items.to_a : (@sale ? sale_lines : check_lines)
     end
 
     def generate
+      return generate_thermal if THERMAL_WIDTH_MM.key?(@format)
+
       pdf = Prawn::Document.new(page_size: "A4", margin: [ 50, 50, 50, 50 ])
       draw_header(pdf)
+      draw_cancelled(pdf) if cancelled_sale?
       draw_info(pdf)
       draw_items(pdf) if @items.any?
       draw_totals(pdf)
       draw_payments(pdf)
+      draw_change(pdf) if @sale
       draw_footer(pdf)
       pdf.render
     end
@@ -39,7 +54,7 @@ module Pdf
       pdf.fill_color WHITE
       pdf.bounding_box([ 15, pdf.cursor - 12 ], width: pdf.bounds.width - 30) do
         pdf.text @company.name.upcase, size: 18, style: :bold
-        pdf.text "TICKET DE COBRO", size: 10
+        pdf.text(@sale ? I18n.t("sale.pdf.title") : "TICKET DE COBRO", size: 10)
       end
       pdf.fill_color BLACK
       pdf.move_down 85
@@ -58,7 +73,10 @@ module Pdf
 
       # Columna derecha: datos de la orden
       pdf.bounding_box([ col_w + 10, pdf.cursor + info_block_height(pdf) ], width: col_w) do
-        if @order
+        if @sale
+          label_value(pdf, I18n.t("sale.pdf.sale"), "##{@sale.id}")
+          label_value(pdf, I18n.t("sale.pdf.cashier"), @ticket.charged_by&.full_name || "—")
+        elsif @order
           label_value(pdf, "Orden",    @order.title)
           label_value(pdf, "Prioridad", priority_label)
           label_value(pdf, "Empleado", @order.employee&.name || "—")
@@ -143,6 +161,23 @@ module Pdf
       pdf.move_down 12
     end
 
+    # Venta de mostrador: lo recibido en efectivo y el cambio que se entregó.
+    def draw_change(pdf)
+      return unless @ticket.change_given.to_d.positive?
+
+      pdf.text "#{I18n.t('sale.pdf.received')}: #{format_money(@ticket.amount_received)}", size: 9, align: :right
+      pdf.text "#{I18n.t('sale.pdf.change')}: #{format_money(@ticket.change_given)}", size: 10, style: :bold, align: :right
+      pdf.move_down 10
+    end
+
+    def draw_cancelled(pdf)
+      pdf.fill_color "B42318"
+      pdf.text I18n.t("sale.pdf.cancelled"), size: 16, style: :bold, align: :center
+      pdf.text "#{I18n.t('sale.pdf.cancel_reason')}: #{safe(@sale.cancel_reason)}", size: 9, align: :center if @sale.cancel_reason.present?
+      pdf.fill_color BLACK
+      pdf.move_down 8
+    end
+
     def payment_detail(payment)
       code = payment.respond_to?(:authorization_code) ? payment.authorization_code : nil
       [ payment.terminal&.name, payment.reference.presence || code ].compact_blank.join(" · ")
@@ -155,6 +190,71 @@ module Pdf
       pdf.fill_color GRAY
       pdf.text "Generado el #{format_date(Time.current, with_time: true)}", size: 8, align: :center
       pdf.fill_color BLACK
+    end
+
+    # --- Rollo térmico (spec 050): una sola columna; la altura se mide con una pasada de prueba para que no sobre papel ---
+
+    def generate_thermal
+      width = THERMAL_WIDTH_MM.fetch(@format) * POINTS_PER_MM
+      probe = Prawn::Document.new(page_size: [ width, THERMAL_PROBE_HEIGHT ], margin: THERMAL_MARGIN)
+      draw_thermal(probe)
+      used = THERMAL_PROBE_HEIGHT - probe.y + THERMAL_MARGIN * 2
+      pdf = Prawn::Document.new(page_size: [ width, [ used, 120 ].max ], margin: THERMAL_MARGIN)
+      draw_thermal(pdf)
+      pdf.render
+    end
+
+    def draw_thermal(pdf)
+      pdf.text safe(@company.name.upcase), size: 11, style: :bold, align: :center
+      pdf.text(@sale ? I18n.t("sale.pdf.title") : "TICKET", size: 8, align: :center)
+      pdf.move_down 4
+      thermal_line(pdf, "Folio", @ticket.folio)
+      thermal_line(pdf, "Fecha", format_date(@ticket.paid_at || @ticket.created_at, with_time: true))
+      thermal_line(pdf, I18n.t("sale.pdf.cashier"), @ticket.charged_by&.full_name) if @sale
+      draw_thermal_cancelled(pdf) if cancelled_sale?
+      thermal_rule(pdf)
+      @items.each { |item| draw_thermal_item(pdf, item) }
+      thermal_rule(pdf)
+      pdf.text "Total  #{format_money(@ticket.total)}", size: 12, style: :bold, align: :right
+      draw_thermal_payments(pdf)
+      pdf.move_down 6
+      pdf.text I18n.t("sale.pdf.thanks"), size: 7, align: :center
+    end
+
+    def draw_thermal_item(pdf, item)
+      pdf.text safe(item.description), size: 8
+      pdf.text "#{item.quantity} x #{format_money(item.unit_price)}   #{format_money(item.subtotal)}", size: 8, align: :right
+      pdf.move_down 2
+    end
+
+    def draw_thermal_payments(pdf)
+      payments = @ticket.ticket_payments.active.to_a
+      payments.each do |payment|
+        pdf.text "#{I18n.t("ticket.payment_method.#{payment.payment_method}")}  #{format_money(payment.amount)}", size: 8, align: :right
+      end
+      return unless @ticket.change_given.to_d.positive?
+
+      pdf.text "#{I18n.t('sale.pdf.received')}  #{format_money(@ticket.amount_received)}", size: 8, align: :right
+      pdf.text "#{I18n.t('sale.pdf.change')}  #{format_money(@ticket.change_given)}", size: 9, style: :bold, align: :right
+    end
+
+    def draw_thermal_cancelled(pdf)
+      pdf.move_down 4
+      pdf.text I18n.t("sale.pdf.cancelled"), size: 12, style: :bold, align: :center
+      pdf.text safe(@sale.cancel_reason), size: 7, align: :center if @sale.cancel_reason.present?
+    end
+
+    def thermal_line(pdf, label, value)
+      pdf.text "#{label}: #{safe(value)}", size: 8
+    end
+
+    def thermal_rule(pdf)
+      pdf.move_down 3
+      pdf.stroke_color "999999"
+      pdf.dash(2, space: 2)
+      pdf.stroke_horizontal_rule
+      pdf.undash
+      pdf.move_down 4
     end
 
     # Helpers
@@ -184,6 +284,17 @@ module Pdf
 
     def status_label
       I18n.t("ticket.status.#{@ticket.status}")
+    end
+
+    def sale_lines
+      @sale.sale_items.map { |item| Line.new(safe(item.name), Product.quantity(item.quantity), nil, item.unit_price, item.subtotal) }
+    end
+
+    def cancelled_sale? = @sale&.status_cancelled?
+
+    # Las fuentes estándar de PDF solo cubren Windows-1252: lo que no cabe (emojis) se cambia por "?" en vez de romper el PDF.
+    def safe(text)
+      text.to_s.encode("Windows-1252", invalid: :replace, undef: :replace, replace: "?").encode("UTF-8")
     end
 
     def check_lines

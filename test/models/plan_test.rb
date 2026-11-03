@@ -23,9 +23,20 @@ class PlanTest < ActiveSupport::TestCase
     assert_equal Subscription.plans.keys.map(&:to_sym).sort, Plan.keys.sort
   end
 
-  test "MODULES lists the ten modules in order" do
+  test "PLAN_MODULES lists the ten plan modules in order" do
     assert_equal %i[employees attendance inventory work_orders tickets reports restaurant terminals whatsapp multi_company],
-                 Plan::MODULES
+                 Plan::PLAN_MODULES
+  end
+
+  test "MODULES adds the add-on modules to the plan modules" do
+    assert_equal Plan::PLAN_MODULES + Addon::KEYS, Plan::MODULES
+    assert_includes Plan::MODULES, :pos
+  end
+
+  test "no plan includes an add-on module" do
+    Plan.all.each do |plan|
+      Addon::KEYS.each { |key| assert_not plan.includes?(key), "#{plan.key} should not include #{key}" }
+    end
   end
 
   test "find accepts symbols and strings" do
@@ -120,7 +131,7 @@ class PlanTest < ActiveSupport::TestCase
     assert_not pro.includes?(:multi_company)
 
     enterprise = Plan.find(:enterprise)
-    Plan::MODULES.each { |mod| assert enterprise.includes?(mod), "enterprise should include #{mod}" }
+    Plan::PLAN_MODULES.each { |mod| assert enterprise.includes?(mod), "enterprise should include #{mod}" }
   end
 
   test "includes? accepts strings and rejects unknown modules" do

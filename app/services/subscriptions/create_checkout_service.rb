@@ -2,8 +2,9 @@ module Subscriptions
   # Crea una sesión de Stripe Checkout para el plan y ciclo elegidos (contracts/api.md, checkout).
   # No cambia la suscripción: el estado solo se actualiza por webhook (FR-007).
   class CreateCheckoutService
-    def initialize(company:, plan:, success_url:, cancel_url:, billing_cycle: nil, actor: nil)
+    def initialize(company:, plan:, success_url:, cancel_url:, billing_cycle: nil, actor: nil, addons: [])
       @actor         = actor
+      @addons        = Array(addons).map(&:to_s).reject(&:blank?).uniq
       @company       = company
       @plan          = plan.to_s
       @billing_cycle = billing_cycle.presence&.to_s || "monthly"
@@ -16,6 +17,7 @@ module Subscriptions
       ensure_not_suspended!
       ensure_no_paid_subscription!
       price_id    = PriceLookupService.price_id(@plan, @billing_cycle)
+      addon_prices = addon_price_ids
       tax_rate_id = TaxRateLookupService.tax_rate_id
       ensure_trial_plan_unchanged!
       customer_id = find_or_create_stripe_customer
@@ -24,10 +26,10 @@ module Subscriptions
         customer: customer_id,
         client_reference_id: @company.id.to_s,
         mode: "subscription",
-        line_items: [ { price: price_id, quantity: 1 } ],
+        line_items: [ { price: price_id, quantity: 1 } ] + addon_prices.map { |id| { price: id, quantity: 1 } },
         success_url: @success_url,
         cancel_url: @cancel_url,
-        metadata: { company_id: @company.id, plan: @plan, billing_cycle: @billing_cycle },
+        metadata: { company_id: @company.id, plan: @plan, billing_cycle: @billing_cycle }.merge(@addons.any? ? { addons: @addons.join(",") } : {}),
         subscription_data: subscription_data(tax_rate_id),
         tax_id_collection: { enabled: true },
         # Stripe exige que el cliente existente acepte el nombre y la dirección fiscal capturados en el checkout.
@@ -39,6 +41,23 @@ module Subscriptions
     end
 
     private
+
+    # Los módulos extra del checkout (spec 050): deben existir y tener sus requisitos en el plan elegido.
+    def addon_price_ids
+      @addons.map do |key|
+        addon = Addon.find(key)
+        missing = addon.requires.reject { |module_key| Plan.find(@plan).includes?(module_key) }
+        if missing.any?
+          raise ApiErrors::UnprocessableEntityError.new(
+            message: I18n.t("addon.errors.requires_module", module: I18n.t("modules.#{missing.first}")), details: { code: "addon_requires_module", required: missing.first.to_s }
+          )
+        end
+
+        PriceLookupService.addon_price_id(addon.key, @billing_cycle)
+      rescue KeyError
+        raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("addon.errors.unknown"), details: { code: "unknown_addon" })
+      end
+    end
 
     # Suspendida (spec 031): se paga la factura pendiente; no se abre otro cobro.
     def ensure_not_suspended!

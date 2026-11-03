@@ -150,4 +150,92 @@ class Api::V1::ReportsControllerTest < ActionDispatch::IntegrationTest
                                   headers: auth_headers(admin, companies(:basic_co))
     assert_response :ok
   end
+
+  # --- punto de venta (spec 050) ---
+
+  def pos_headers(user = users(:pos_admin)) = auth_headers(user, companies(:pos_co))
+
+  def pos_sale(user = users(:pos_staff), quantity = 2)
+    charge_cash(open_sale(user, [ products(:pos_cuaderno), quantity ]), user, received: 500).sale
+  end
+
+  test "a basic company with pos gets income with only its sales and no receivable, orders or terminal blocks" do
+    pos_sale
+    get "/api/v1/reports/income", params: { from: 2.days.ago.to_date.iso8601, to: Date.current.iso8601 }, headers: pos_headers
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal 85.0, body["total_revenue"]
+    assert_equal 1, body["total_tickets"]
+    assert_equal [ "cash" ], body["by_method"].map { |row| row["method"] }
+  end
+
+  test "the same basic company without the module still gets 403 on income" do
+    get "/api/v1/reports/income", headers: auth_headers(users(:basic_co_owner), companies(:basic_co))
+    assert_response :forbidden
+    assert_equal "module_not_in_plan", response.parsed_body.dig("error", "details", "code")
+  end
+
+  test "the summary of a basic company with pos adds income and sales but not pending or work orders" do
+    pos_sale
+    get "/api/v1/reports/summary", params: { from: 2.days.ago.to_date.iso8601, to: Date.current.iso8601, compare: "true" }, headers: pos_headers
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal({ "total_revenue" => 85.0, "tickets_paid" => 1 }, body["income"])
+    assert_equal 85.0, body.dig("sales", "total_revenue")
+    assert_equal 2, body.dig("sales", "units")
+    assert body.dig("previous", "sales")
+    assert_not body.key?("work_orders")
+  end
+
+  test "GET sales lists units and revenue by product and by cashier" do
+    pos_sale(users(:pos_staff), 2)
+    pos_sale(users(:pos_staff2), 1)
+    get "/api/v1/reports/sales", params: { from: 2.days.ago.to_date.iso8601, to: Date.current.iso8601 }, headers: pos_headers
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal 127.5, body["total_revenue"]
+    assert_equal 2, body["total_sales"]
+    assert_equal 3, body["units"]
+    assert_equal({ "name" => "Cuaderno profesional", "units" => 3, "revenue" => 127.5 }, body["by_product"].first.slice("name", "units", "revenue"))
+    assert_equal 2, body["by_cashier"].size
+  end
+
+  test "GET sales leaves out cancelled sales" do
+    sale = pos_sale
+    Sales::Cancel.call(sale, users(:pos_admin), "Error")
+    get "/api/v1/reports/sales", params: { from: 2.days.ago.to_date.iso8601, to: Date.current.iso8601 }, headers: pos_headers
+
+    assert_equal 0, response.parsed_body["total_sales"]
+    assert_empty response.parsed_body["by_product"]
+  end
+
+  test "GET sales needs the pos module" do
+    get "/api/v1/reports/sales", headers: @headers
+    assert_response :forbidden
+    assert_equal "module_not_in_plan", response.parsed_body.dig("error", "details", "code")
+    assert_equal "pos", response.parsed_body.dig("error", "details", "module")
+  end
+
+  test "GET sales is for the owner and administrators, not for staff" do
+    get "/api/v1/reports/sales", headers: pos_headers(users(:pos_staff))
+    assert_response :forbidden
+    get "/api/v1/reports/sales", headers: pos_headers(users(:pos_owner))
+    assert_response :ok
+  end
+
+  test "the super admin reads sales of any company with the module" do
+    get "/api/v1/reports/sales", headers: auth_headers(users(:super_admin), companies(:pos_co))
+    assert_response :ok
+  end
+
+  test "stock returned by a cancelled sale does not show up as an inventory purchase in expenses" do
+    Sales::Cancel.call(pos_sale, users(:pos_admin), "Error")
+    get "/api/v1/reports/expenses", params: { from: 2.days.ago.to_date.iso8601, to: Date.current.iso8601 }, headers: pos_headers
+
+    assert_response :ok
+    assert_equal 0.0, response.parsed_body.dig("inventory_cost", "total")
+  end
 end

@@ -32,3 +32,8 @@ resto_co:
   name: Restaurante Prueba
   slug: restaurante-prueba
   order_mode: 1
+
+# Punto de venta (spec 050): plan Básico con el módulo extra `pos`. Papelería con tipos, productos y cajeros.
+pos_co:
+  name: Papelería Prueba
+  slug: papeleria-prueba

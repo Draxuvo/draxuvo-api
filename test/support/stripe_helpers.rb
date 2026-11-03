@@ -1,10 +1,15 @@
 # Ayudantes de Stripe compartidos por los tests de suscripciones y webhooks.
 module StripeHelpers
-  ALL_LOOKUP_KEYS = %w[basic pro enterprise].product(%w[monthly annual]).map { |p, c| "draxuvo_#{p}_#{c}" }.freeze
+  ALL_LOOKUP_KEYS = (%w[basic pro enterprise].product(%w[monthly annual]).map { |p, c| "draxuvo_#{p}_#{c}" } +
+                     %w[monthly annual].map { |c| "draxuvo_addon_pos_#{c}" }).freeze
 
   # Suscripción de Stripe como la devuelve la API (versión acacia), con el periodo también en el item.
   def stripe_sub_hash(id:, status:, lookup_key:, cancel_at_period_end: false, customer: "cus_test",
-                      period_start: 1.day.ago, period_end: 29.days.from_now, metadata: {})
+                      period_start: 1.day.ago, period_end: 29.days.from_now, metadata: {}, extra_lookup_keys: [])
+    extra_items = extra_lookup_keys.map do |key|
+      { id: "si_#{key}", object: "subscription_item", current_period_start: period_start.to_i, current_period_end: period_end.to_i,
+        price: { id: "price_#{key}", object: "price", lookup_key: key } }
+    end
     {
       id: id,
       object: "subscription",
@@ -24,7 +29,8 @@ module StripeHelpers
             current_period_start: period_start.to_i,
             current_period_end: period_end.to_i,
             price: { id: "price_#{lookup_key}", object: "price", lookup_key: lookup_key }
-          }
+          },
+          *extra_items
         ]
       }
     }
@@ -108,3 +114,34 @@ module StripeHelpers
     end
   end
 end
+
+# Simula el alta y la baja de un renglón de módulo extra (spec 050). `created` y `deleted` reciben cada llamada.
+# `charge_error: true` hace que Stripe rechace el cobro proporcional; `outage: true`, que no responda.
+module AddonStripeHelpers
+  def with_addon_stubs(created: [], deleted: [], charge_error: false, outage: false, prices: StripeHelpers::ALL_LOOKUP_KEYS)
+    price_list = lambda do |params = {}, *_rest|
+      requested = Array(params.to_h.with_indifferent_access[:lookup_keys]).map(&:to_s)
+      Stripe::ListObject.construct_from(
+        object: "list", data: (prices & requested).map { |key| { id: "price_#{key}", object: "price", lookup_key: key, active: true } }
+      )
+    end
+    create = lambda do |params = {}, *_rest|
+      created << params.to_h.deep_symbolize_keys
+      raise Stripe::APIConnectionError, "sin red" if outage
+      raise Stripe::CardError.new("Your card was declined.", "card_declined", http_status: 402) if charge_error
+
+      Stripe::StripeObject.construct_from(id: "si_new_#{created.size}", object: "subscription_item")
+    end
+    delete = lambda do |id, params = {}, *_rest|
+      deleted << { id: id, params: params.to_h.deep_symbolize_keys }
+      Stripe::StripeObject.construct_from(id: id, deleted: true)
+    end
+    Stripe::Price.stub(:list, price_list) do
+      Stripe::SubscriptionItem.stub(:create, create) do
+        Stripe::SubscriptionItem.stub(:delete, delete) { yield }
+      end
+    end
+  end
+end
+
+ActiveSupport::TestCase.include AddonStripeHelpers
