@@ -49,7 +49,6 @@ module Api
           plan: required_param!(:plan),
           actor: current_user,
           billing_cycle: params[:billing_cycle],
-          addons: params[:addons],
           success_url: required_param!(:success_url),
           cancel_url: required_param!(:cancel_url)
         ).call

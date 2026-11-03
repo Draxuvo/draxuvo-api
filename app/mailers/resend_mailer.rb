@@ -85,6 +85,26 @@ class ResendMailer
       false
     end
 
+    # Aviso de que el super admin encendió o apagó un módulo extra (spec 053): módulo, fecha efectiva y nuevo total.
+    def addon_changed(user:, company_name:, module_name:, action:, effective_on:, total_cents:)
+      raise ArgumentError, "User email is required" unless user&.email.present?
+
+      send_email(
+        from:    sender_email(company_name),
+        to:      user.email,
+        subject: I18n.t("addon.email.subject_#{action}", module: module_name, locale: :es),
+        html:    ApplicationController.render(
+                   template: "resend_mailer/addon_changed",
+                   layout:   false,
+                   locals:   { user: user, company_name: company_name, module_name: module_name, action: action,
+                               effective_on: effective_on, total_cents: total_cents }
+                 )
+      )
+    rescue => e
+      handle_email_error(user, e)
+      false
+    end
+
     # Aviso de stock bajo para dueño y administrador (spec 045): `kind` es "immediate" (productos que acaban de bajar)
     # o "daily" (resumen de todo lo que sigue bajo). Sin datos de clientes ni montos de cuentas (FR-025).
     def stock_alert(user:, company_name:, kind:, products:, locale: "es")

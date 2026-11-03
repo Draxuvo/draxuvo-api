@@ -208,6 +208,17 @@ class Subscriptions::SyncServiceTest < ActiveSupport::TestCase
     assert companies(:pos_co).reload.module_active?(:pos)
   end
 
+  test "an add-on turned on in the trial (no Stripe item yet) is not closed by the sync (spec 053)" do
+    company = companies(:one)
+    grant_addon!(company, :pos)
+    company.billing_subscription.addons.update_all(stripe_item_id: nil)
+    subscription = company.billing_subscription
+    sync(stripe_sub(id: "sub_one", status: "trialing", lookup_key: "draxuvo_pro_monthly"), subscription: subscription)
+
+    assert_nil subscription.addons.sole.reload.ends_at
+    assert company.reload.module_active?(:pos)
+  end
+
   test "an add-on with a pending end is not touched by the sync" do
     subscription = subscriptions(:pos_co)
     ends_at = 5.days.from_now.change(usec: 0)

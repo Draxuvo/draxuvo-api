@@ -116,7 +116,10 @@ module Subscriptions
                       started_at: addon.started_at || Time.current, ends_at: nil)
       end
       closing = subscription.current_period_end || Time.current
-      subscription.addons.where(ends_at: nil).where.not(module: seen).update_all(ends_at: closing, stripe_item_id: nil, updated_at: Time.current)
+      # Spec 053: un extra encendido en la prueba aún no tiene renglón en Stripe: no se cierra mientras dure la prueba.
+      scope = subscription.addons.where(ends_at: nil).where.not(module: seen)
+      scope = scope.where.not(stripe_item_id: nil) if subscription.trialing?
+      scope.update_all(ends_at: closing, stripe_item_id: nil, updated_at: Time.current)
     end
 
     def timestamp(value)
