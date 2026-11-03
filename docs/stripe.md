@@ -73,6 +73,8 @@ Para los reintentos de cobro (el periodo de gracia), activa *Smart Retries*. Al 
 |---|---|
 | `STRIPE_API_KEY` | Llave secreta (`sk_live_…` o `sk_test_…`) |
 | `STRIPE_WEBHOOK_SECRET` | Secreto del endpoint (`whsec_…`). Sin él, todo webhook se rechaza con 400 |
+| `ADDON_POS_ENABLED` | `true` por omisión. En producción el módulo extra «Punto de venta» solo se ofrece (`GET /plans`, Suscripción y el sitio público) si esta variable no es `false` **y** sus dos Prices existen en la cuenta de Stripe activa (spec 052); se revisa cada 5 minutos. Ponla en `false` para ocultarlo |
+| `LOGIN_RATE_LIMIT` / `LOGIN_RATE_WINDOW_MINUTES` | Intentos de inicio de sesión por cuenta e IP (10) y ventana (15 minutos) antes del 429 (spec 052) |
 
 ## Desarrollo local
 
@@ -92,7 +94,8 @@ un cambio de claves y de IDs; no cambia código. Hazlo solo tras el recorrido de
 2. **Productos y precios reales.** Los IDs del modo prueba no existen en el modo real. Crea Básico, Pro y Empresa con los
    seis precios de la tabla de arriba y los mismos `lookup_key` (`draxuvo_<plan>_<monthly|annual>`), en MXN, recurrentes y
    sin IVA incluido (`tax_behavior: exclusive`). Como la API busca por `lookup_key`, no hay IDs que cambiar en ningún lado.
-   Crea también la **tasa de IVA** de la sección «Tasa de IVA»; sin ella el checkout no abre.
+   Los dos Prices del extra «Punto de venta» (`draxuvo_addon_pos_monthly|annual`, sección «Módulos extra») se crean igual; mientras
+   no existan, la API no lo anuncia ni lo ofrece (spec 052). Crea también la **tasa de IVA** de la sección «Tasa de IVA»; sin ella el checkout no abre.
 3. **Clave restringida real** (`rk_live_…`) con los mismos permisos: Write en Customers, Checkout Sessions, Subscriptions y
    Customer portal; Read en Prices y en Tax rates; todo lo demás en None. Cópiala directo en Render, no la pegues en chats ni archivos.
 4. **Customer Portal real** (Settings → Billing → Customer portal, ya en modo real): método de pago, historial de facturas,
