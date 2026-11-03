@@ -13,6 +13,10 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
+    # El límite de intentos de login (spec 052) cuenta en memoria dentro del proceso: sin limpiarlo, las pruebas que
+    # inician sesión con la misma cuenta se acumulan y dependen de cuántos workers haya.
+    setup { Api::V1::AuthenticationController::RATE_LIMIT_STORE.clear }
+
     include StripeHelpers
     include CacheHelpers
     include EnvHelpers
