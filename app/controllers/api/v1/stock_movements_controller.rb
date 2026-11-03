@@ -18,9 +18,13 @@ module Api
       def create
         product = current_company.products.find(params[:product_id])
 
-        movement = product.stock_movements.create!(
-          movement_params.merge(company: current_company, user: current_user)
-        )
+        attrs = movement_params.merge(company: current_company, user: current_user)
+        movement = product.stock_movements.build(attrs)
+        # Spec 052: el aviso de stock insuficiente llega entero ("Stock insuficiente. Disponible: 4"), sin el prefijo del campo.
+        if movement.exit? && !movement.valid? && movement.errors.of_kind?(:qty, :insufficient_stock)
+          raise ApiErrors::UnprocessableEntityError.new(details: I18n.t("products.insufficient_stock", available: Product.quantity(product.stock)))
+        end
+        movement.save!
 
         render json: { movement: StockMovementSerializer.new(movement).as_json,
                        product: ProductSerializer.new(product.reload).as_json }, status: :created
