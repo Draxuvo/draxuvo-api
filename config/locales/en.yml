@@ -19,6 +19,7 @@ en:
     terminals:     "Terminals"
     whatsapp:      "WhatsApp"
     multi_company: "Multi-company"
+    pos:           "Point of sale"
 
   errors:
     default: "Something went wrong"
@@ -488,3 +489,46 @@ en:
       template: "%{target} was turned off because its template no longer works (%{detail})."
       since: "Since %{time}."
       open: "Open WhatsApp in Draxuvo"
+
+  # Counter point of sale (spec 050).
+  sale:
+    status:
+      open:      "Open"
+      paid:      "Paid"
+      cancelled: "Cancelled"
+    stock_note:        "Sale #%{id}"
+    breakdown_title:   "Counter sale #%{id}"
+    stock_cancel_note: "Sale #%{id} cancellation"
+    errors:
+      not_open:            "The sale is no longer open."
+      not_paid:            "This only applies to a paid sale."
+      empty:               "Add at least one item to charge."
+      reason_required:     "Write the reason for the cancellation."
+      invalid_format:      "Invalid ticket format. Use a4, thermal58 or thermal80."
+      product_not_found:   "Product not found."
+      product_not_sellable: "This product is not sold."
+      product_inactive:    "This product is inactive."
+      product_without_price: "This product has no price."
+      invalid_quantity:    "The quantity is not valid."
+      item_not_found:      "The item is not in the sale."
+      stale_object:        "The sale changed while you were looking at it. Review it and charge again."
+    pdf:
+      title:    "PURCHASE RECEIPT"
+      cashier:  "Cashier"
+      sale:     "Sale"
+      cancelled: "CANCELLED"
+      cancel_reason: "Reason"
+      change:   "Change"
+      received: "Received"
+      thanks:   "Thank you for your purchase"
+  # Add-on modules (spec 050).
+  addon:
+    errors:
+      unknown:         "That module is not an add-on."
+      requires_module: "This module needs %{module} to be active."
+      already_active:  "This module is already subscribed."
+      not_paid:        "To add a module, first pay your subscription."
+      payment_failed:  "The module could not be charged. Check your payment method."
+      already_ending:  "This module is already set to end."
+      not_ending:      "This module is not set to end."
+      not_found:       "This module is not subscribed."

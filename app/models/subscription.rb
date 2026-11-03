@@ -20,6 +20,7 @@ class Subscription < ApplicationRecord
   validates :suspension_reason, inclusion: { in: SUSPENSION_REASONS }, allow_nil: true
 
   has_many :subscription_changes, dependent: :destroy
+  has_many :addons, class_name: "SubscriptionAddon", dependent: :destroy
 
   def self.start_trial!(company, plan:)
     create!(
@@ -59,12 +60,22 @@ class Subscription < ApplicationRecord
     [ (trial_ends_at.to_date - Date.current).to_i, 0 ].max
   end
 
+  # Suma, sin IVA, de los módulos extra vigentes (spec 050). `amount_cents` es solo el plan.
+  def addons_cents
+    addons.current.sum(:amount_cents)
+  end
+
+  # Base del cobro recurrente sin IVA: el plan más los extras vigentes.
+  def subtotal_cents
+    amount_cents.to_i + addons_cents
+  end
+
   def iva_cents
-    (amount_cents.to_i * IVA_RATE).round
+    (subtotal_cents * IVA_RATE).round
   end
 
   def total_cents
-    amount_cents.to_i + iva_cents
+    subtotal_cents + iva_cents
   end
 
   def amount

@@ -16,6 +16,7 @@ module Reports
       result[:expenses]    = expenses_data if @modules.expenses?
       result[:attendance]  = attendance_data if @modules.attendance?
       result[:inventory]   = inventory_data if @modules.inventory?
+      result[:sales]       = sales_data if @modules.pos?
       result[:previous]    = previous_data if @compare
       result
     end
@@ -28,7 +29,13 @@ module Reports
       result = { period: { from: range.first, to: range.last } }
       result[:income] = income_data(range).slice(:total_revenue, :pending_revenue) if @modules.income?
       result[:expenses] = expenses_data(range) if @modules.expenses?
+      result[:sales] = sales_data(range).slice(:total_revenue, :total_sales, :units) if @modules.pos?
       result
+    end
+
+    # Ventas de mostrador cobradas del periodo (spec 050); las canceladas no cuentan.
+    def sales_data(range = @range)
+      SalesService.new(@company, range).totals
     end
 
     # Foto de hoy, igual que el reporte de inventario (no depende del periodo).
@@ -38,15 +45,13 @@ module Reports
     end
 
     def income_data(range = @range)
-      paid    = @company.tickets.where(status: :paid, paid_at: range)
-      pending = @company.tickets.where(status: :pending, created_at: range)
+      paid = @modules.income_tickets(@company.tickets.where(status: :paid, paid_at: range))
+      data = { total_revenue: paid.sum(:total).to_f, tickets_paid: paid.count }
+      # Por cobrar solo existe con órdenes de trabajo: Básico con punto de venta no lo ve (spec 050, FR-052).
+      return data unless @modules.work_orders?
 
-      {
-        total_revenue:   paid.sum(:total).to_f,
-        tickets_paid:    paid.count,
-        pending_revenue: pending.sum(:total).to_f,
-        tickets_pending: pending.count
-      }
+      pending = @company.tickets.where(status: :pending, created_at: range)
+      data.merge(pending_revenue: pending.sum(:total).to_f, tickets_pending: pending.count)
     end
 
     def work_orders_data
@@ -70,7 +75,7 @@ module Reports
       payroll_total  = @modules.payroll? ? @company.employees.where(status: :active).sum("COALESCE(salary, 0)").to_f : 0.0
       inventory_cost = if @modules.inventory?
         @company.stock_movements
-                .where(movement_type: :entry, created_at: range)
+                .where(movement_type: :entry, sale_id: nil, created_at: range)
                 .joins(:product)
                 .sum("stock_movements.qty * COALESCE(products.unit_cost, 0)").to_f
       else

@@ -181,4 +181,31 @@ class SubscriptionTest < ActiveSupport::TestCase
 
     assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save!(validate: false) }
   end
+
+  test "addons_cents suma solo los extras vigentes y no cambia amount_cents" do
+    subscription = subscriptions(:pos_co)
+    assert_equal 39_900, subscription.amount_cents
+    assert_equal 19_900, subscription.addons_cents
+    assert_equal 59_800, subscription.subtotal_cents
+  end
+
+  test "iva y total se calculan sobre el plan más los extras" do
+    subscription = subscriptions(:pos_co)
+    assert_equal 9_568, subscription.iva_cents
+    assert_equal 69_368, subscription.total_cents
+    assert_in_delta 693.68, subscription.total_with_iva, 0.001
+  end
+
+  test "sin extras el total es el de siempre" do
+    subscription = subscriptions(:basic_co)
+    assert_equal 0, subscription.addons_cents
+    assert_equal 6_384, subscription.iva_cents
+    assert_equal 46_284, subscription.total_cents
+  end
+
+  test "un extra con baja ya vencida no suma" do
+    subscription = subscriptions(:pos_co)
+    subscription.addons.update_all(ends_at: 1.hour.ago)
+    assert_equal 0, subscription.addons_cents
+  end
 end

@@ -9,8 +9,9 @@ module Api
       def index
         render json: {
           iva_rate: Subscription::IVA_RATE,
-          modules: Plan::MODULES.map(&:to_s),
-          plans: Plan.all.map { |plan| serialize_plan(plan) }
+          modules: Plan::PLAN_MODULES.map(&:to_s),
+          plans: Plan.all.map { |plan| serialize_plan(plan) },
+          addons: Addon.all.map { |addon| serialize_addon(addon) }
         }
       end
 
@@ -21,6 +22,15 @@ module Api
           key: plan.key.to_s,
           modules: plan.modules.map(&:to_s),
           prices: Plan::CYCLES.index_with { |cycle| price(plan.amount_cents(cycle)) }
+        }
+      end
+
+      # Módulos extra contratables aparte del plan (spec 050).
+      def serialize_addon(addon)
+        {
+          key: addon.key.to_s,
+          requires: addon.requires.map(&:to_s),
+          prices: Plan::CYCLES.index_with { |cycle| price(addon.amount_cents(cycle)) }
         }
       end
 

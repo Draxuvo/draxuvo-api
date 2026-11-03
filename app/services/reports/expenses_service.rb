@@ -39,7 +39,7 @@ module Reports
 
     def inventory_data
       movements = @company.stock_movements
-                          .where(movement_type: :entry, created_at: @range)
+                          .where(movement_type: :entry, sale_id: nil, created_at: @range)
                           .joins(:product)
                           .includes(:product)
                           .order(:created_at)

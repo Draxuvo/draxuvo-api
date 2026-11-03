@@ -64,6 +64,11 @@ Rails.application.routes.draw do
         end
       end
 
+      # Módulos extra de la suscripción (spec 050): contratar, dar de baja y reactivar
+      post   "subscription/addons",                  to: "subscription_addons#create"
+      delete "subscription/addons/:module",          to: "subscription_addons#destroy", as: :subscription_addon
+      post   "subscription/addons/:module/reactivate", to: "subscription_addons#reactivate"
+
       # Webhooks de Stripe (sin autenticación)
       post "stripe/webhooks", to: "stripe_webhooks#create"
 
@@ -153,6 +158,21 @@ Rails.application.routes.draw do
         end
       end
 
+      # Punto de venta de mostrador (spec 050)
+      resources :sales, only: %i[index show create destroy] do
+        collection { get :catalog }
+        member do
+          post   :items,            action: :add_item
+          patch  "items/:item_id",  action: :update_item
+          delete "items/:item_id",  action: :remove_item
+          post   :charge
+          post   :cancel
+          get    "ticket.pdf",      action: :ticket_pdf
+          get    :ticket
+          post   "ticket/whatsapp", action: :ticket_whatsapp
+        end
+      end
+
       # WhatsApp OTP
       post "phone_verifications/send_code", to: "phone_verifications#send_code"
       post "phone_verifications/verify",    to: "phone_verifications#verify"
@@ -219,6 +239,7 @@ Rails.application.routes.draw do
       get "reports/expenses", to: "reports#expenses"
       get "reports/payroll",  to: "reports#payroll"
       get "reports/inventory", to: "reports#inventory"
+      get "reports/sales",     to: "reports#sales"
 
       resources :work_orders do
         collection do

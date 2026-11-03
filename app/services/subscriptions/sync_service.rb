@@ -29,14 +29,21 @@ module Subscriptions
       stripe_sub = Stripe::Subscription.retrieve({ id: @stripe_subscription_id, expand: [ "items.data.price" ] })
       was_suspended = subscription.suspended?
       subscription.update!(attributes_from(stripe_sub, subscription))
+      sync_addons(subscription, stripe_sub)
       finish_suspension(subscription, was_suspended)
       subscription
     end
 
     private
 
+    # El renglón del plan es el que trae un lookup_key de plan; si ninguno lo es, el primero (como antes de los extras).
+    def plan_item(stripe_sub)
+      items = stripe_sub.items&.data || []
+      items.find { |item| Plan.parse_lookup_key(item.price&.lookup_key) } || items.first
+    end
+
     def attributes_from(stripe_sub, subscription)
-      item = stripe_sub.items&.data&.first
+      item = plan_item(stripe_sub)
       attrs = {
         stripe_subscription_id: stripe_sub.id,
         cancel_at_period_end: stripe_sub["cancel_at_period_end"] ? true : false,
@@ -90,6 +97,26 @@ module Subscriptions
         amount_cents: Plan.find(plan_key).amount_cents(cycle),
         stripe_price_lookup_key: lookup_key
       }
+    end
+
+    # Módulos extra (spec 050): cada renglón con un lookup_key de extra deja su fila vigente; un extra que Stripe ya no
+    # trae y no tenía baja pendiente se cierra con el fin del periodo (si no hay renglones del plan, no se toca nada).
+    def sync_addons(subscription, stripe_sub)
+      items = stripe_sub.items&.data
+      return if items.blank?
+
+      seen = []
+      items.each do |item|
+        key, cycle = Addon.parse_lookup_key(item.price&.lookup_key)
+        next unless key
+
+        seen << key.to_s
+        addon = subscription.addons.find_or_initialize_by(module: key.to_s)
+        addon.update!(company: subscription.company, stripe_item_id: item.id, amount_cents: Addon.find(key).amount_cents(cycle),
+                      started_at: addon.started_at || Time.current, ends_at: nil)
+      end
+      closing = subscription.current_period_end || Time.current
+      subscription.addons.where(ends_at: nil).where.not(module: seen).update_all(ends_at: closing, stripe_item_id: nil, updated_at: Time.current)
     end
 
     def timestamp(value)

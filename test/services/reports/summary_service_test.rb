@@ -136,4 +136,46 @@ class Reports::SummaryServiceTest < ActiveSupport::TestCase
 
     assert_equal({ value: 20.0, counted_products: 1, low_stock: 1 }, summary[:inventory])
   end
+
+  # --- punto de venta (spec 050) ---
+
+  def pos_sale(quantity = 2, product: :pos_cuaderno)
+    cashier = users(:pos_staff)
+    charge_cash(open_sale(cashier, [ products(product), quantity ]), cashier, received: 500).sale
+  end
+
+  test "a company with pos gets the sales block and income without the receivable figures" do
+    pos_sale
+    result = Reports::SummaryService.new(companies(:pos_co), 1.day.ago..1.day.from_now, "custom").call
+
+    assert_equal({ total_revenue: 85.0, total_sales: 1, units: 2 }, result[:sales])
+    assert_equal({ total_revenue: 85.0, tickets_paid: 1 }, result[:income])
+    assert_not result.key?(:work_orders)
+  end
+
+  test "without pos there is no sales block" do
+    result = Reports::SummaryService.new(companies(:pro_co), 1.day.ago..1.day.from_now, "custom").call
+    assert_not result.key?(:sales)
+  end
+
+  test "compare adds the previous sales figures" do
+    pos_sale
+    sale = pos_sale(1)
+    sale.update_columns(paid_at: 40.days.ago)
+    sale.ticket.update_columns(paid_at: 40.days.ago)
+
+    result = Reports::SummaryService.new(companies(:pos_co), 30.days.ago..Time.current, "custom", compare: true).call
+    assert_equal 85.0, result[:sales][:total_revenue]
+    assert_equal({ total_revenue: 42.5, total_sales: 1, units: 1 }, result[:previous][:sales])
+  end
+
+  test "stock that comes back from a cancelled sale is not counted as an inventory purchase" do
+    sale = pos_sale
+    Sales::Cancel.call(sale, users(:pos_admin), "Error")
+
+    result = Reports::SummaryService.new(companies(:pos_co), 1.day.ago..1.day.from_now, "custom").call
+    assert_equal 0.0, result[:expenses][:inventory_cost]
+    expenses = Reports::ExpensesService.new(companies(:pos_co), 1.day.ago..1.day.from_now, "month").call
+    assert_equal 0.0, expenses[:inventory_cost][:total]
+  end
 end

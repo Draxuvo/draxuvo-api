@@ -155,4 +155,84 @@ class Subscriptions::SyncServiceTest < ActiveSupport::TestCase
     sync(stripe_sub(id: "sub_pro", status: "active", lookup_key: "draxuvo_pro_monthly"))
     assert_nil subscription.reload.past_due_since
   end
+
+  # --- módulos extra (spec 050) ---
+
+  test "a subscription with an add-on item reads the plan from the plan item and saves the add-on" do
+    subscription = subscriptions(:basic_co)
+    sync(stripe_sub(id: "sub_basic", status: "active", lookup_key: "draxuvo_basic_monthly", extra_lookup_keys: [ "draxuvo_addon_pos_monthly" ]))
+    subscription.reload
+
+    assert subscription.basic?
+    assert_equal 39_900, subscription.amount_cents
+    assert_equal "draxuvo_basic_monthly", subscription.stripe_price_lookup_key
+    addon = subscription.addons.sole
+    assert_equal "pos", addon.module
+    assert_equal "si_draxuvo_addon_pos_monthly", addon.stripe_item_id
+    assert_equal 19_900, addon.amount_cents
+    assert_nil addon.ends_at
+    assert companies(:basic_co).reload.module_active?(:pos)
+  end
+
+  test "the plan is found even when the add-on item comes first" do
+    subscription = subscriptions(:basic_co)
+    hash = stripe_sub_hash(id: "sub_basic", status: "active", lookup_key: "draxuvo_basic_annual", extra_lookup_keys: [ "draxuvo_addon_pos_annual" ])
+    hash[:items][:data].reverse!
+    sync(Stripe::Subscription.construct_from(hash))
+    subscription.reload
+
+    assert subscription.basic?
+    assert subscription.annual?
+    assert_equal 399_000, subscription.amount_cents
+    assert_equal 199_000, subscription.addons.sole.amount_cents
+  end
+
+  test "syncing twice does not duplicate the add-on and keeps when it started" do
+    subscription = subscriptions(:basic_co)
+    2.times { sync(stripe_sub(id: "sub_basic", status: "active", lookup_key: "draxuvo_basic_monthly", extra_lookup_keys: [ "draxuvo_addon_pos_monthly" ])) }
+
+    assert_equal 1, subscription.addons.count
+    first = subscription.addons.sole.started_at
+    sync(stripe_sub(id: "sub_basic", status: "active", lookup_key: "draxuvo_basic_monthly", extra_lookup_keys: [ "draxuvo_addon_pos_monthly" ]))
+    assert_equal first, subscription.addons.sole.reload.started_at
+  end
+
+  test "an add-on that Stripe no longer has is closed at the end of the period" do
+    subscription = subscriptions(:pos_co)
+    assert_nil subscription.addons.sole.ends_at
+    sync(stripe_sub(id: "sub_pos", status: "active", lookup_key: "draxuvo_basic_monthly", period_end: 12.days.from_now))
+
+    addon = subscription.addons.sole.reload
+    assert_in_delta 12.days.from_now.to_f, addon.ends_at.to_f, 5
+    assert_nil addon.stripe_item_id
+    assert companies(:pos_co).reload.module_active?(:pos)
+  end
+
+  test "an add-on with a pending end is not touched by the sync" do
+    subscription = subscriptions(:pos_co)
+    ends_at = 5.days.from_now.change(usec: 0)
+    subscription.addons.update_all(ends_at: ends_at)
+    sync(stripe_sub(id: "sub_pos", status: "active", lookup_key: "draxuvo_basic_monthly"))
+
+    assert_equal ends_at, subscription.addons.sole.reload.ends_at
+  end
+
+  test "an unknown add-on price is ignored" do
+    subscription = subscriptions(:basic_co)
+    sync(stripe_sub(id: "sub_basic", status: "active", lookup_key: "draxuvo_basic_monthly", extra_lookup_keys: [ "draxuvo_addon_otro_monthly" ]))
+
+    assert_empty subscription.addons.reload
+  end
+
+  test "a plan change keeps the add-on contracted (spec 050, FR-005)" do
+    subscription = subscriptions(:pos_co)
+    sync(stripe_sub(id: "sub_pos", status: "active", lookup_key: "draxuvo_pro_monthly", extra_lookup_keys: [ "draxuvo_addon_pos_monthly" ]))
+
+    subscription.reload
+    assert subscription.pro?
+    assert_equal 79_900, subscription.amount_cents
+    assert_nil subscription.addons.sole.ends_at
+    assert companies(:pos_co).reload.module_active?(:pos)
+    assert_equal 79_900 + 19_900, subscription.subtotal_cents
+  end
 end

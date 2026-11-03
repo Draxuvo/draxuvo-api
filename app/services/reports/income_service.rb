@@ -7,7 +7,7 @@ module Reports
     end
 
     def call
-      tickets = @company.tickets.where(status: :paid, paid_at: @range).order(:paid_at)
+      tickets = Modules.new(@company).income_tickets(@company.tickets.where(status: :paid, paid_at: @range)).order(:paid_at)
 
       {
         period:        { from: @range.first, to: @range.last },
@@ -27,6 +27,7 @@ module Reports
     def payments(tickets)
       @payments ||= begin
         ids = tickets.select(:id)
+        # Las órdenes de trabajo y las ventas de mostrador guardan sus pagos en ticket_payments.
         order_payments = TicketPayment.active.where(ticket_id: ids).includes(:terminal)
         check_payments = CheckPayment.joins(check: :ticket).where(tickets: { id: ids }).includes(:terminal)
         (order_payments.to_a + check_payments.to_a).map { |p| [ p.payment_method, p.terminal, p.amount ] }
@@ -57,7 +58,7 @@ module Reports
     end
 
     def breakdown(tickets)
-      tickets.includes({ work_order: :employee }, { check: %i[dining_table waiter] }).map do |ticket|
+      tickets.includes({ work_order: :employee }, { check: %i[dining_table waiter] }, { sale: :charged_by }).map do |ticket|
         {
           id:         ticket.id,
           folio:      ticket.folio,
@@ -68,10 +69,11 @@ module Reports
       end
     end
 
-    # Una orden de trabajo, o una cuenta de restaurante con su mesa y su mesero en los mismos campos.
+    # Una orden de trabajo, una venta de mostrador o una cuenta de restaurante con su mesa y su mesero en los mismos campos.
     def breakdown_source(ticket)
       order = ticket.work_order
       return { id: ticket.work_order_id, title: order.title, employee: order.employee&.name } if order
+      return { id: nil, title: I18n.t("sale.breakdown_title", id: ticket.sale_id), employee: ticket.sale.charged_by&.full_name } if ticket.sale
 
       check = ticket.check
       title = check.dining_table ? "Mesa #{check.dining_table.name}" : "Para llevar: #{check.takeout_name}"

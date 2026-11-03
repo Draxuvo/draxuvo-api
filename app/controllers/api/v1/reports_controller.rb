@@ -8,6 +8,7 @@ module Api
       before_action(only: :expenses) { gate_reports!(report_modules.payroll? ? :inventory : :employees, report_modules.expenses?) }
       before_action(only: :payroll) { gate_reports!(report_modules.payroll? ? :attendance : :employees, report_modules.attendance?) }
       before_action(only: :inventory) { gate_reports!(:inventory, report_modules.inventory?) }
+      before_action(only: :sales) { gate_reports!(:pos, report_modules.pos?) }
 
       # GET /api/v1/reports/summary?from=2026-04-01&to=2026-04-30[&compare=true]
       # También acepta period=weekly|monthly|annual&date=2026-04-01 (si llegan from/to, mandan estos).
@@ -50,6 +51,11 @@ module Api
       # Existencias y valor son de hoy; solo los movimientos usan el rango.
       def inventory
         render json: Reports::InventoryService.new(current_company, from_to_range).call
+      end
+
+      # GET /api/v1/reports/sales?from=2026-04-01&to=2026-04-30 — ventas de mostrador por producto y por cajero (spec 050).
+      def sales
+        render json: Reports::SalesService.new(current_company, from_to_range).call
       end
 
       private

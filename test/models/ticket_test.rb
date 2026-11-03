@@ -102,4 +102,16 @@ class TicketTest < ActiveSupport::TestCase
 
     assert paid.valid?
   end
+
+  test "a ticket may belong to a counter sale" do
+    sale = Sale.create!(company: companies(:pos_co), opened_by: users(:pos_staff))
+    assert Ticket.new(sale: sale, company: companies(:pos_co), total: 10).valid?
+  end
+
+  test "a ticket needs exactly one owner among order, check and sale" do
+    sale = Sale.create!(company: companies(:pos_co), opened_by: users(:pos_staff))
+    assert_not Ticket.new(company: companies(:pos_co), total: 10).valid?
+    assert_not Ticket.new(sale: sale, work_order: work_orders(:pro_done), company: companies(:pro_co), total: 10).valid?
+    assert_not Ticket.new(sale: sale, check: checks(:open_check), company: companies(:pos_co), total: 10).valid?
+  end
 end

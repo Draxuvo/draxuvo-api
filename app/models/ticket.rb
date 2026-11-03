@@ -2,6 +2,7 @@
 class Ticket < ApplicationRecord
   belongs_to :work_order, optional: true
   belongs_to :check, optional: true
+  belongs_to :sale, optional: true
   belongs_to :company
   has_many :ticket_payments, -> { order(:id) }, dependent: :destroy
 
@@ -29,7 +30,7 @@ class Ticket < ApplicationRecord
   private
 
   def exactly_one_owner
-    errors.add(:base, :invalid) if work_order.nil? == check.nil?
+    errors.add(:base, :invalid) unless [ work_order, check, sale ].count(&:present?) == 1
   end
 
   def reserve_folio

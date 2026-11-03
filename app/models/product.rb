@@ -6,6 +6,7 @@ class Product < ApplicationRecord
   has_many :work_order_items, dependent: :destroy
   belongs_to :station, optional: true
   has_many :check_items, dependent: :nullify
+  has_many :sale_items, dependent: :nullify
   has_many :barcodes, -> { order(:id) }, class_name: "ProductBarcode", dependent: :destroy
 
   before_validation { self.stock ||= 0 }

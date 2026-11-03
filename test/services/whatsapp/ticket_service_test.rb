@@ -102,6 +102,18 @@ class Whatsapp::TicketServiceTest < ActiveSupport::TestCase
     assert_includes body, "Tacos al pastor x1"
   end
 
+  test "the text fallback lists the items of a counter sale (spec 050)" do
+    sale = open_sale(users(:pos_staff), [ products(:pos_cuaderno), 2 ])
+    ticket = charge_cash(sale, users(:pos_staff)).ticket
+    _, http, = with_whatsapp([ ok({ "id" => "m" }), failure(131_026), ok({ "messages" => [ { "id" => "w" } ] }) ]) do
+      Whatsapp::TicketService.new(ticket, phone: "5512345678").call
+    end
+    body = JSON.parse(http.requests.last.body)["text"]["body"]
+    assert_includes body, "Venta: ##{sale.id}"
+    assert_includes body, "Cuaderno profesional x2"
+    assert_includes body, "$85.00"
+  end
+
   test "other API errors raise with the WhatsApp message" do
     with_whatsapp(failure(100, "Parámetro inválido")) do
       error = assert_raises(ApiErrors::UnprocessableEntityError) { service.call }

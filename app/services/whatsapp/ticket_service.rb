@@ -75,13 +75,14 @@ module Whatsapp
     # Mensaje de texto con los datos del ticket cuando no hay ventana de 24h abierta.
     def send_text_fallback
       order = @ticket.work_order
-      lines = order ? order.work_order_items.map { |i| [ i.description, i.quantity, i.subtotal ] } : check_lines
+      lines = order ? order.work_order_items.map { |i| [ i.description, i.quantity, i.subtotal ] } : check_or_sale_lines
       items = lines.map { |description, quantity, subtotal| "  • #{description} x#{quantity} — $#{format('%.2f', subtotal)}" }.join("\n")
-      subject = order ? order.title : check_subject
+      subject = order ? order.title : check_or_sale_subject
+      label = if order then "Orden" elsif @ticket.sale then "Venta" else "Cuenta" end
 
       body = <<~MSG.strip
         🧾 *Ticket #{@ticket.folio}*
-        #{order ? 'Orden' : 'Cuenta'}: #{subject}
+        #{label}: #{subject}
         Estado: #{@ticket.status_label_text}
         Fecha: #{@ticket.created_at.strftime('%d/%m/%Y')}
 
@@ -139,6 +140,17 @@ module Whatsapp
 
       log(:warn, "WhatsApp no disponible para tickets (origen=#{config.source})")
       raise ApiErrors::UnprocessableEntityError.new(details: I18n.t("whatsapp.not_configured"))
+    end
+
+    # Renglones de una venta de mostrador (spec 050) o de una cuenta de restaurante.
+    def check_or_sale_lines
+      return @ticket.sale.sale_items.map { |i| [ i.name, Product.quantity(i.quantity), i.subtotal ] } if @ticket.sale
+
+      check_lines
+    end
+
+    def check_or_sale_subject
+      @ticket.sale ? "##{@ticket.sale.id}" : check_subject
     end
 
     def check_lines

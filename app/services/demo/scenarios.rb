@@ -5,6 +5,7 @@ module Demo
   module Scenarios
     PLAN_OF = {
       "basic_retail" => "basic",
+      "basic_stationery" => "basic",
       "pro_service" => "pro",
       "pro_restaurant" => "pro",
       "enterprise_restaurant" => "enterprise"

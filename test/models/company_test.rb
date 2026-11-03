@@ -134,4 +134,44 @@ class CompanyTest < ActiveSupport::TestCase
     assert_equal names, company.payment_terminals.pluck(:name).sort
     assert_equal payments, TicketPayment.where.not(terminal_id: nil).count
   end
+
+  test "available_modules suma los extras vigentes al plan y module_sources distingue su origen" do
+    company = companies(:basic_co)
+    assert_not_includes company.available_modules, :pos
+
+    grant_addon!(company, :pos)
+    assert_includes company.available_modules, :pos
+    assert company.module_active?(:pos)
+    assert_equal "addon", company.module_sources[:pos]
+    assert_equal "plan", company.module_sources[:inventory]
+  end
+
+  test "un extra con baja pendiente sigue activo hasta su fin y luego deja de estarlo" do
+    company = companies(:basic_co)
+    grant_addon!(company, :pos, ends_at: 3.days.from_now)
+    assert company.module_active?(:pos)
+
+    company.billing_subscription.addons.update_all(ends_at: 1.hour.ago)
+    assert_not company.reload.module_active?(:pos)
+  end
+
+  test "disabled_modules apaga un extra contratado" do
+    company = companies(:pos_co)
+    assert company.module_active?(:pos)
+    company.update!(disabled_modules: [ "pos" ])
+    assert_not company.module_active?(:pos)
+    assert_includes company.available_modules, :pos
+  end
+
+  test "una sucursal toma los extras de la suscripción de su principal" do
+    parent = companies(:pos_co)
+    branch = Company.create!(name: "Sucursal Papelería", parent: parent)
+    assert branch.module_active?(:pos)
+  end
+
+  test "sin suscripción no hay módulos ni extras" do
+    company = Company.create!(name: "Sin plan", parent: nil)
+    company.subscription.destroy
+    assert_empty company.reload.available_modules
+  end
 end

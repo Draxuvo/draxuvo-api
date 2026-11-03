@@ -15,6 +15,7 @@ class Company < ApplicationRecord
   has_many :stations, dependent: :destroy
   has_many :dining_tables, dependent: :destroy
   has_many :checks, dependent: :destroy
+  has_many :sales, dependent: :destroy
   has_many :payment_terminals, dependent: :destroy
   has_many :product_types, dependent: :destroy
   has_many :module_changes, dependent: :destroy
@@ -77,12 +78,20 @@ class Company < ApplicationRecord
     billing_company&.subscription
   end
 
-  # Módulos del plan de la suscripción de billing_company (R13, R17). Sin suscripción no hay módulos.
+  # Módulos del plan de la suscripción de billing_company (R13, R17) más los extras contratados y vigentes
+  # (spec 050). Sin suscripción no hay módulos.
   def available_modules
-    plan = billing_subscription&.plan
-    return [] unless plan
+    subscription = billing_subscription
+    return [] unless subscription&.plan
 
-    Plan.find(plan).modules.to_a
+    # La asociación se carga una sola vez por suscripción: module_active? se llama muchas veces por petición.
+    Plan.find(subscription.plan).modules.to_a | subscription.addons.select(&:current?).map { |addon| addon.module.to_sym }
+  end
+
+  # De dónde viene cada módulo disponible: "plan" o "addon".
+  def module_sources
+    plan_modules = billing_subscription&.plan ? Plan.find(billing_subscription.plan).modules : []
+    available_modules.index_with { |key| plan_modules.include?(key) ? "plan" : "addon" }
   end
 
   # Activos = plan menos disabled_modules (R16). Un desactivado fuera del plan no tiene efecto.

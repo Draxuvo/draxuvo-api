@@ -1,5 +1,5 @@
 # Tipos iniciales (spec 016) de las empresas que tienen productos en fixtures. `resto_co` usa los del restaurante.
-<% { "one" => :service, "two" => :service, "resto_co" => :order }.each do |co, mode| %>
+<% { "one" => :service, "two" => :service, "resto_co" => :order, "pos_co" => :service }.each do |co, mode| %>
 <% names = mode == :order ? %w[Platillo Bebida Insumo] : %w[Servicio Refacción Material] %>
 <%= co %>_sold:
   company: <%= co %>
@@ -32,3 +32,14 @@
   default_unit_key: <%= mode == :order ? "kg" : "pza" %>
   position: 3
 <% end %>
+
+# Tipo que se vende por fracción (spec 050): cinta o listón por metro.
+pos_co_meter:
+  company: pos_co
+  name: Por metro
+  kind: counted_sold
+  sellable: true
+  counted: true
+  fractional: true
+  default_unit_key: m
+  position: 4

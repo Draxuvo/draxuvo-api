@@ -103,4 +103,43 @@ class Subscriptions::CreateCheckoutServiceTest < ActiveSupport::TestCase
       end
     end
   end
+
+  # --- módulos extra (spec 050) ---
+
+  test "an add-on becomes a second line item with the cycle price" do
+    captured = with_memory_cache { with_checkout_stubs { service(companies(:one), billing_cycle: "annual", addons: [ "pos" ]).call } }
+
+    assert_equal [ { price: "price_draxuvo_pro_annual", quantity: 1 }, { price: "price_draxuvo_addon_pos_annual", quantity: 1 } ], captured[:line_items]
+    assert_equal "pos", captured[:metadata][:addons]
+  end
+
+  test "without add-ons the checkout is the same as always" do
+    captured = with_memory_cache { with_checkout_stubs { service(companies(:one), addons: []).call } }
+
+    assert_equal 1, captured[:line_items].size
+    assert_not captured[:metadata].key?(:addons)
+  end
+
+  test "blank and repeated add-ons are ignored" do
+    captured = with_memory_cache { with_checkout_stubs { service(companies(:one), addons: [ "pos", "", "pos" ]).call } }
+    assert_equal 2, captured[:line_items].size
+  end
+
+  test "an unknown add-on is rejected before opening the session" do
+    error = assert_raises(ApiErrors::UnprocessableEntityError) do
+      with_memory_cache { with_checkout_stubs { service(companies(:one), addons: [ "teletransportador" ]).call } }
+    end
+    assert_equal "unknown_addon", error.details[:code]
+  end
+
+  test "an add-on needs the modules of the chosen plan" do
+    needs_restaurant = Addon.new(key: :pos, requires: %i[restaurant], monthly_amount_cents: 19_900)
+    Addon.stub(:find, needs_restaurant) do
+      error = assert_raises(ApiErrors::UnprocessableEntityError) do
+        with_memory_cache { with_checkout_stubs { Subscriptions::CreateCheckoutService.new(company: companies(:one), plan: :basic, success_url: "x", cancel_url: "y", addons: [ "pos" ]).call } }
+      end
+      assert_equal "addon_requires_module", error.details[:code]
+      assert_equal "restaurant", error.details[:required]
+    end
+  end
 end

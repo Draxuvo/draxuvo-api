@@ -48,4 +48,28 @@ class Reports::ModulesTest < ActiveSupport::TestCase
     assert_not modules.inventory?
     assert_not modules.expenses?
   end
+
+  # --- punto de venta (spec 050) ---
+
+  test "a basic company with pos reports income and sales but not work orders" do
+    modules = Reports::Modules.new(companies(:pos_co))
+    assert modules.income?
+    assert modules.pos?
+    assert_not modules.work_orders?
+  end
+
+  test "a basic company without pos has no income" do
+    modules = Reports::Modules.new(companies(:basic_co))
+    assert_not modules.income?
+    assert_not modules.pos?
+  end
+
+  test "income_tickets keeps only the tickets of the active modules" do
+    modules = Reports::Modules.new(companies(:pos_co))
+    cashier = users(:pos_staff)
+    sale = charge_cash(open_sale(cashier, [ products(:pos_cuaderno), 1 ]), cashier).sale
+
+    assert_equal [ sale.ticket ], modules.income_tickets(companies(:pos_co).tickets).to_a
+    assert_empty Reports::Modules.new(companies(:basic_co)).income_tickets(companies(:basic_co).tickets)
+  end
 end

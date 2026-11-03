@@ -6,7 +6,8 @@ class Demo::ScenariosTest < ActiveSupport::TestCase
   end
 
   test "registry maps every scenario to a plan and plans to scenarios" do
-    assert_equal %w[basic_retail enterprise_restaurant pro_restaurant pro_service], Demo::Scenarios.keys.sort
+    assert_equal %w[basic_retail basic_stationery enterprise_restaurant pro_restaurant pro_service], Demo::Scenarios.keys.sort
+    assert_equal %w[basic_retail basic_stationery], Demo::Scenarios.for_plan(:basic).sort
     assert_equal %w[pro_restaurant pro_service], Demo::Scenarios.for_plan(:pro).sort
     assert Demo::Scenarios.valid?("pro", "pro_service")
     assert_not Demo::Scenarios.valid?("basic", "pro_service")
@@ -18,7 +19,10 @@ class Demo::ScenariosTest < ActiveSupport::TestCase
       company = result.company
 
       assert company.demo?
-      assert_equal Plan.find(Demo::Scenarios.plan_of(key)).modules.sort, company.active_modules.sort
+      # Los módulos del plan más los extra que el escenario trae contratados (spec 050).
+      scenario = Demo::Scenarios.fetch(key)
+      extras = scenario.const_defined?(:ADDONS) ? scenario::ADDONS : []
+      assert_equal (Plan.find(Demo::Scenarios.plan_of(key)).modules + extras).sort, company.active_modules.sort
       assert_operator company.employees.active.where.not(salary: nil).count, :>=, 4
       assert_operator company.attendances.where("checkin_at >= ?", 10.days.ago).count, :>=, 20
       assert_operator company.attendances.where(checkin_at: Time.zone.today.all_day).count, :>=, 2
@@ -89,5 +93,72 @@ class Demo::ScenariosTest < ActiveSupport::TestCase
     assert_equal result.company, result.branch.parent
     assert_equal [ result.branch.id, result.company.id ].sort, result.user.user_companies.pluck(:company_id).sort
     assert result.branch.employees.exists?
+  end
+
+  # --- basic_stationery (spec 050) ---
+
+  test "basic_stationery is a basic plan company with the point of sale contracted and no orders or restaurant" do
+    company = provision("basic_stationery").company
+
+    assert company.subscription.basic?
+    assert company.module_active?(:pos)
+    assert_equal "addon", company.module_sources[:pos]
+    assert_not company.module_active?(:tickets)
+    assert_equal 0, company.work_orders.count
+    assert_equal 0, company.checks.count
+    assert_equal [ "Artículo" ], company.products.where.not(sku: "SER-001").includes(:product_type).map { |p| p.product_type.name }.uniq
+  end
+
+  test "basic_stationery has barcodes, a service that is not counted and low stock" do
+    company = provision("basic_stationery").company
+
+    assert_equal 16, company.product_barcodes.count
+    assert company.product_barcodes.all? { |barcode| barcode.code.match?(/\A750990\d{7}\z/) }
+    assert_not company.products.find_by!(sku: "SER-001").counted?
+    assert_operator company.products.low_stock.count, :>=, 2
+    assert_equal 0, company.products.where("stock < 0").count
+  end
+
+  test "basic_stationery has a week of paid sales in cash, card and transfer, and one cancelled" do
+    company = provision("basic_stationery").company
+
+    assert_operator company.sales.status_paid.count, :>=, 18
+    assert_equal 1, company.sales.status_cancelled.count
+    assert_equal %w[card cash transfer], company.tickets.where.not(sale_id: nil).distinct.pluck(:payment_method).sort
+    assert company.sales.status_paid.where("paid_at < ?", 6.days.ago).exists?
+    assert company.sales.status_paid.where(paid_at: Time.zone.today.all_day).exists?
+    assert_equal [], company.sales.status_open.to_a
+  end
+
+  test "basic_stationery sales have tickets, stock movements and a consistent total" do
+    company = provision("basic_stationery").company
+    sale = company.sales.status_paid.first
+
+    assert sale.ticket.paid?
+    assert_equal sale.total, sale.ticket.total
+    assert_equal sale.total, sale.sale_items.sum(:subtotal)
+    assert StockMovement.exists?(sale_id: sale.id)
+    cancelled = company.sales.status_cancelled.first
+    assert cancelled.ticket.voided?
+    assert StockMovement.exists?(sale_id: cancelled.id, movement_type: :entry)
+  end
+
+  test "basic_stationery shows in the reports of a basic company" do
+    company = provision("basic_stationery").company
+    range = 10.days.ago..Time.current
+
+    sales = Reports::SalesService.new(company, range).call
+    assert_operator sales[:by_product].size, :>=, 8
+    income = Reports::IncomeService.new(company, range, "day").call
+    assert_equal sales[:total_revenue], income[:total_revenue]
+    assert_equal sales[:total_sales], income[:total_tickets]
+  end
+
+  test "basic_stationery has two cashiers and the owner can sell" do
+    result = provision("basic_stationery")
+    cashiers = result.company.sales.pluck(:opened_by_id).uniq
+
+    assert_equal 2, cashiers.size
+    assert_includes cashiers, result.user.id
   end
 end

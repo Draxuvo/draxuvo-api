@@ -47,3 +47,15 @@ resto_<%= who %>:
   active: true
   role: <%= { "owner" => 3, "waiter" => 0, "waiter2" => 0 }[who] %>
 <% end %>
+
+# Cajeros de la papelería (spec 050). Contraseña: password123
+<% { "owner" => 3, "admin" => 2, "staff" => 0, "staff2" => 0 }.each_key do |who| %>
+pos_<%= who %>:
+  first_name: <%= who.camelize %>
+  last_name: Papelería
+  email: <%= who %>@pos-co.test
+  phone: "5512340<%= %w[owner admin staff staff2].index(who) %>00"
+  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  active: true
+  role: <%= who == "owner" ? 3 : 0 %>
+<% end %>
