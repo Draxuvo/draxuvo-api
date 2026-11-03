@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_03_100200) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_03_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -732,6 +732,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_03_100200) do
     t.datetime "updated_at", null: false
     t.bigint "user_id"
     t.bigint "sale_id"
+    t.boolean "initial", default: false, null: false
     t.index ["company_id"], name: "index_stock_movements_on_company_id"
     t.index ["product_id"], name: "index_stock_movements_on_product_id"
     t.index ["sale_id"], name: "index_stock_movements_on_sale_id"

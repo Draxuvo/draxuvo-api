@@ -48,7 +48,7 @@ class Api::V1::ProfileControllerTest < ActionDispatch::IntegrationTest
 
   test "login returns preferences" do
     @owner.update!(theme: "mercado")
-    post "/api/v1/auth/login", params: { email: @owner.email, password: "password123" }, as: :json
+    post "/api/v1/auth/login", params: { email: @owner.email, password: "Clave-Segura-9" }, as: :json
     skip "el fixture no tiene contraseña conocida" unless response.successful?
     assert_equal "mercado", response.parsed_body.dig("user", "preferences", "theme")
   end

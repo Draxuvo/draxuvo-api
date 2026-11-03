@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Whatsapp::ConnectionCheckTest < ActiveSupport::TestCase
-  TOKEN = "EAAGtokensecreto1234567890".freeze
+  TOKEN = "EAAGtokenClave-Segura-94567890".freeze
   PHONE = "104512345678901".freeze
   WABA = "109876543210987".freeze
 

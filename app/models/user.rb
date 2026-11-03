@@ -53,7 +53,23 @@ class User < ApplicationRecord
   validates :phone, presence: true
   validates :theme, inclusion: { in: THEMES }
   validates :color_mode, inclusion: { in: COLOR_MODES }
-  validates :password, presence: true, length: { minimum: 6 }, if: :password_required?
+  validates :password, presence: true, if: :password_required?
+  validate :password_strength, if: -> { password.present? && password_required? }
+
+  COMMON_PASSWORDS = Set.new(
+    File.readlines(Rails.root.join("config/common_passwords.txt"), chomp: true).map { |l| l.strip.downcase }.reject(&:empty?)
+  ).freeze
+
+  # Spec 052 (H-38): al menos 8 caracteres, no solo números y fuera de las contraseñas más comunes.
+  # Devuelve la clave del problema o nil.
+  def self.password_problem(value)
+    value = value.to_s
+    return :too_short if value.length < 8
+    return :only_digits if value.match?(/\A\d+\z/)
+    return :common if COMMON_PASSWORDS.include?(value.downcase)
+
+    nil
+  end
 
   def full_name
     [ first_name, middle_name, last_name, second_last_name ].compact.join(" ")
@@ -91,7 +107,7 @@ class User < ApplicationRecord
   def update_password(current_password, new_password, new_password_confirmation)
     errors.add(:current_password, "es incorrecta") unless authenticate(current_password)
     errors.add(:new_password, "no puede estar vacía") if new_password.blank?
-    errors.add(:new_password, "debe tener al menos 6 caracteres") if new_password.present? && new_password.length < 6
+    add_new_password_problem(new_password)
     errors.add(:new_password_confirmation, "no coincide con la nueva contraseña") if new_password != new_password_confirmation
 
     return false unless errors.empty?
@@ -102,7 +118,7 @@ class User < ApplicationRecord
   # Method to reset password with token validation
   def reset_password_with_token(token, new_password, new_password_confirmation)
     errors.add(:new_password, "no puede estar vacía") if new_password.blank?
-    errors.add(:new_password, "debe tener al menos 6 caracteres") if new_password.present? && new_password.length < 6
+    add_new_password_problem(new_password)
     errors.add(:new_password_confirmation, "no coincide con la nueva contraseña") if new_password != new_password_confirmation
 
     return false unless errors.empty?
@@ -111,6 +127,16 @@ class User < ApplicationRecord
   end
 
   private
+
+  def password_strength
+    problem = self.class.password_problem(password)
+    errors.add(:password, I18n.t("auth.weak_password.#{problem}")) if problem
+  end
+
+  def add_new_password_problem(value)
+    problem = self.class.password_problem(value) if value.present?
+    errors.add(:new_password, I18n.t("auth.weak_password.#{problem}")) if problem
+  end
 
   def password_required?
     # Require password for new records or when password is being changed

@@ -3,6 +3,7 @@ module ErrorHandler
 
   included do
     rescue_from StandardError,                      with: :handle_internal_error
+    rescue_from ActiveModel::RangeError, ActiveRecord::RangeError, with: :handle_out_of_range
     rescue_from ActiveRecord::RecordNotFound,       with: :handle_not_found
     rescue_from ActiveRecord::RecordInvalid,        with: :handle_unprocessable_entity
     rescue_from ActionController::ParameterMissing, with: :handle_bad_request
@@ -53,6 +54,13 @@ module ErrorHandler
         message: I18n.t("errors.validation_failed"),
         details: error.record.errors.full_messages,
       )
+    )
+  end
+
+  # Spec 052 (H-32): un número que no cabe en la columna es un dato inválido, no un error del servidor.
+  def handle_out_of_range(_error)
+    handle_api_error(
+      ApiErrors::UnprocessableEntityError.new(message: I18n.t("errors.validation_failed"), details: [ I18n.t("errors.messages.out_of_range") ])
     )
   end
 

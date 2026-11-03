@@ -44,7 +44,7 @@ class UserCompanyTest < ActiveSupport::TestCase
 
   test "giving staff access creates an active employee card for the person" do
     company = companies(:pro_co)
-    user = User.create!(first_name: "Marta", last_name: "Gómez", email: "marta@ficha.test", phone: "5512340000", password: "password123", active: true)
+    user = User.create!(first_name: "Marta", last_name: "Gómez", email: "marta@ficha.test", phone: "5512340000", password: "Clave-Segura-9", active: true)
 
     assert_difference -> { company.employees.count }, 1 do
       UserCompany.create!(user: user, company: company, role: :staff)

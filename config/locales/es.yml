@@ -40,6 +40,11 @@ es:
       not_a_number: "no es un número"
       greater_than_or_equal_to: "debe ser mayor o igual a %{count}"
       less_than_or_equal_to: "debe ser menor o igual a %{count}"
+      other_than: "no puede ser %{count}"
+      less_than: "debe ser menor que %{count}"
+      out_of_range: "fuera de rango"
+      insufficient_stock: "Stock insuficiente. Disponible: %{available}"
+      inclusion_movement: "no es un tipo de movimiento válido"
       blank: "no puede estar vacío"
       roll_single: "en un rollo debe ser 1"
       grid_too_wide: "La cuadrícula de etiquetas no cabe a lo ancho de la página"
@@ -103,6 +108,12 @@ es:
     not_authorized: "No tienes autorización para realizar esta acción"
     employee_inactive: "Tu acceso a esta empresa está suspendido porque el empleado fue dado de baja"
     no_company: "Usuario sin empresa asignada"
+    account_inactive: "Tu cuenta está desactivada. Contacta al administrador."
+    too_many_attempts: "Demasiados intentos de inicio de sesión. Espera unos minutos e inténtalo de nuevo, o recupera tu contraseña."
+    weak_password:
+      too_short: "debe tener al menos 8 caracteres"
+      only_digits: "no puede ser solo números"
+      common: "es demasiado común; elige otra"
 
   attendance:
     no_open: "No tienes una entrada abierta"
@@ -205,6 +216,7 @@ es:
       name_taken: "Ya tienes un formato con ese nombre"
 
   products:
+    initial_stock_note: "Inventario inicial"
     deleted: "Producto eliminado"
     insufficient_stock: "Stock insuficiente. Disponible: %{available}"
     export:
@@ -323,6 +335,7 @@ es:
     whatsapp_sent: "Ticket enviado por WhatsApp exitosamente"
 
   reports:
+    invalid_range: "El rango de fechas no es válido: revisa que la fecha inicial no sea posterior a la final."
     invalid_period: "Período inválido. Use: weekly, monthly o annual."
     invalid_group_by: "Agrupación inválida. Use: week, month o year."
     period:

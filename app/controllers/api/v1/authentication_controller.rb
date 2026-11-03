@@ -4,7 +4,17 @@ module Api::V1
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
     rescue_from ActiveRecord::RecordInvalid, with: :handle_record_invalid
 
+    # En test el cache es null_store; los tests necesitan un store real para el límite.
+    RATE_LIMIT_STORE = Rails.env.test? ? ActiveSupport::Cache::MemoryStore.new : Rails.cache
+
     before_action :authenticate_request, only: [ :me ]
+
+    # Spec 052 (H-37): 10 intentos por correo e IP en 15 minutos; el límite no depende de que la contraseña sea correcta.
+    # La recuperación de contraseña vive en otro controlador y no se bloquea.
+    rate_limit to: ENV.fetch("LOGIN_RATE_LIMIT", 10).to_i, within: ENV.fetch("LOGIN_RATE_WINDOW_MINUTES", 15).to_i.minutes,
+               store: RATE_LIMIT_STORE, only: :login,
+               by: -> { "login:#{request.remote_ip}:#{params[:email].to_s.downcase}" },
+               with: -> { raise ApiErrors::TooManyRequestsError.new(message: I18n.t("auth.too_many_attempts"), details: { retry_after: ENV.fetch("LOGIN_RATE_WINDOW_MINUTES", 15).to_i * 60 }) }
 
     # GET /api/v1/auth/me
     def me

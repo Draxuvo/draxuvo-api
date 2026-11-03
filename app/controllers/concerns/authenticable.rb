@@ -35,6 +35,9 @@ module Authenticable
         details: e.message,
       )
     end
+
+    # Spec 052 (H-04): una cuenta desactivada pierde el acceso en la siguiente petición, aunque su token siga vigente.
+    raise ApiErrors::UnauthorizedError.new(message: I18n.t("auth.account_inactive")) if @current_user.locked?
   end
 
   def current_user

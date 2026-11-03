@@ -30,25 +30,17 @@ class Api::V1::ProductImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil ProductImport.find(body["id"]).file_data
   end
 
-  test "any member can import, and the job applies the file" do
+  test "a waiter cannot import (spec 052, H-02); an owner can and the job applies the file" do
     upload("sku,name,barcodes\nW-1,Mesero,9300000000001\n", headers: @waiter)
-    assert_response :accepted
-
-    perform_enqueued_jobs
-    get "/api/v1/product_imports/#{response.parsed_body['id']}", headers: @waiter
-
-    assert_equal "done", response.parsed_body["status"]
-    assert_equal 1, response.parsed_body["created"]
-    assert @company.products.exists?(sku: "W-1")
-  end
-
-  test "only admins and owners apply icons from the file" do
-    upload("sku,name,icon\nI-W,Mesero,taco\n", headers: @waiter)
-    perform_enqueued_jobs
-    assert_nil @company.products.find_by!(sku: "I-W").icon
+    assert_response :forbidden
+    assert_not @company.products.exists?(sku: "W-1")
 
     upload("sku,name,icon\nI-O,Dueño,taco\n", headers: @owner)
+    assert_response :accepted
     perform_enqueued_jobs
+    get "/api/v1/product_imports/#{response.parsed_body['id']}", headers: @owner
+
+    assert_equal "done", response.parsed_body["status"]
     assert_equal "taco", @company.products.find_by!(sku: "I-O").icon
   end
 

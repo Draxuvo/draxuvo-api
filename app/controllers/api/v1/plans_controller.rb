@@ -11,7 +11,7 @@ module Api
           iva_rate: Subscription::IVA_RATE,
           modules: Plan::PLAN_MODULES.map(&:to_s),
           plans: Plan.all.map { |plan| serialize_plan(plan) },
-          addons: Addon.all.map { |addon| serialize_addon(addon) }
+          addons: Addon.all.select(&:available?).map { |addon| serialize_addon(addon) }
         }
       end
 

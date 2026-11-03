@@ -40,7 +40,7 @@ class Api::V1::RoleScopeControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "login lists every company with the role there and keeps user.role from the first company" do
-    post "/api/v1/auth/login", params: { email: @user.email, password: "password123" }, as: :json
+    post "/api/v1/auth/login", params: { email: @user.email, password: "Clave-Segura-9" }, as: :json
 
     assert_response :ok
     user = JSON.parse(response.body)["user"]
@@ -52,7 +52,7 @@ class Api::V1::RoleScopeControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the super admin keeps role super_admin" do
-    post "/api/v1/auth/login", params: { email: users(:super_admin).email, password: "password123" }, as: :json
+    post "/api/v1/auth/login", params: { email: users(:super_admin).email, password: "Clave-Segura-9" }, as: :json
 
     assert_response :ok
     assert_equal "super_admin", JSON.parse(response.body).dig("user", "role")

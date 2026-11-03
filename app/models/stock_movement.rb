@@ -5,17 +5,19 @@ class StockMovement < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :sale, optional: true
 
-  enum :movement_type, { entry: 0, exit: 1, adjustment: 2 }
+  enum :movement_type, { entry: 0, exit: 1, adjustment: 2 }, validate: true
 
-  validates :qty, presence: true, numericality: { other_than: 0 }
+  validates :movement_type, presence: true
+  validates :qty, presence: true, numericality: { other_than: 0, less_than: 100_000_000 }
   validate :adjustment_keeps_stock_non_negative, on: :create
+  validate :exit_within_stock, on: :create, unless: :initial?
   validate :whole_quantity, unless: -> { product&.fractional? }
 
   scope :search, ->(q) {
     joins(:product).where("products.name ILIKE :q OR stock_movements.note ILIKE :q", q: "%#{q}%") if q.present?
   }
 
-  after_create :update_stock
+  after_create :update_stock, unless: :initial?
 
   private
 
@@ -25,6 +27,14 @@ class StockMovement < ApplicationRecord
     return if product.stock.to_d + qty >= 0
 
     errors.add(:qty, :greater_than_or_equal_to, count: -product.stock.to_d)
+  end
+
+  # Spec 052 (H-08): una salida nunca deja la existencia por debajo de cero, llegue como llegue la petición.
+  def exit_within_stock
+    return unless exit? && product
+    return if product.stock.to_d >= qty.to_d.abs
+
+    errors.add(:qty, :insufficient_stock, available: Product.quantity(product.stock))
   end
 
   # Solo los tipos con decimales (spec 016) aceptan fracciones.

@@ -2,7 +2,7 @@ require "test_helper"
 
 # Spec 047, US1: conectar, verificar, reemplazar la llave y desconectar. Meta se simula; nunca hay llamadas reales.
 class WhatsappConnectionsControllerTest < ActionDispatch::IntegrationTest
-  TOKEN = "EAAGtokensecreto1234567890".freeze
+  TOKEN = "EAAGtokenClave-Segura-94567890".freeze
   NEW_TOKEN = "EAAGotrallavenueva00009999".freeze
   PHONE = "104512345678901".freeze
   WABA = "109876543210987".freeze

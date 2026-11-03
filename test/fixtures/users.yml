@@ -1,11 +1,11 @@
-# role global: solo distingue a super_admin (4); el rol de empresa está en user_companies. Contraseña de todos: password123
+# role global: solo distingue a super_admin (4); el rol de empresa está en user_companies. Contraseña de todos: Clave-Segura-9
 <% %w[one two basic_co pro_co enterprise_co expired_co past_due_co].each do |co| %>
 <%= co %>_owner:
   first_name: Dueño
   last_name: <%= co.camelize %>
   email: owner@<%= co.dasherize %>.test
   phone: "5512345678"
-  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  password_digest: <%= BCrypt::Password.create("Clave-Segura-9", cost: 4) %>
   active: true
   role: 3
 <% end %>
@@ -15,7 +15,7 @@ pro_staff:
   last_name: Pro
   email: staff@pro-co.test
   phone: "5512345679"
-  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  password_digest: <%= BCrypt::Password.create("Clave-Segura-9", cost: 4) %>
   active: true
   role: 0
 
@@ -24,7 +24,7 @@ expired_staff:
   last_name: Vencido
   email: staff@expired-co.test
   phone: "5512345671"
-  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  password_digest: <%= BCrypt::Password.create("Clave-Segura-9", cost: 4) %>
   active: true
   role: 0
 
@@ -33,7 +33,7 @@ super_admin:
   last_name: Admin
   email: superadmin@draxuvo.test
   phone: "5512345672"
-  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  password_digest: <%= BCrypt::Password.create("Clave-Segura-9", cost: 4) %>
   active: true
   role: 4
 
@@ -43,19 +43,19 @@ resto_<%= who %>:
   last_name: Resto
   email: <%= who %>@resto-co.test
   phone: "55123456<%= 80 + i %>"
-  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  password_digest: <%= BCrypt::Password.create("Clave-Segura-9", cost: 4) %>
   active: true
   role: <%= { "owner" => 3, "waiter" => 0, "waiter2" => 0 }[who] %>
 <% end %>
 
-# Cajeros de la papelería (spec 050). Contraseña: password123
+# Cajeros de la papelería (spec 050). Contraseña: Clave-Segura-9
 <% { "owner" => 3, "admin" => 2, "staff" => 0, "staff2" => 0 }.each_key do |who| %>
 pos_<%= who %>:
   first_name: <%= who.camelize %>
   last_name: Papelería
   email: <%= who %>@pos-co.test
   phone: "5512340<%= %w[owner admin staff staff2].index(who) %>00"
-  password_digest: <%= BCrypt::Password.create("password123", cost: 4) %>
+  password_digest: <%= BCrypt::Password.create("Clave-Segura-9", cost: 4) %>
   active: true
   role: <%= who == "owner" ? 3 : 0 %>
 <% end %>

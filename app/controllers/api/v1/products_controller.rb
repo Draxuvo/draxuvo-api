@@ -5,6 +5,8 @@ module Api
       MAX_GENERATE = 1_000
 
       requires_module :inventory
+      # Spec 052 (H-02): el catálogo lo cambia quien dirige; el staff lo consulta y mueve existencias (spec 034).
+      before_action :require_boss!, only: %i[create update destroy import generate_barcodes export]
       before_action :set_product, only: [ :show, :update, :destroy ]
       before_action :require_icon_permission!, only: [ :create, :update ]
 
@@ -53,7 +55,9 @@ module Api
         product = nil
         Product.transaction do
           ensure_barcodes_free!(nil)
-          product = current_company.products.create!(product_params)
+          product = current_company.products.new(product_params)
+          product.initial_user = current_user
+          product.save!
           product.replace_barcodes!(barcode_params) unless barcode_params.nil?
         end
         render json: ProductSerializer.new(product.reload).as_json, status: :created

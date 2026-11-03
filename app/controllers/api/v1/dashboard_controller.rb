@@ -1,6 +1,8 @@
 module Api
   module V1
     class DashboardController < BaseController
+      before_action :require_boss!
+
       def index
         render json: {
           employees:   employees_stats,

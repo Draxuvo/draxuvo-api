@@ -19,6 +19,8 @@ module Api
           range  = from_to_range
         else
           period = params[:period].presence&.downcase || "monthly"
+          raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("reports.invalid_period")) unless %w[weekly monthly annual].include?(period)
+          invalid_range! if params[:date].present? && parse_date(params[:date]).nil?
           range  = period_range(period, parse_date(params[:date]) || Date.current)
         end
 
@@ -81,10 +83,19 @@ module Api
         end
       end
 
+      # Spec 052 (H-14): una fecha ilegible o un rango invertido es un error, no un reporte de otro periodo.
       def from_to_range
-        from = parse_date(params[:from]) || 1.month.ago.to_date
-        to   = parse_date(params[:to])   || Date.current
+        from = parse_date(params[:from])
+        to   = parse_date(params[:to])
+        invalid_range! if (params[:from].present? && from.nil?) || (params[:to].present? && to.nil?)
+        from ||= 1.month.ago.to_date
+        to   ||= Date.current
+        invalid_range! if from > to
         from.beginning_of_day..to.end_of_day
+      end
+
+      def invalid_range!
+        raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("reports.invalid_range"))
       end
 
       def parse_date(value)

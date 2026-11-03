@@ -9,6 +9,9 @@ class Employee < ApplicationRecord
   enum :status, { active: 0, inactive: 1 }, default: :inactive
 
   validates :name, presence: true
+  validates :name, :position, :department, length: { maximum: 120 }
+  validates :salary, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 99_999_999.99 }, allow_nil: true
+  validates :phone, format: { with: /\A[\d+\-\s().]*\z/ }, length: { maximum: 20 }, allow_blank: true
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :email, uniqueness: true, allow_blank: true
 
