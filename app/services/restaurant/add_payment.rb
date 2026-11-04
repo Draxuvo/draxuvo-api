@@ -58,13 +58,16 @@ module Restaurant
       { payment_method: :cash, amount: amount, amount_received: received }
     end
 
+    # Transferencia y tarjeta: la transferencia exige referencia; la tarjeta la guarda si viene (spec 054, H-51), igual que
+    # en el cobro de una orden de trabajo.
     def transfer_attributes(method, balance)
       amount = decimal(@params[:amount])
       fail!(:invalid_amount) if amount.nil? || !amount.positive?
       fail!(:exceeds_balance) if amount > balance
-      fail!(:reference_required) if @params[:reference].to_s.strip.empty?
+      reference = @params[:reference].to_s.strip
+      fail!(:reference_required) if method == "transfer" && reference.empty?
 
-      { payment_method: method, amount: amount, reference: @params[:reference].to_s.strip }.merge(terminal_attributes(method))
+      { payment_method: method, amount: amount, reference: reference.presence }.merge(terminal_attributes(method))
     end
 
     # La terminal en que se cobró con tarjeta, opcional (spec 015, FR-022).

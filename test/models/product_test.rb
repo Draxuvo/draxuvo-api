@@ -91,4 +91,18 @@ class ProductTest < ActiveSupport::TestCase
     assert product.valid?
     assert_nil product.icon
   end
+
+  # --- Spec 054 (H-48): un tipo que no existe no cae en silencio en el de por omisión ---
+
+  test "a product with a product type id that does not exist is invalid" do
+    product = Product.new(company: companies(:one), sku: "TIPO-FANTASMA", name: "Fantasma", product_type_id: 99_999_999)
+    assert_not product.valid?
+    assert_includes product.errors.attribute_names, :product_type
+  end
+
+  test "a product without a product type still gets the default one" do
+    product = Product.new(company: companies(:one), sku: "TIPO-OMITIDO", name: "Sin tipo")
+    assert product.valid?, product.errors.full_messages.to_sentence
+    assert_not_nil product.product_type
+  end
 end

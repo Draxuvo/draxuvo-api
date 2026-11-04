@@ -11,7 +11,9 @@ class Product < ApplicationRecord
 
   before_validation { self.stock ||= 0 }
   # Sin tipo (formularios o archivos anteriores), se clasifica con la regla de los tipos iniciales (spec 016).
-  before_validation { self.product_type ||= ProductTypes::Defaults.classify(company, self) if company }
+  # Spec 054 (H-48): solo cuando no se mandó tipo; un `product_type_id` que no existe falla por la asociación obligatoria
+  # en vez de caer en silencio en el tipo por omisión.
+  before_validation { self.product_type ||= ProductTypes::Defaults.classify(company, self) if company && product_type_id.blank? }
   before_validation { self.tracks_stock = product_type.counted if product_type }
   validate :station_in_company
   validate :type_in_company

@@ -38,4 +38,17 @@ class Api::V1::StockMovementsControllerTest < ActionDispatch::IntegrationTest
     get "/api/v1/products/#{@shrimp.id}/stock_movements", headers: @headers
     assert_equal users(:resto_owner).full_name, response.parsed_body["results"].first.dig("user", "name")
   end
+
+  # --- Spec 054 (H-54): entrada y salida son cantidades positivas ---
+
+  test "an entry or exit with a zero or negative quantity answers 422 and leaves the stock" do
+    %w[entry exit].each do |type|
+      [ -2, 0 ].each do |qty|
+        move(@shrimp, type, qty)
+        assert_response :unprocessable_entity, "#{type} #{qty}"
+      end
+    end
+    assert_equal 10, @shrimp.reload.stock
+    assert_equal 0, @shrimp.stock_movements.where(initial: false).count
+  end
 end

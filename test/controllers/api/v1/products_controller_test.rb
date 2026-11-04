@@ -337,4 +337,13 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_equal 1, response.parsed_body["generated"]
   end
+
+  # --- Spec 054 (H-48) ---
+
+  test "a product type id that does not exist answers 422 instead of using the default type" do
+    post "/api/v1/products", params: { product: { sku: "TIPO-X", name: "Tipo fantasma", price: 5, product_type_id: 99_999_999 } },
+                             headers: auth_headers(@owner, @company), as: :json
+    assert_response :unprocessable_entity
+    assert_nil Product.find_by(sku: "TIPO-X")
+  end
 end

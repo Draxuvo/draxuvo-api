@@ -9,7 +9,8 @@ class CheckPayment < ApplicationRecord
   enum :source, { manual: 0 }, default: :manual
 
   validates :amount, numericality: { greater_than: 0 }
-  validates :reference, presence: true, if: -> { card? || transfer? }
+  # Spec 054 (H-51): la tarjeta no exige referencia; la transferencia sí.
+  validates :reference, presence: true, if: :transfer?
   validates :amount_received, numericality: { greater_than_or_equal_to: ->(p) { p.amount || 0 } }, if: :cash?
   validate :within_balance, on: :create
   validate :terminal_usable, on: :create

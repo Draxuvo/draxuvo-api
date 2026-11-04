@@ -311,4 +311,76 @@ class Api::V1::WorkOrdersFlowTest < ActionDispatch::IntegrationTest
     assert_equal "plug", product["icon"]
     assert_equal "gear", product["type_icon"]
   end
+
+  # --- Existencias al cobrar y anular (spec 054, H-49) ---
+
+  def counted_part(stock)
+    type = ProductTypes::Defaults.create_missing(@company).find_by!(kind: "counted_sold")
+    Product.create!(company: @company, sku: "H49-#{SecureRandom.hex(3)}", name: "Contacto", price: 25, stock: stock, product_type: type)
+  end
+
+  def order_with(product, quantity)
+    order = work_orders(:pro_done)
+    order.work_order_items.create!(product: product, description: product.name, quantity: quantity, unit_price: product.price, position: 9)
+    order.recalculate_total!
+    order
+  end
+
+  test "charging discounts the parts, answers the shortage and voiding returns what left" do
+    part = counted_part(2)
+    order = order_with(part, 5)
+
+    act(order, :charge, payments: [ { method: "cash", amount_received: order.total.to_s } ])
+    assert_response :ok
+    assert_equal 0, part.reload.stock
+    shortage = json["stock_shortages"].sole
+    assert_equal part.id, shortage["product_id"]
+    assert_equal 3, shortage["missing"].to_i
+
+    act(order, :void_charge, reason: "Se devolvió")
+    assert_response :ok
+    assert_not json.key?("stock_shortages"), "solo el cobro trae el faltante"
+    assert_equal 2, part.reload.stock
+  end
+
+  test "a charge with enough stock answers an empty shortage list" do
+    part = counted_part(10)
+    order = order_with(part, 4)
+
+    act(order, :charge, payments: [ { method: "cash", amount_received: order.total.to_s } ])
+    assert_response :ok
+    assert_equal [], json["stock_shortages"]
+    assert_equal 6, part.reload.stock
+  end
+
+  # --- Spec 054: datos inválidos al crear o editar una orden (422, nunca 500) ---
+
+  def create_order(attrs) = post("/api/v1/work_orders", params: { work_order: { title: "Orden" }.merge(attrs) }, headers: headers(@owner), as: :json)
+
+  test "an invalid priority or due date answers 422 and creates nothing" do
+    [ { priority: "urgentisima" }, { due_date: "no-es-fecha" } ].each do |attrs|
+      assert_no_difference "WorkOrder.count" do
+        create_order(attrs)
+      end
+      assert_response :unprocessable_entity, attrs.inspect
+    end
+    create_order(priority: "high", due_date: "2026-12-31")
+    assert_response :created
+  end
+
+  test "editing an order with an invalid priority or due date answers 422" do
+    order = work_orders(:pro_open)
+    [ { priority: "zzz" }, { due_date: "basura" } ].each do |attrs|
+      patch "/api/v1/work_orders/#{order.id}", params: { work_order: attrs }, headers: headers(@owner), as: :json
+      assert_response :unprocessable_entity, attrs.inspect
+    end
+    assert_equal "high", order.reload.priority
+  end
+
+  test "free text fields over their maximum answer 422" do
+    { title: 201, customer_name: 121, customer_address: 301, notes: 2001 }.each do |field, size|
+      create_order(field => "x" * size)
+      assert_response :unprocessable_entity, field.to_s
+    end
+  end
 end

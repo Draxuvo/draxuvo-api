@@ -10,8 +10,7 @@ module Api
           # Uno que salió del menú (spec 032) se rechaza; lo ya agregado a la cuenta se conserva.
           product = current_company.products.available.sellable.find(params[:product_id])
           invalid!(:not_on_menu, name: product.name) unless product.product_type.in_menu
-          quantity = params[:quantity].to_i
-          quantity = 1 if quantity < 1
+          quantity = requested_quantity
           availability = ::Restaurant::Availability.new(current_company)
           available = availability.available_qty(product)
           invalid!(:sold_out, name: product.name) if available && quantity > available
@@ -49,6 +48,15 @@ module Api
         end
 
         def note_param = params[:note].to_s.strip.presence
+
+        # Spec 054: sin `quantity` es 1; si viene debe ser un entero positivo (0, negativos y texto ya no se vuelven 1).
+        def requested_quantity
+          return 1 unless params.key?(:quantity)
+
+          quantity = Integer(params[:quantity].to_s.strip, exception: false)
+          invalid!(:invalid_quantity) if quantity.nil? || quantity < 1
+          quantity
+        end
       end
     end
   end

@@ -15,7 +15,10 @@ class UserSerializer < ActiveModel::Serializer
     object.ordered_memberships.map do |membership|
       company = membership.company
       { id: company.id, name: company.name, slug: company.slug, role: membership.role,
-        parent_company_id: company.parent_company_id, order_mode: company.order_mode, demo: company.demo? }
+        parent_company_id: company.parent_company_id, order_mode: company.order_mode, demo: company.demo?,
+        # Spec 054: los módulos activos de la empresa (plan más extras vigentes, menos los que el super admin apagó), para que
+        # el personal, que no puede leer la suscripción, sepa qué hay sin probar rutas que responden 403.
+        modules: company.active_modules.map(&:to_s) }
     end
   end
 

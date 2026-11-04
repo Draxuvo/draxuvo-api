@@ -52,9 +52,14 @@ class Restaurant::AddPaymentTest < ActiveSupport::TestCase
     assert_equal "card", result.close.ticket.payment_method
   end
 
-  test "card without a reference is rejected" do
-    assert_equal "reference_required", code_of { pay(method: "card", amount: "50") }
+  # Spec 054 (H-51): la referencia solo es obligatoria en la transferencia.
+  test "a transfer without a reference is rejected but a card without one is accepted" do
     assert_equal "reference_required", code_of { pay(method: "transfer", amount: "50", reference: " ") }
+    assert_equal "reference_required", code_of { pay(method: "transfer", amount: "50") }
+    result = pay(method: "card", amount: "50")
+    assert_nil result.payment.reference
+    result = pay(method: "card", amount: "50", reference: " AUT-1 ")
+    assert_equal "AUT-1", result.payment.reference
   end
 
   test "card above the balance is rejected" do
@@ -153,13 +158,16 @@ class Restaurant::AddPaymentTest < ActiveSupport::TestCase
 
   # --- spec 015: terminal en pagos con tarjeta ---
 
-  test "a card payment keeps the chosen terminal and still requires a reference" do
+  test "a card payment keeps the chosen terminal with or without a reference" do
     terminal = payment_terminals(:resto_point)
     result = pay(method: "card", amount: "50", reference: "A1", terminal_id: terminal.id)
     assert_equal terminal, result.payment.terminal
     assert_equal "manual", result.payment.source
 
-    assert_equal "reference_required", code_of { pay(method: "card", amount: "50", terminal_id: terminal.id) }
+    # Spec 054 (H-51): la referencia de la tarjeta es opcional.
+    result = pay(method: "card", amount: "50", terminal_id: terminal.id)
+    assert_equal terminal, result.payment.terminal
+    assert_nil result.payment.reference
   end
 
   test "a terminal of another company or inactive is rejected" do

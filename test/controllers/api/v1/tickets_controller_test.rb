@@ -233,4 +233,53 @@ class Api::V1::TicketsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "application/pdf", response.media_type
     assert response.body.b.start_with?("%PDF")
   end
+
+  # --- Spec 054 (H-50): historial de anulaciones en el detalle del ticket ---
+
+  def void_and_recharge(order, reason)
+    post "/api/v1/work_orders/#{order.id}/void_charge", params: { reason: reason }, headers: auth_headers(@owner, @company), as: :json
+    assert_response :ok
+    post "/api/v1/work_orders/#{order.id}/charge", params: { payments: [ { method: "cash", amount_received: "5000" } ] },
+                                                   headers: auth_headers(@owner, @company), as: :json
+    assert_response :ok
+  end
+
+  test "the ticket detail lists its voids with who, when, why and the voided payments" do
+    order = work_orders(:pro_paid)
+    ticket = tickets(:pro_paid_ticket)
+    void_and_recharge(order, "Error de captura")
+
+    get "/api/v1/tickets/#{ticket.id}", headers: auth_headers(@owner, @company)
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal "paid", body["status"]
+    assert_equal ticket.folio, body["folio"]
+    void = body["voids"].sole
+    assert_equal "Error de captura", void["reason"]
+    assert_equal @owner.id, void.dig("voided_by", "id")
+    assert_equal "500.0", void["amount"].to_s
+    assert_not_nil void["voided_at"]
+    assert_equal [ { "method" => "card", "amount" => "500.0" } ], void["payments"].map { |p| p.slice("method", "amount") }
+  end
+
+  test "a ticket that was never voided has an empty voids list and the list does not carry them" do
+    get "/api/v1/tickets/#{@oil.id}", headers: auth_headers(@owner, @company)
+    assert_equal [], response.parsed_body["voids"]
+    get "/api/v1/tickets", headers: auth_headers(@owner, @company)
+    assert response.parsed_body["results"].none? { |t| t.key?("voids") }
+  end
+
+  test "staff only reads the voids of their own tickets" do
+    staff = users(:pro_staff)
+    order = work_orders(:pro_paid)
+    order.update_columns(employee_id: employees(:pro_staff_employee).id)
+    void_and_recharge(order, "Cobro duplicado")
+    ticket = tickets(:pro_paid_ticket)
+
+    get "/api/v1/tickets/#{ticket.id}", headers: auth_headers(staff, @company)
+    assert_response :ok
+    assert_equal 1, response.parsed_body["voids"].size
+    get "/api/v1/tickets/#{@brakes.id}", headers: auth_headers(staff, @company)
+    assert_response :not_found
+  end
 end

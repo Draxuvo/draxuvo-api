@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_03_210000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_04_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -735,10 +735,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_03_210000) do
     t.bigint "user_id"
     t.bigint "sale_id"
     t.boolean "initial", default: false, null: false
+    t.bigint "work_order_id"
     t.index ["company_id"], name: "index_stock_movements_on_company_id"
     t.index ["product_id"], name: "index_stock_movements_on_product_id"
     t.index ["sale_id"], name: "index_stock_movements_on_sale_id"
     t.index ["user_id"], name: "index_stock_movements_on_user_id"
+    t.index ["work_order_id"], name: "index_stock_movements_on_work_order_id"
   end
 
   create_table "stripe_events", force: :cascade do |t|
@@ -826,6 +828,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_03_210000) do
     t.index ["created_by_id"], name: "index_ticket_payments_on_created_by_id"
     t.index ["terminal_id"], name: "index_ticket_payments_on_terminal_id"
     t.index ["ticket_id"], name: "index_ticket_payments_on_ticket_id"
+  end
+
+  create_table "ticket_voids", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "ticket_id", null: false
+    t.bigint "voided_by_id", null: false
+    t.datetime "voided_at", null: false
+    t.string "reason", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.jsonb "payments", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_ticket_voids_on_company_id"
+    t.index ["ticket_id"], name: "index_ticket_voids_on_ticket_id"
+    t.index ["voided_by_id"], name: "index_ticket_voids_on_voided_by_id"
   end
 
   create_table "tickets", force: :cascade do |t|
@@ -978,6 +995,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_03_210000) do
     t.datetime "updated_at", null: false
     t.bigint "product_id"
     t.decimal "unit_price", precision: 10, scale: 2
+    t.decimal "stock_taken", precision: 12, scale: 3, default: "0.0", null: false
     t.index ["product_id"], name: "index_work_order_items_on_product_id"
     t.index ["work_order_id"], name: "index_work_order_items_on_work_order_id"
   end
@@ -1111,6 +1129,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_03_210000) do
   add_foreign_key "stock_movements", "products"
   add_foreign_key "stock_movements", "sales"
   add_foreign_key "stock_movements", "users"
+  add_foreign_key "stock_movements", "work_orders"
   add_foreign_key "subscription_addons", "companies"
   add_foreign_key "subscription_addons", "subscriptions"
   add_foreign_key "subscription_changes", "companies"
@@ -1121,6 +1140,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_03_210000) do
   add_foreign_key "ticket_payments", "payment_terminals", column: "terminal_id"
   add_foreign_key "ticket_payments", "tickets"
   add_foreign_key "ticket_payments", "users", column: "created_by_id"
+  add_foreign_key "ticket_voids", "companies"
+  add_foreign_key "ticket_voids", "tickets"
+  add_foreign_key "ticket_voids", "users", column: "voided_by_id"
   add_foreign_key "tickets", "checks"
   add_foreign_key "tickets", "companies"
   add_foreign_key "tickets", "sales"

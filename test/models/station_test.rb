@@ -36,4 +36,20 @@ class StationTest < ActiveSupport::TestCase
 
     assert_equal stations(:kitchen), Station.default_for(@company)
   end
+
+  # Spec 054 (H-47): el nombre tiene tope de 100 y solo se exige cuando cambia.
+  test "name has a maximum length of 100 that accepts the limit and rejects one more" do
+    assert Station.new(company: companies(:resto_co), kind: "kitchen", name: "x" * 100).valid?
+    record = Station.new(company: companies(:resto_co), kind: "kitchen", name: "x" * 101)
+    assert_not record.valid?
+    assert_includes record.errors.attribute_names, :name
+  end
+
+  test "an old record with a longer name can still be updated without touching the name" do
+    record = Station.new(company: companies(:resto_co), kind: "kitchen", name: "Corto")
+    record.save!
+    record.update_columns(name: "y" * 300)
+    assert record.reload.update(position: 3) if record.respond_to?(:position=)
+    assert_not record.update(name: "z" * 300)
+  end
 end

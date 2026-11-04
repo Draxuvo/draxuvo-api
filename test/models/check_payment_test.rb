@@ -11,9 +11,11 @@ class CheckPaymentTest < ActiveSupport::TestCase
     @check.check_payments.build({ company: @check.company, created_by: @user }.merge(attrs))
   end
 
-  test "card and transfer need a reference" do
-    assert_not pay(payment_method: :card, amount: 50).valid?
+  # Spec 054 (H-51): la tarjeta ya no exige referencia (como en el cobro de una orden); la transferencia sí.
+  test "a transfer needs a reference and a card does not" do
     assert_not pay(payment_method: :transfer, amount: 50).valid?
+    assert pay(payment_method: :transfer, amount: 50, reference: "T1").valid?
+    assert pay(payment_method: :card, amount: 50).valid?
     assert pay(payment_method: :card, amount: 50, reference: "A1").valid?
   end
 

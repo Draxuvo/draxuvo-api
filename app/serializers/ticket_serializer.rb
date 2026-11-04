@@ -66,12 +66,23 @@ class TicketSerializer
       sale: sale && { id: sale.id, opened_by: self.class.person(sale.opened_by) }
     }
 
-    base.merge!(detail(order, check)) if @detailed
+    if @detailed
+      base.merge!(detail(order, check))
+      base[:voids] = voids_json
+    end
 
     base
   end
 
   private
+
+  # Historial de anulaciones del cobro (spec 054, H-50): sobrevive a un nuevo cobro del mismo ticket.
+  def voids_json
+    @ticket.voids.includes(:voided_by).map do |void|
+      { id: void.id, voided_at: void.voided_at, voided_by: self.class.person(void.voided_by), reason: void.reason,
+        amount: void.amount, payments: void.payments }
+    end
+  end
 
   def check_json(check)
     { id: check.id, table: check.dining_table&.name, takeout_name: check.takeout_name, waiter: self.class.person(check.waiter) }

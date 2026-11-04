@@ -51,4 +51,18 @@ class CheckItemTest < ActiveSupport::TestCase
 
     assert_empty statuses & %w[draft cancelled]
   end
+
+  # Spec 054 (H-47): la nota del renglón tiene tope de 200 y solo se exige cuando cambia.
+  test "note has a maximum length of 200 that accepts the limit and rejects one more" do
+    assert @check.check_items.build(company: @check.company, name: "x", quantity: 1, unit_price: 1, note: "x" * 200).valid?
+    long = @check.check_items.build(company: @check.company, name: "x", quantity: 1, unit_price: 1, note: "x" * 201)
+    assert_not long.valid?
+    assert_includes long.errors.attribute_names, :note
+  end
+
+  test "an old item with a longer note can still move forward" do
+    record = item
+    record.update_columns(note: "y" * 500)
+    assert record.reload.update(status: :new), record.errors.full_messages.to_sentence
+  end
 end
