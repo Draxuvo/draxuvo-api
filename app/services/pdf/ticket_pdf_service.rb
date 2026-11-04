@@ -18,6 +18,10 @@ module Pdf
     POINTS_PER_MM = 72 / 25.4
     THERMAL_MARGIN = 8
     THERMAL_PROBE_HEIGHT = 20_000
+    # Código del folio (spec 056): Code 128 que la pistola y la cámara leen para abrir el ticket en Cobradas.
+    A4_BARCODE_WIDTH = 220
+    A4_BARCODE_HEIGHT = 40
+    THERMAL_BARCODE_HEIGHT = 32
 
     def initialize(ticket, format: "a4")
       raise ArgumentError, "unknown ticket format: #{format.inspect}" unless FORMATS.include?(format.to_s)
@@ -42,6 +46,7 @@ module Pdf
       draw_totals(pdf)
       draw_payments(pdf)
       draw_change(pdf) if @sale
+      draw_folio_barcode(pdf, width: [ pdf.bounds.width, A4_BARCODE_WIDTH ].min, height: A4_BARCODE_HEIGHT, paginate: true)
       draw_footer(pdf)
       pdf.render
     end
@@ -183,6 +188,21 @@ module Pdf
       [ payment.terminal&.name, payment.reference.presence || code ].compact_blank.join(" · ")
     end
 
+    # Code 128 con el folio y el folio escrito debajo. Si el folio no se pudiera dibujar el ticket sale sin código en vez
+    # de fallar. `paginate` (A4) pasa a otra página si no cabe; el rollo térmico mide su altura con una pasada de prueba.
+    def draw_folio_barcode(pdf, width:, height:, paginate: false)
+      drawing = Labels::BarcodeDrawing.for(@ticket.folio)
+      pdf.start_new_page if paginate && pdf.cursor < height + 30
+      x = (pdf.bounds.width - width) / 2.0
+      drawing.draw(pdf, x: x, y: pdf.cursor - height, width: width, height: height)
+      pdf.move_down height + 2
+      pdf.fill_color BLACK
+      pdf.text drawing.human_text, size: 7, align: :center
+      pdf.move_down 6
+    rescue Labels::BarcodeDrawing::Unsupported
+      nil
+    end
+
     def draw_footer(pdf)
       pdf.stroke_color "DDDDDD"
       pdf.stroke_horizontal_rule
@@ -218,6 +238,7 @@ module Pdf
       pdf.text "Total  #{format_money(@ticket.total)}", size: 12, style: :bold, align: :right
       draw_thermal_payments(pdf)
       pdf.move_down 6
+      draw_folio_barcode(pdf, width: pdf.bounds.width, height: THERMAL_BARCODE_HEIGHT)
       pdf.text I18n.t("sale.pdf.thanks"), size: 7, align: :center
     end
 
