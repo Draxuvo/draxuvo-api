@@ -29,6 +29,7 @@ en:
     bad_request: "Bad request"
     unauthorized: "Unauthorized"
     forbidden: "Forbidden"
+    route_not_found: "Route not found"
     not_found: "Not found"
     unprocessable: "Validation error"
     resource_not_found: "Resource not found"
