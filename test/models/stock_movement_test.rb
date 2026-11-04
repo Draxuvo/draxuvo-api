@@ -24,13 +24,26 @@ class StockMovementTest < ActiveSupport::TestCase
     end
   end
 
-  test "entry and exit use the absolute value of qty" do
-    assert_difference -> { products(:one).reload.stock }, 3 do
-      movement(:entry, -3).save!
+  # Spec 054 (H-54): antes se tomaba el valor absoluto y la historia quedaba con una "salida de -2".
+  test "entry and exit need a positive quantity" do
+    %i[entry exit].each do |type|
+      [ -3, 0 ].each do |qty|
+        movement = movement(type, qty)
+        assert_not movement.valid?, "#{type} #{qty}"
+        assert movement.errors[:qty].any?
+      end
+      assert movement(type, 1).valid?
     end
-    assert_difference -> { products(:one).reload.stock }, -2 do
-      movement(:exit, -2).save!
+    assert_no_difference -> { products(:one).reload.stock } do
+      movement(:entry, -3).save
+      movement(:exit, -2).save
     end
+  end
+
+  test "an adjustment keeps its sign but cannot be zero" do
+    assert movement(:adjustment, -2).valid?
+    assert movement(:adjustment, 2).valid?
+    assert_not movement(:adjustment, 0).valid?
   end
 
   test "a positive adjustment raises the stock" do

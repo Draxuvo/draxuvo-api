@@ -4,11 +4,16 @@ class StockMovement < ApplicationRecord
   belongs_to :company
   belongs_to :user, optional: true
   belongs_to :sale, optional: true
+  belongs_to :work_order, optional: true
 
   enum :movement_type, { entry: 0, exit: 1, adjustment: 2 }, validate: true
 
   validates :movement_type, presence: true
-  validates :qty, presence: true, numericality: { other_than: 0, less_than: 100_000_000 }
+  validates :qty, presence: true, numericality: { less_than: 100_000_000 }
+  # Spec 054 (H-54): una entrada o una salida es una cantidad positiva (el sentido lo da el tipo). Solo el ajuste del
+  # conteo físico lleva signo.
+  validates :qty, numericality: { greater_than: 0 }, allow_nil: true, unless: :adjustment?
+  validates :qty, numericality: { other_than: 0 }, allow_nil: true, if: :adjustment?
   validate :adjustment_keeps_stock_non_negative, on: :create
   validate :exit_within_stock, on: :create, unless: :initial?
   validate :whole_quantity, unless: -> { product&.fractional? }

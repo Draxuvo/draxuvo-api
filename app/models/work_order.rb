@@ -11,12 +11,13 @@ class WorkOrder < ApplicationRecord
   has_many   :work_order_events, -> { order(:created_at) }, dependent: :destroy
   has_many   :products, through: :work_order_items
   has_one    :ticket, dependent: :destroy
+  has_many   :stock_movements, dependent: :nullify
 
   alias_method :steps, :work_order_steps
   alias_method :events, :work_order_events
   alias_method :attachments, :work_order_attachments
 
-  enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }, default: :medium
+  enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }, default: :medium, validate: true
   enum :status, {
     open:        0,
     in_progress: 1,
@@ -31,6 +32,13 @@ class WorkOrder < ApplicationRecord
   }
 
   validates :title, presence: true
+  validate :due_date_parseable
+  # Topes de longitud (spec 054, H-47): solo se exigen cuando el campo se crea o cambia, para que una orden vieja con un
+  # texto más largo se siga pudiendo cobrar o cerrar.
+  validates :title, length: { maximum: 200 }, if: :will_save_change_to_title?
+  validates :customer_name, length: { maximum: 120 }, if: :will_save_change_to_customer_name?
+  validates :customer_address, length: { maximum: 300 }, if: :will_save_change_to_customer_address?
+  validates :notes, length: { maximum: 2000 }, if: :will_save_change_to_notes?
   validates :customer_phone, format: { with: PHONE_FORMAT }, length: { in: 7..20 }, allow_blank: true
   validates :cancel_reason, presence: true, if: :cancelled?
   validate  :employee_belongs_to_company
@@ -56,6 +64,13 @@ class WorkOrder < ApplicationRecord
   end
 
   private
+
+  # Una fecha límite que no es una fecha se rechaza en vez de guardarse en blanco (spec 054, H-55).
+  def due_date_parseable
+    return if due_date_before_type_cast.blank? || due_date.present?
+
+    errors.add(:due_date, :invalid)
+  end
 
   def employee_belongs_to_company
     return if employee.nil? || employee.company_id == company_id

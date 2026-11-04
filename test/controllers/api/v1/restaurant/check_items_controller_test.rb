@@ -119,4 +119,32 @@ class Api::V1::Restaurant::CheckItemsControllerTest < ActionDispatch::Integratio
     assert_equal "not_on_menu", response.parsed_body.dig("error", "details", "code")
     assert kept.reload.persisted?
   end
+
+  # --- Spec 054: la cantidad inválida se rechaza en vez de volverse 1 ---
+
+  test "a quantity that is zero, negative, decimal or text answers 422 and adds nothing" do
+    [ 0, -4, "abc", "", 1.5, "1e3x" ].each do |quantity|
+      assert_no_difference "CheckItem.count" do
+        add(products(:resto_tacos), quantity: quantity)
+      end
+      assert_response :unprocessable_entity, "quantity #{quantity.inspect}"
+      assert_equal "invalid_quantity", response.parsed_body.dig("error", "details", "code")
+    end
+  end
+
+  test "a missing quantity is one and a numeric string is accepted" do
+    post "/api/v1/restaurant/checks/#{@check.id}/items", params: { product_id: products(:resto_tacos).id }, headers: @headers, as: :json
+    assert_response :created
+    assert_equal 1, response.parsed_body["items"].last["quantity"]
+    add(products(:resto_tacos), quantity: "3")
+    assert_response :created
+    assert_equal 3, response.parsed_body["items"].last["quantity"]
+  end
+
+  test "a note over 200 characters answers 422" do
+    add(products(:resto_tacos), note: "x" * 201)
+    assert_response :unprocessable_entity
+    add(products(:resto_tacos), note: "x" * 200)
+    assert_response :created
+  end
 end

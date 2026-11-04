@@ -5,6 +5,8 @@ class Ticket < ApplicationRecord
   belongs_to :sale, optional: true
   belongs_to :company
   has_many :ticket_payments, -> { order(:id) }, dependent: :destroy
+  # Historial de anulaciones del cobro (spec 054): sobrevive a un nuevo cobro del mismo ticket.
+  has_many :voids, -> { order(:voided_at, :id) }, class_name: "TicketVoid", dependent: :destroy
 
   enum :status, { pending: 0, paid: 1, voided: 2 }, default: :pending
   enum :payment_method, { cash: 0, card: 1, transfer: 2, mixed: 3 }

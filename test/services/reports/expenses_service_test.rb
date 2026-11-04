@@ -38,6 +38,17 @@ class Reports::ExpensesServiceTest < ActiveSupport::TestCase
     assert_equal 0.0, payroll[:employees][1][:salary]
   end
 
+  test "the stock returned by a voided work order is not a purchase" do
+    order = @company.work_orders.create!(title: "Orden", created_by: users(:pro_co_owner), status: :done)
+    movement(@cable, :entry, 10, Time.utc(2026, 2, 1), note: "Compra")
+    back = StockMovement.create!(product: @cable, company: @company, movement_type: :entry, qty: 4, work_order: order,
+                                 created_at: Time.utc(2026, 2, 2))
+
+    inventory = report[:inventory_cost]
+    assert_equal 105.0, inventory[:total]
+    assert_not_includes inventory[:movements].map { |m| m[:id] }, back.id
+  end
+
   test "only entry movements in the range count as inventory expense" do
     movement(@cable, :entry, 10, Time.utc(2026, 2, 1), note: "Compra")
     movement(@cable, :exit, 4, Time.utc(2026, 2, 2))

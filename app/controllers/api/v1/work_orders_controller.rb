@@ -109,8 +109,9 @@ module Api
         action = request.path_parameters[:transition].to_s
         raise ApiErrors::NotFoundError.new unless TRANSITIONS.include?(action)
 
-        WorkOrders::Transition.call(order, action, work_order_context, transition_params)
-        render_order(order)
+        transition = WorkOrders::Transition.new(order, action, work_order_context, transition_params)
+        transition.call
+        render_order(order, shortages: (transition.shortages if action == "charge"))
       end
 
       # POST /api/v1/work_orders/:id/items
@@ -240,8 +241,11 @@ module Api
         current_employee ? scope.where(employee: current_employee) : scope.none
       end
 
-      def render_order(order, status: :ok)
-        render json: WorkOrderSerializer.new(order, detailed: true, context: work_order_context).as_json, status: status
+      # `shortages` (solo al cobrar, spec 054): lo que no alcanzó del inventario, para avisar a quien cobra.
+      def render_order(order, status: :ok, shortages: nil)
+        body = WorkOrderSerializer.new(order, detailed: true, context: work_order_context).as_json
+        body = body.merge(stock_shortages: shortages) unless shortages.nil?
+        render json: body, status: status
       end
 
       def event(order, kind, data = {})

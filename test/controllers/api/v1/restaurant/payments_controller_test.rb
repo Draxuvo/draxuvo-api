@@ -35,11 +35,15 @@ class Api::V1::Restaurant::PaymentsControllerTest < ActionDispatch::IntegrationT
     assert_equal "A8812", body.dig("ticket", "payments", 1, "reference")
   end
 
-  test "a card payment without a reference answers 422" do
-    pay({ method: "card", amount: "50" })
-
+  # Spec 054 (H-51): la tarjeta no exige referencia; la transferencia sí.
+  test "a transfer without a reference answers 422 and a card without one is accepted" do
+    pay({ method: "transfer", amount: "50" })
     assert_response :unprocessable_entity
     assert_equal "reference_required", response.parsed_body.dig("error", "details", "code")
+
+    pay({ method: "card", amount: "50" })
+    assert_response :created
+    assert_nil response.parsed_body.dig("payment", "reference")
   end
 
   test "incomplete items ask for confirmation" do

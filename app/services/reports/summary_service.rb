@@ -75,7 +75,7 @@ module Reports
       payroll_total  = @modules.payroll? ? @company.employees.where(status: :active).sum("COALESCE(salary, 0)").to_f : 0.0
       inventory_cost = if @modules.inventory?
         @company.stock_movements
-                .where(movement_type: :entry, sale_id: nil, initial: false, created_at: range)
+                .where(movement_type: :entry, sale_id: nil, work_order_id: nil, initial: false, created_at: range)
                 .joins(:product)
                 .sum("stock_movements.qty * COALESCE(products.unit_cost, 0)").to_f
       else

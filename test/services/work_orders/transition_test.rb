@@ -295,4 +295,50 @@ class WorkOrders::TransitionTest < ActiveSupport::TestCase
   test "allowed is empty for a cancelled order" do
     assert_equal [], Transition.allowed(work_orders(:pro_cancelled), owner)
   end
+
+  # --- Spec 054 (H-50): historial de anulaciones del ticket ---
+
+  test "voiding records who, when, why and which payments, and a new charge keeps the history and the folio" do
+    order = done_order([ products(:pos_cuaderno), 2 ])
+    charge_order(order, users(:pos_admin))
+    ticket = order.reload.ticket
+    folio = ticket.folio
+
+    void_order(order, users(:pos_admin), reason: "Error de captura")
+    void = ticket.reload.voids.sole
+    assert_equal users(:pos_admin), void.voided_by
+    assert_equal "Error de captura", void.reason
+    assert_equal ticket.total, void.amount
+    assert_equal [ { "method" => "cash", "amount" => ticket.total.to_s("F") } ], void.payments.map { |p| p.slice("method", "amount") }
+    assert_equal order.company_id, void.company_id
+
+    charge_order(order, users(:pos_admin))
+    ticket.reload
+    assert ticket.paid?
+    assert_nil ticket.void_reason
+    assert_equal folio, ticket.folio
+    assert_equal 1, ticket.voids.count, "recobrar no borra la anulación"
+  end
+
+  test "two voids of the same ticket stay in order" do
+    order = done_order([ products(:pos_cuaderno), 1 ])
+    charge_order(order)
+    void_order(order, reason: "Primera")
+    charge_order(order)
+    void_order(order, reason: "Segunda")
+
+    assert_equal %w[Primera Segunda], order.reload.ticket.voids.map(&:reason)
+  end
+
+  test "payments of the voided charge are not mixed with the ones of the new charge" do
+    order = done_order([ products(:pos_cuaderno), 1 ])
+    charge_order(order)
+    void_order(order)
+    WorkOrders::Transition.call(order, :charge, stock_context, payments: [ { method: "card", amount: order.total.to_s } ])
+
+    ticket = order.reload.ticket
+    assert_equal [ "cash" ], ticket.ticket_payments.where.not(voided_at: nil).map(&:payment_method)
+    assert_equal [ "card" ], ticket.ticket_payments.active.map(&:payment_method)
+    assert_equal "card", ticket.payment_method
+  end
 end

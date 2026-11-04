@@ -122,4 +122,41 @@ class WorkOrderTest < ActiveSupport::TestCase
     assert_equal 0, WorkOrderStep.where(work_order_id: order.id).count
     assert_equal 0, WorkOrderEvent.where(work_order_id: order.id).count
   end
+
+  # --- Spec 054: prioridad, fecha límite y longitudes ---
+
+  def build_order(**attrs) = WorkOrder.new({ company: companies(:pro_co), title: "Orden", created_by: users(:pro_co_owner) }.merge(attrs))
+
+  test "an invalid priority is a validation error, not an exception" do
+    order = build_order(priority: "urgentisima")
+    assert_not order.valid?
+    assert_includes order.errors.attribute_names, :priority
+    assert build_order(priority: "high").valid?
+  end
+
+  test "a due date that is not a date is rejected and a blank one is not" do
+    order = build_order(due_date: "no-es-fecha")
+    assert_not order.valid?
+    assert_includes order.errors.attribute_names, :due_date
+    assert build_order(due_date: "").valid?
+    assert build_order(due_date: nil).valid?
+    assert build_order(due_date: "2026-12-31").valid?
+    assert build_order(due_date: Date.new(2026, 12, 31)).valid?
+  end
+
+  test "free text fields have a maximum length that accepts the limit and rejects one more" do
+    { title: 200, customer_name: 120, customer_address: 300, notes: 2000 }.each do |field, max|
+      assert build_order(field => "x" * max).valid?, "#{field} con #{max}"
+      order = build_order(field => "x" * (max + 1))
+      assert_not order.valid?, "#{field} con #{max + 1}"
+      assert_includes order.errors.attribute_names, field
+    end
+  end
+
+  test "an old order with a longer text can still be updated without touching it" do
+    order = work_orders(:pro_open)
+    order.update_columns(notes: "x" * 5000, customer_name: "y" * 500)
+    assert order.reload.update(priority: :high), order.errors.full_messages.to_sentence
+    assert_not order.update(notes: "z" * 5000)
+  end
 end

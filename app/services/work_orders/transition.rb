@@ -25,6 +25,9 @@ module WorkOrders
       void_charge: { from: %w[paid],                          who: :admin }
     }.freeze
 
+    # Lo que no alcanzó del inventario al cobrar la orden (spec 054): [{ product_id:, name:, missing: }].
+    attr_reader :shortages
+
     def self.call(order, action, context, params = {})
       new(order, action, context, params).call
     end
@@ -47,6 +50,7 @@ module WorkOrders
       @action  = action.to_sym
       @context = context
       @params  = params.respond_to?(:to_unsafe_h) ? params.to_unsafe_h.with_indifferent_access : params.to_h.with_indifferent_access
+      @shortages = []
     end
 
     def call
@@ -110,6 +114,7 @@ module WorkOrders
         ticket.ticket_payments.create!(attrs.merge(company: @order.company, created_by: @context.user))
       end
       @order.update!(status: :paid)
+      @shortages = DeductStock.call(@order, @context.user)
       event(:charged, { ticket_id: ticket.id, folio: ticket.folio, payment_method: split.payment_method, total: total.to_s("F"),
                         amount_received: split.amount_received.to_s("F"), change_given: split.change_given.to_s("F"),
                         payments: payments_summary(split.payments) })
@@ -122,7 +127,10 @@ module WorkOrders
       now = Time.current
       voided = ticket.ticket_payments.active.to_a
       ticket.ticket_payments.active.update_all(voided_at: now, updated_at: now)
+      ticket.voids.create!(company: @order.company, voided_by: @context.user, voided_at: now, reason: reason,
+                           amount: ticket.total, payments: payments_summary(voided))
       ticket.update!(status: :voided, voided_at: now, voided_by: @context.user, void_reason: reason)
+      RestoreStock.call(@order, @context.user)
       @order.update!(status: :done)
       event(:voided, { ticket_id: ticket.id, reason: reason, payments: payments_summary(voided) })
     end

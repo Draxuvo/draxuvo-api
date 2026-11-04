@@ -4,6 +4,7 @@ module ErrorHandler
   included do
     rescue_from StandardError,                      with: :handle_internal_error
     rescue_from ActiveModel::RangeError, ActiveRecord::RangeError, with: :handle_out_of_range
+    rescue_from Pagy::VariableError,                with: :handle_invalid_pagination
     rescue_from ActiveRecord::RecordNotFound,       with: :handle_not_found
     rescue_from ActiveRecord::RecordInvalid,        with: :handle_unprocessable_entity
     rescue_from ActionController::ParameterMissing, with: :handle_bad_request
@@ -61,6 +62,16 @@ module ErrorHandler
   def handle_out_of_range(_error)
     handle_api_error(
       ApiErrors::UnprocessableEntityError.new(message: I18n.t("errors.validation_failed"), details: [ I18n.t("errors.messages.out_of_range") ])
+    )
+  end
+
+  # Spec 054 (H-46): `page` o `page_size` que no son enteros mayores o iguales a 1 son un dato inválido, no un 500.
+  def handle_invalid_pagination(error)
+    param = error.variable.to_s == "limit" ? "page_size" : "page"
+    handle_api_error(
+      ApiErrors::UnprocessableEntityError.new(
+        message: I18n.t("errors.pagination.invalid", param: param), details: { code: "invalid_pagination", param: param }
+      )
     )
   end
 

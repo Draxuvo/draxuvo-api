@@ -22,6 +22,8 @@ en:
     pos:           "Point of sale"
 
   errors:
+    pagination:
+      invalid: "The %{param} parameter must be an integer greater than or equal to 1"
     default: "Something went wrong"
     internal: "Internal server error"
     bad_request: "Bad request"
@@ -344,6 +346,8 @@ en:
       annual:  "Annual"
 
   work_order:
+    stock_note: "Order #%{id}"
+    stock_cancel_note: "Charge void of order #%{id}"
     already_cancelled: "Work order is already cancelled"
     status:
       open:        "Open"
@@ -418,6 +422,7 @@ en:
     errors:
       invalid_terminal: "The terminal does not exist or is inactive"
       table_occupied: "The table already has an open check"
+      invalid_quantity: "The quantity must be a whole number of 1 or more"
       not_on_menu: "%{name} is no longer on the restaurant menu"
       table_inactive: "The table is not available"
       sold_out: "%{name} is sold out"

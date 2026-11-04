@@ -7,6 +7,8 @@ class Station < ApplicationRecord
   KINDS = %w[kitchen bar other].freeze
 
   validates :name, presence: true, uniqueness: { scope: :company_id }
+  # Spec 054 (H-47): solo se exige al crear o cambiar el nombre.
+  validates :name, length: { maximum: 100 }, if: :will_save_change_to_name?
   validates :kind, inclusion: { in: KINDS }
   validate :default_station_stays_active
 

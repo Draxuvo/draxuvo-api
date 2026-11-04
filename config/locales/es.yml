@@ -22,6 +22,8 @@ es:
     pos:           "Punto de venta"
 
   errors:
+    pagination:
+      invalid: "El parámetro %{param} debe ser un entero mayor o igual a 1"
     default: "Algo salió mal"
     internal: "Error interno del servidor"
     bad_request: "Solicitud incorrecta"
@@ -344,6 +346,8 @@ es:
       annual:  "Anual"
 
   work_order:
+    stock_note: "Orden #%{id}"
+    stock_cancel_note: "Anulación de cobro de la orden #%{id}"
     already_cancelled: "La orden de trabajo ya está cancelada"
     status:
       open:        "Abierta"
@@ -418,6 +422,7 @@ es:
     errors:
       invalid_terminal: "La terminal no existe o está desactivada"
       table_occupied: "La mesa ya tiene una cuenta abierta"
+      invalid_quantity: "La cantidad debe ser un número entero mayor o igual a 1"
       not_on_menu: "%{name} ya no está en el menú del restaurante"
       table_inactive: "La mesa no está disponible"
       sold_out: "%{name} está agotado"

@@ -22,6 +22,8 @@ class CheckItem < ApplicationRecord
   validates :name, presence: true
   validates :quantity, numericality: { only_integer: true, greater_than: 0 }
   validates :unit_price, numericality: { greater_than_or_equal_to: 0 }
+  # Spec 054 (H-47): la nota del renglón ("sin cebolla") tiene tope, y solo se exige cuando cambia.
+  validates :note, length: { maximum: 200 }, if: :will_save_change_to_note?
   validates :cancel_reason, :cancelled_by, presence: true, if: -> { status_cancelled? && kitchen_order_id.present? }
   validate :forward_only, if: :will_save_change_to_status?
 
