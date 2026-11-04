@@ -195,4 +195,52 @@ class Pdf::TicketPdfServiceTest < ActiveSupport::TestCase
   test "work order and restaurant tickets still render in the default format" do
     assert Pdf::TicketPdfService.new(tickets(:pro_paid_ticket)).generate.start_with?("%PDF")
   end
+
+  # --- Código del folio (spec 056) ---
+
+  def rectangles(bytes)
+    bytes.b.scan(/^[\d.\-]+ [\d.\-]+ [\d.\-]+ [\d.\-]+ re$/).size
+  end
+
+  def bars_for(folio)
+    drawing = Labels::BarcodeDrawing.for(folio)
+    drawing.modules.each_cons(2).count { |a, b| !a && b } + (drawing.modules.first ? 1 : 0)
+  end
+
+  test "every ticket draws its folio as a barcode with the folio written under it" do
+    [ tickets(:pro_paid_ticket), sale_ticket ].each do |ticket|
+      bytes = Pdf::TicketPdfService.new(ticket).generate
+      assert_operator rectangles(bytes), :>=, bars_for(ticket.folio), "#{ticket.folio} sin código de barras"
+      assert_operator pdf_text(bytes).scan(ticket.folio).size, :>=, 2
+    end
+  end
+
+  test "a restaurant ticket also carries the folio barcode" do
+    ticket = tickets(:resto_paid_ticket)
+    bytes = Pdf::TicketPdfService.new(ticket).generate
+    assert_operator rectangles(bytes), :>=, bars_for(ticket.folio)
+  end
+
+  test "thermal tickets carry the folio barcode and it stays readable in 58 and 80 mm" do
+    ticket = sale_ticket
+    drawing = Labels::BarcodeDrawing.for(ticket.folio)
+    { "thermal58" => 58, "thermal80" => 80 }.each do |format, mm|
+      bytes = Pdf::TicketPdfService.new(ticket, format: format).generate
+      assert_operator rectangles(bytes), :>=, bars_for(ticket.folio)
+      available_mm = (mm * 72 / 25.4 - Pdf::TicketPdfService::THERMAL_MARGIN * 2) / Labels::Layout::MM_TO_PT
+      assert drawing.readable_in?(available_mm), "#{format}: el código no cabe con módulo legible"
+    end
+  end
+
+  test "a folio that cannot be drawn leaves the ticket without the code instead of failing" do
+    ticket = tickets(:pro_paid_ticket)
+    ticket.folio = "T-ñ"
+    bytes = Pdf::TicketPdfService.new(ticket).generate
+    assert bytes.start_with?("%PDF")
+  end
+
+  test "the barcode keeps the A4 ticket on one page when it fits" do
+    bytes = Pdf::TicketPdfService.new(tickets(:pro_paid_ticket)).generate
+    assert_equal 1, bytes.b.scan(%r{/Type /Page$|/Type /Page\b(?!s)}).size
+  end
 end
