@@ -261,6 +261,9 @@ Rails.application.routes.draw do
           delete "photos/:photo_id",       to: "work_orders#destroy_photo", as: :destroy_photo
         end
       end
+
+      # Spec 055 (H-61): lo que ninguna ruta anterior atiende responde JSON 404 en vez de la página HTML de Rails.
+      match "*unmatched", to: "not_found#show", via: :all
     end
   end
 end

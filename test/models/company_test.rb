@@ -174,4 +174,42 @@ class CompanyTest < ActiveSupport::TestCase
     company.subscription.destroy
     assert_empty company.reload.available_modules
   end
+
+  # Spec 055 (H-58, H-60): tope del nombre y aviso del nombre vacío sin hablar del slug.
+  test "el nombre admite 120 caracteres y rechaza 121" do
+    assert Company.new(name: "a" * 120).valid?
+    company = Company.new(name: "a" * 121)
+    assert_not company.valid?
+    assert_includes company.errors[:name], "es demasiado largo (máximo 120 caracteres)"
+  end
+
+  test "el tope del nombre cuenta caracteres y no bytes" do
+    assert Company.new(name: "ñ" * 119 + "a").valid?
+  end
+
+  test "renombrar a más de 120 caracteres se rechaza" do
+    company = companies(:pro_co)
+    assert_not company.update(name: "z" * 121)
+    assert_includes company.errors[:name].join, "máximo 120"
+  end
+
+  test "una empresa que ya tenía un nombre largo se sigue editando sin acortarlo" do
+    company = companies(:pro_co)
+    company.update_columns(name: "x" * 300)
+    assert company.reload.update(order_mode: :order)
+  end
+
+  test "un nombre vacío solo se explica sobre el nombre, sin hablar del slug" do
+    [ "", "   ", nil ].each do |blank|
+      company = Company.new(name: blank)
+      assert_not company.valid?
+      assert_equal [ :name ], company.errors.attribute_names, blank.inspect
+    end
+  end
+
+  test "un nombre sin letras ni números se explica sobre el nombre" do
+    company = Company.new(name: "!!!")
+    assert_not company.valid?
+    assert_equal [ :name ], company.errors.attribute_names
+  end
 end

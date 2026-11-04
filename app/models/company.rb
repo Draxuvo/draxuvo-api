@@ -43,8 +43,17 @@ class Company < ApplicationRecord
 
   MAX_COMPANIES_PER_ACCOUNT = 3
 
+  # Spec 055 (H-58): el nombre cabe en el selector de empresa. El tope solo se exige cuando el nombre cambia, para no
+  # bloquear la edición de empresas que ya tengan uno más largo.
+  NAME_MAX_LENGTH = 120
+
   validates :name, presence: true
-  validates :slug, presence: true, uniqueness: true
+  validates :name, length: { maximum: NAME_MAX_LENGTH }, if: :will_save_change_to_name?
+  # El slug lo genera la API: sin nombre el aviso ya sale de `name` (spec 055, H-60), y un nombre sin letras ni números
+  # (que no produce slug) también se explica sobre el nombre.
+  validates :slug, presence: true, if: -> { name.present? && !slug_unavailable_for_name? }
+  validates :slug, uniqueness: true, allow_blank: true
+  validate :name_produces_slug, on: :create
   validate :disabled_modules_in_catalog
   validate :one_level_of_branches
 
@@ -112,6 +121,15 @@ class Company < ApplicationRecord
 
   def generate_slug
     self.slug ||= name.to_s.downcase.gsub(/\s+/, "-").gsub(/[^a-z0-9-]/, "")
+  end
+
+  # Un nombre con texto pero sin letras ni números (`"!!!"`) no produce slug.
+  def slug_unavailable_for_name?
+    slug.blank? && name.to_s.downcase.gsub(/[^a-z0-9]/, "").blank?
+  end
+
+  def name_produces_slug
+    errors.add(:name, :invalid) if name.present? && slug_unavailable_for_name?
   end
 
   def disabled_modules_in_catalog

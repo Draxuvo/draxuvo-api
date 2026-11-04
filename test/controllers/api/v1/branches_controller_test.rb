@@ -160,6 +160,42 @@ class Api::V1::BranchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "billing_managed_by_parent", json.dig("error", "details", "code"), action
   end
 
+  # Spec 055 (H-58, H-60)
+  test "a branch name of 121 characters is rejected and 120 is accepted" do
+    assert_no_difference "Company.count" do
+      post BASE, params: { branch: { name: "n" * 121 } }, headers: auth_headers(@owner, @main), as: :json
+    end
+    assert_response :unprocessable_entity
+    assert_match(/máximo 120/, json.dig("error", "details").join)
+
+    assert_difference "Company.count", 1 do
+      post BASE, params: { branch: { name: "n" * 120 } }, headers: auth_headers(@owner, @main), as: :json
+    end
+    assert_response :created
+  end
+
+  test "a blank branch name only complains about the name" do
+    [ "", "   " ].each do |name|
+      post BASE, params: { branch: { name: name } }, headers: auth_headers(@owner, @main), as: :json
+      assert_response :unprocessable_entity
+      details = json.dig("error", "details")
+      assert_equal 1, details.size, details.inspect
+      assert_no_match(/slug/i, details.join)
+    end
+  end
+
+  test "a branch name without letters or digits is rejected on the name" do
+    post BASE, params: { branch: { name: "!!!" } }, headers: auth_headers(@owner, @main), as: :json
+    assert_response :unprocessable_entity
+    assert_no_match(/slug/i, json.dig("error", "details").join)
+  end
+
+  test "renaming the company to more than 120 characters is rejected" do
+    patch "/api/v1/company", params: { company: { name: "y" * 121 } }, headers: auth_headers(@owner, @main), as: :json
+    assert_response :unprocessable_entity
+    assert_match(/máximo 120/, json.dig("error", "details").join)
+  end
+
   def json
     JSON.parse(response.body)
   end

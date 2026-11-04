@@ -88,6 +88,13 @@ class Api::V1::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal company.subscription.trial_ends_at, kwargs[:trial_ends_at]
   end
 
+  test "un nombre de empresa de más de 120 caracteres: 422 y no crea empresa (spec 055)" do
+    assert_no_difference "Company.count" do
+      register(valid_params(company_name: "e" * 121))
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "correo ya registrado (sin importar mayúsculas): 422 y no crea empresa" do
     existing = users(:pro_co_owner)
     assert_no_difference [ "Company.count", "User.count", "Subscription.count" ] do
