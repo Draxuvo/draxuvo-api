@@ -136,6 +136,22 @@ AlertDelivery.where(company_id: 1).order(id: :desc).limit(20).pluck(:created_at,
 Los avisos corren con dos trabajos recurrentes en `config/recurring.yml`: `StockAlerts::ScanJob` (cada 5 minutos) y
 `StockAlerts::DailySummaryJob` (cada hora en punto; manda el resumen a las empresas cuya hora local es la configurada).
 
+## Avisos push de la app (spec 057)
+
+La API manda los avisos push por el servicio de push de Expo (`Push::ExpoClient`, `https://exp.host/--/api/v2/push/send`);
+las credenciales de FCM (Android) y APNs (iOS) viven en EAS, no en Render.
+
+| Variable | Uso |
+|---|---|
+| `EXPO_ACCESS_TOKEN` | Opcional. Token de acceso de Expo; con «Enhanced push security» activado en el proyecto de Expo, solo quien lo tenga puede mandar a nuestros teléfonos. |
+| `PUSH_ENABLED` | Opcional (por omisión `true`). `false` apaga todo envío; los teléfonos se siguen registrando. |
+
+Trabajos recurrentes (`config/recurring.yml`): `Push::AlertsScanJob` (cada minuto, alertas operativas), `Push::ReceiptsJob`
+(cada 15 minutos: recibos de Expo; `DeviceNotRegistered` desactiva el teléfono) y `Push::PruneDevicesJob` (diario a las 4:
+desactiva teléfonos con 30 días sin uso y borra la bitácora `push_deliveries` de más de 90 días). «Comanda lista» y «orden
+asignada» se encolan al momento (`Push::CheckReadyJob`, `Push::WorkOrderAssignedJob`); el stock bajo sale con
+`StockAlerts::Dispatch`. Para revisar un envío: `PushDelivery.order(:id).last(20)` en la consola (nunca guarda el token).
+
 ## Versión mínima de la app móvil (FR-015)
 
 `MIN_APP_VERSION_IOS` y `MIN_APP_VERSION_ANDROID` en Render (semver). Subirlas obliga a actualizar sin publicar otra

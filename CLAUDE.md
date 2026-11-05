@@ -162,6 +162,24 @@ el stock bajo ya no sale por WhatsApp** (se borró `Whatsapp::StockAlertService`
 las filas `alert_deliveries` con canal `whatsapp` y los `whatsapp_events` del tipo retirado se conservan como historial pero ya no se leen ni se escriben
 (`GET/PATCH /notification_preference` solo habla de `stock_email` y ignora `stock_whatsapp`). Demos y empresas sin acceso no mandan nada (`StockAlerts::Companies`).
 
+### Avisos push (spec 057)
+
+La app del personal recibe avisos push por **Expo Push** (`app/services/push/`; `Push::ExpoClient` es la única salida, `Net::HTTP`,
+lotes de 100, 429/5xx/red lanzan `Push::ExpoClient::Transient` y los jobs reintentan 3 veces). `PushDevice` es de la **persona**
+(no de la empresa): `POST /push_devices` hace upsert por token (otro inicio de sesión en el mismo teléfono lo reasigna) y
+`DELETE /push_devices/:token` siempre da 204; ambos exigen `X-Company-Id` pero se saltan `check_subscription!` (FR-005a). El
+token nunca se serializa ni va a la bitácora. Preferencias: cuatro columnas `push_*` en `notification_preferences` (todas
+encendidas por omisión) que se leen y cambian con `GET|PATCH /push_preference` (cualquier miembro; solo los tipos de
+`Push::Kinds.available_for(rol, empresa)`); `/notification_preference` (correo, solo jefes) no cambia. Tipos:
+`check_ready` (mesero de la cuenta; `Push::CheckReadyJob` se encola 6 s después de `AdvanceItems` y agrupa la comanda, uno por
+minuto, vencido a los 5 min), `work_order_assigned` (responsable al crear o reasignar, solo con turno abierto si hay módulo
+`attendance`; si no, `off_shift`), `operational_alert` (`Push::AlertsScan` cada minuto sobre `Alerts::Collector`, una vez por
+alerta con `push_alert_notices` y `rearm` tras una posposición) y `low_stock` (con el aviso inmediato de `StockAlerts::Dispatch`,
+nunca con el resumen). `Push::Eligibility` decide empresa (real, con acceso, módulo, `PUSH_ENABLED`) y persona (activa, miembro con
+el rol del tipo, empleado activo, preferencia, teléfono activo); `Push::Deliver` registra cada intento en `push_deliveries`
+(`sent`, `skipped_preference`, `off_shift`, `no_devices`, `invalid_device`, `failed`, `expired`). Textos en `push.*` de los locales,
+en el idioma del teléfono, **sin montos ni datos de clientes**. En pruebas, `with_fake_expo` y `register_device` (`test/support/push_helpers.rb`).
+
 ### Configurar WhatsApp (spec 047)
 
 El super admin conecta WhatsApp Business desde el panel (`/whatsapp` en `ui`); todo vive bajo `/api/v1/whatsapp`, **sin `X-Company-Id` y solo para el super admin**
