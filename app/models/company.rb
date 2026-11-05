@@ -27,6 +27,7 @@ class Company < ApplicationRecord
   has_one :alert_setting, dependent: :delete
   has_many :alert_snoozes, dependent: :delete_all
   has_many :notification_preferences, dependent: :delete_all
+  has_many :push_alert_notices, dependent: :delete_all
   has_many :stock_alert_states, dependent: :delete_all
   has_many :alert_deliveries, dependent: :delete_all
   has_one :subscription, dependent: :destroy

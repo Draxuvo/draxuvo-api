@@ -555,3 +555,30 @@ es:
     email:
       subject_on: "Se activó %{module} en tu empresa"
       subject_off: "Se desactivará %{module} en tu empresa"
+  # Spec 057: avisos push de la app. Nunca montos ni datos de clientes.
+  push:
+    kinds:
+      check_ready: "Comanda lista"
+      work_order_assigned: "Orden asignada"
+      operational_alert: "Alerta"
+      low_stock: "Stock bajo"
+    bodies:
+      check_ready_table:
+        one: "Mesa %{table} · 1 artículo listo"
+        other: "Mesa %{table} · %{count} artículos listos"
+      check_ready_takeout:
+        one: "Para llevar: %{name} · 1 artículo listo"
+        other: "Para llevar: %{name} · %{count} artículos listos"
+      work_order_assigned: "#%{number} · %{title}"
+      work_order_assigned_untitled: "Orden #%{number}"
+      alert_kitchen_wait: "%{label} · %{minutes} min sin atender"
+      alert_kitchen_preparing: "%{label} · %{minutes} min en preparación"
+      alert_work_order_stalled: "%{label} · sin avance desde hace %{minutes} min"
+      alert_table_open: "%{label} · abierta hace %{minutes} min"
+      low_stock:
+        one: "1 producto bajo el mínimo: %{names}"
+        other: "%{count} productos bajo el mínimo: %{names}"
+    errors:
+      invalid_token: "El identificador del dispositivo no es válido."
+      invalid_platform: "La plataforma debe ser android o ios."
+      invalid_value: "El valor debe ser verdadero o falso."

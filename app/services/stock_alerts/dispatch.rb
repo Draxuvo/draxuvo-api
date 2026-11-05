@@ -17,11 +17,19 @@ module StockAlerts
       products = Product.where(id: pending.pluck(:product_id)).order(:name)
       Notify.call(company: @company, recipients: Alerts::Recipients.call(@company), products: products,
                   kind: "immediate", sent_on: local_date)
+      push(products)
       # Se marcan avisados aunque no haya a quién mandar: el resumen diario sigue cubriendo lo que está bajo.
       pending.update_all(notified_at: @now, updated_at: @now)
     end
 
     private
+
+    # Spec 057 (US5): el mismo aviso por push; un fallo aquí no detiene el correo ni el marcado de pendientes.
+    def push(products)
+      Push::LowStock.call(company: @company, products: products, now: @now)
+    rescue => e
+      Rails.logger.error("[StockAlerts::Dispatch] push company=#{@company.id}: #{e.class}: #{e.message}")
+    end
 
     def local_date = @now.in_time_zone(AlertSetting.for(@company).time_zone).to_date
   end

@@ -27,6 +27,19 @@ production:
     class: StockAlerts::DailySummaryJob
     queue: default
     schedule: "0 * * * *"
+  # Spec 057: alertas operativas por push (una vez por alerta).
+  push_alerts_scan:
+    class: Push::AlertsScanJob
+    queue: default
+    schedule: every minute
+  push_receipts:
+    class: Push::ReceiptsJob
+    queue: default
+    schedule: every 15 minutes
+  push_prune_devices:
+    class: Push::PruneDevicesJob
+    queue: default
+    schedule: at 4am every day
   # Spec 039: borra las demos vencidas o terminadas.
   purge_demos:
     class: Demo::PurgeJob

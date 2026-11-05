@@ -555,3 +555,30 @@ en:
     email:
       subject_on: "%{module} was turned on for your company"
       subject_off: "%{module} will be turned off for your company"
+  # Spec 057: app push notifications. Never amounts or customer data.
+  push:
+    kinds:
+      check_ready: "Order ready"
+      work_order_assigned: "Work order assigned"
+      operational_alert: "Alert"
+      low_stock: "Low stock"
+    bodies:
+      check_ready_table:
+        one: "Table %{table} · 1 item ready"
+        other: "Table %{table} · %{count} items ready"
+      check_ready_takeout:
+        one: "Takeout: %{name} · 1 item ready"
+        other: "Takeout: %{name} · %{count} items ready"
+      work_order_assigned: "#%{number} · %{title}"
+      work_order_assigned_untitled: "Work order #%{number}"
+      alert_kitchen_wait: "%{label} · waiting %{minutes} min"
+      alert_kitchen_preparing: "%{label} · preparing for %{minutes} min"
+      alert_work_order_stalled: "%{label} · no progress for %{minutes} min"
+      alert_table_open: "%{label} · open for %{minutes} min"
+      low_stock:
+        one: "1 product below minimum: %{names}"
+        other: "%{count} products below minimum: %{names}"
+    errors:
+      invalid_token: "The device identifier is not valid."
+      invalid_platform: "Platform must be android or ios."
+      invalid_value: "The value must be true or false."
