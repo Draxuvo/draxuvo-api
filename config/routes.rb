@@ -183,6 +183,9 @@ Rails.application.routes.draw do
       # Alertas operativas (spec 045)
       resource :alert_settings, only: %i[show update]
       resource :notification_preference, only: %i[show update]
+      # Spec 057: avisos push de la app (dispositivos de la persona y tipos por empresa).
+      resources :push_devices, only: %i[create destroy], param: :token, constraints: { token: %r{[^/]+} }
+      resource :push_preference, only: %i[show update]
       resources :alerts, only: :index do
         collection do
           post   :snooze, to: "alert_snoozes#create"

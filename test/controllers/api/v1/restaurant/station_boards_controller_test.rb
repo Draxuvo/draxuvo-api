@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Api::V1::Restaurant::StationBoardsControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
   setup do
     @company = companies(:resto_co)
     @headers = auth_headers(users(:resto_waiter), @company)
@@ -102,5 +103,29 @@ class Api::V1::Restaurant::StationBoardsControllerTest < ActionDispatch::Integra
     get "/api/v1/restaurant/stations/#{stations(:kitchen).id}/board", headers: auth_headers(users(:pro_co_owner), companies(:pro_co))
 
     assert_response :not_found
+  end
+
+  # Spec 057: dejar listos artículos encola el aviso al mesero; pasarlos a preparación no.
+  test "advancing items to ready enqueues the ready notice, preparing does not" do
+    assert_no_enqueued_jobs(only: Push::CheckReadyJob) do
+      post "/api/v1/restaurant/stations/#{stations(:kitchen).id}/items/#{check_items(:item_new).id}/advance", headers: @headers, as: :json
+    end
+
+    assert_enqueued_with(job: Push::CheckReadyJob, args: [ kitchen_orders(:first_round).id, users(:resto_waiter).id ]) do
+      post "/api/v1/restaurant/stations/#{stations(:kitchen).id}/items/#{check_items(:item_preparing).id}/advance", headers: @headers, as: :json
+    end
+  end
+
+  test "advancing the whole round enqueues the notice once when something became ready" do
+    assert_enqueued_jobs 1, only: Push::CheckReadyJob do
+      post "/api/v1/restaurant/stations/#{stations(:kitchen).id}/kitchen_orders/#{kitchen_orders(:first_round).id}/advance", headers: @headers, as: :json
+    end
+  end
+
+  test "a failed advance enqueues nothing" do
+    assert_no_enqueued_jobs(only: Push::CheckReadyJob) do
+      post "/api/v1/restaurant/stations/#{stations(:bar).id}/items/#{check_items(:item_ready).id}/advance", headers: @headers, as: :json
+    end
+    assert_response :unprocessable_entity
   end
 end

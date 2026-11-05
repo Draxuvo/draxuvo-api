@@ -172,4 +172,28 @@ class StockAlerts::ScanDispatchTest < ActiveSupport::TestCase
     StockAlerts::Companies.each { |company| ids << company.id }
     assert_not_includes ids, @company.id
   end
+
+  # Spec 057 (US5): el aviso inmediato también sale por push, aunque el correo esté apagado; el resumen diario no.
+  test "the immediate notice also goes by push, even with email off" do
+    register_device(@owner)
+    NotificationPreference.for(@owner, @company).update!(stock_email: false)
+    t0 = Time.current
+    scan_at(t0)
+
+    fake = PushHelpers::FakeExpo.new
+    Push::ExpoClient.stub(:new, fake) { with_channels { dispatch_at(t0 + 6.minutes) } }
+
+    assert_empty @emails
+    assert_equal 1, fake.messages.size
+    assert_equal "1 producto bajo el mínimo: Refresco de cola", fake.messages.first[:body]
+  end
+
+  test "the daily summary never goes by push" do
+    register_device(@owner)
+    fake = PushHelpers::FakeExpo.new
+    Push::ExpoClient.stub(:new, fake) do
+      with_channels { setting = AlertSetting.for(@company); StockAlerts::DailySummary.call(@company, now: Time.current.in_time_zone(setting.time_zone).change(hour: setting.summary_hour)) }
+    end
+    assert_empty fake.messages
+  end
 end

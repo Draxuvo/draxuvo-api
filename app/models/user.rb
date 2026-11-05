@@ -3,6 +3,7 @@ class User < ApplicationRecord
   include JwtHelper
   has_many :user_companies, dependent: :destroy
   has_many :companies, through: :user_companies
+  has_many :push_devices, dependent: :delete_all
   has_secure_password
   has_many :created_work_orders, class_name: "WorkOrder", as: :created_by
   has_one :employee, dependent: :nullify

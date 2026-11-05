@@ -73,12 +73,14 @@ module Api
           end
         end
 
+        notify_assignee(order)
         render_order(order.reload, status: :created)
       end
 
       def update
         order = base_scope.find(params[:id])
         ensure_unlocked!(order)
+        employee_changed = false
 
         WorkOrder.transaction do
           order.assign_attributes(work_order_params)
@@ -92,6 +94,7 @@ module Api
           rebuild_steps(order, params[:steps]) if params.key?(:steps)
         end
 
+        notify_assignee(order) if employee_changed
         render_order(order.reload)
       end
 
@@ -250,6 +253,11 @@ module Api
 
       def event(order, kind, data = {})
         order.work_order_events.create!(kind: kind, actor: current_user, data: data)
+      end
+
+      # Spec 057 (US3): avisa a quien queda como responsable, ya fuera de la transacción.
+      def notify_assignee(order)
+        ::Push::WorkOrderAssignedJob.perform_later(order.id, order.employee_id, current_user.id) if order.employee_id
       end
 
       def unprocessable(message, details: nil)

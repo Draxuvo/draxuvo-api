@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_04_100200) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -318,6 +318,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_04_100200) do
     t.boolean "stock_whatsapp", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "push_check_ready", default: true, null: false
+    t.boolean "push_work_order_assigned", default: true, null: false
+    t.boolean "push_operational_alerts", default: true, null: false
+    t.boolean "push_low_stock", default: true, null: false
     t.index ["company_id"], name: "index_notification_preferences_on_company_id"
     t.index ["user_id", "company_id"], name: "index_notification_preferences_on_user_and_company", unique: true
     t.index ["user_id"], name: "index_notification_preferences_on_user_id"
@@ -490,6 +494,50 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_04_100200) do
     t.index ["company_id"], name: "index_products_on_company_id"
     t.index ["product_type_id"], name: "index_products_on_product_type_id"
     t.index ["station_id"], name: "index_products_on_station_id"
+  end
+
+  create_table "push_alert_notices", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "kind", null: false
+    t.string "subject_key", null: false
+    t.datetime "notified_at", null: false
+    t.boolean "rearm", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "kind", "subject_key"], name: "index_push_alert_notices_unique", unique: true
+  end
+
+  create_table "push_deliveries", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "subject_key", limit: 200, null: false
+    t.string "status", null: false
+    t.integer "devices_count", default: 0, null: false
+    t.jsonb "tickets", default: [], null: false
+    t.string "error", limit: 200
+    t.integer "attempts", default: 0, null: false
+    t.datetime "receipts_checked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "kind", "subject_key", "created_at"], name: "index_push_deliveries_on_subject"
+    t.index ["created_at"], name: "index_push_deliveries_on_created_at"
+    t.index ["user_id"], name: "index_push_deliveries_on_user_id"
+  end
+
+  create_table "push_devices", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token", limit: 255, null: false
+    t.string "platform", null: false
+    t.string "locale", default: "es", null: false
+    t.string "app_version", limit: 32
+    t.datetime "last_seen_at", null: false
+    t.datetime "disabled_at"
+    t.string "disabled_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_push_devices_on_token", unique: true
+    t.index ["user_id"], name: "index_push_devices_active_by_user", where: "(disabled_at IS NULL)"
   end
 
   create_table "sale_items", force: :cascade do |t|
@@ -1104,6 +1152,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_04_100200) do
   add_foreign_key "products", "companies"
   add_foreign_key "products", "product_types"
   add_foreign_key "products", "stations"
+  add_foreign_key "push_alert_notices", "companies", on_delete: :cascade
+  add_foreign_key "push_deliveries", "companies", on_delete: :cascade
+  add_foreign_key "push_deliveries", "users", on_delete: :nullify
+  add_foreign_key "push_devices", "users", on_delete: :cascade
   add_foreign_key "sale_items", "companies"
   add_foreign_key "sale_items", "products"
   add_foreign_key "sale_items", "sales"
