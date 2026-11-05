@@ -39,6 +39,20 @@ class Push::CheckReadyTest < ActiveSupport::TestCase
     assert_empty fake.messages
   end
 
+  test "jobs for the same round take a per-round lock so two at once cannot both send" do
+    statements = []
+    callback = ->(*, payload) { statements << payload[:sql] }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      with_fake_expo { run_check_ready }
+    end
+    assert(statements.any? { |sql| sql.include?("pg_advisory_xact_lock(#{Push::CheckReady::LOCK_NAMESPACE}, #{@round.id})") })
+
+    # El segundo job, que esperaba el candado, ya ve el envío del primero aunque arrancó en el mismo instante.
+    fake = with_fake_expo { assert_equal :retry, run_check_ready(now: PushDelivery.last.created_at - 0.1).status }
+    assert_empty fake.messages
+    assert_equal 1, PushDelivery.where(kind: "check_ready", status: "sent").count
+  end
+
   test "items that became ready after the last notice get a new one" do
     with_fake_expo { run_check_ready }
     item = check_items(:item_new)

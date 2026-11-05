@@ -557,6 +557,12 @@ es:
       subject_off: "Se desactivará %{module} en tu empresa"
   # Spec 057: avisos push de la app. Nunca montos ni datos de clientes.
   push:
+    time:
+      minutes: "%{count} min"
+      hours: "%{count} h"
+      hours_minutes: "%{hours} h %{minutes} min"
+      days: "%{count} d"
+      days_hours: "%{days} d %{hours} h"
     kinds:
       check_ready: "Comanda lista"
       work_order_assigned: "Orden asignada"
@@ -571,10 +577,10 @@ es:
         other: "Para llevar: %{name} · %{count} artículos listos"
       work_order_assigned: "#%{number} · %{title}"
       work_order_assigned_untitled: "Orden #%{number}"
-      alert_kitchen_wait: "%{label} · %{minutes} min sin atender"
-      alert_kitchen_preparing: "%{label} · %{minutes} min en preparación"
-      alert_work_order_stalled: "%{label} · sin avance desde hace %{minutes} min"
-      alert_table_open: "%{label} · abierta hace %{minutes} min"
+      alert_kitchen_wait: "%{label} · %{duration} sin atender"
+      alert_kitchen_preparing: "%{label} · %{duration} en preparación"
+      alert_work_order_stalled: "%{label} · sin avance desde hace %{duration}"
+      alert_table_open: "%{label} · abierta hace %{duration}"
       low_stock:
         one: "1 producto bajo el mínimo: %{names}"
         other: "%{count} productos bajo el mínimo: %{names}"

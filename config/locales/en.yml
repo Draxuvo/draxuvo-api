@@ -557,6 +557,12 @@ en:
       subject_off: "%{module} will be turned off for your company"
   # Spec 057: app push notifications. Never amounts or customer data.
   push:
+    time:
+      minutes: "%{count} min"
+      hours: "%{count} h"
+      hours_minutes: "%{hours} h %{minutes} min"
+      days: "%{count} d"
+      days_hours: "%{days} d %{hours} h"
     kinds:
       check_ready: "Order ready"
       work_order_assigned: "Work order assigned"
@@ -571,10 +577,10 @@ en:
         other: "Takeout: %{name} · %{count} items ready"
       work_order_assigned: "#%{number} · %{title}"
       work_order_assigned_untitled: "Work order #%{number}"
-      alert_kitchen_wait: "%{label} · waiting %{minutes} min"
-      alert_kitchen_preparing: "%{label} · preparing for %{minutes} min"
-      alert_work_order_stalled: "%{label} · no progress for %{minutes} min"
-      alert_table_open: "%{label} · open for %{minutes} min"
+      alert_kitchen_wait: "%{label} · waiting %{duration}"
+      alert_kitchen_preparing: "%{label} · preparing for %{duration}"
+      alert_work_order_stalled: "%{label} · no progress for %{duration}"
+      alert_table_open: "%{label} · open for %{duration}"
       low_stock:
         one: "1 product below minimum: %{names}"
         other: "%{count} products below minimum: %{names}"

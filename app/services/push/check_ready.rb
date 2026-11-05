@@ -7,6 +7,7 @@ module Push
     KIND = "check_ready".freeze
     MIN_GAP = 60.seconds
     EXPIRES_AFTER = 5.minutes
+    LOCK_NAMESPACE = 57_001 # clave de `pg_advisory_xact_lock` para los avisos de comanda lista
 
     Result = Struct.new(:status, :retry_at, keyword_init: true)
 
@@ -27,6 +28,17 @@ module Push
       waiter = check.waiter
       return result(:skipped) if waiter.nil? || waiter.id == @actor_id || !Eligibility.company_ok?(company, KIND)
 
+      # Cada artículo marcado listo encola su job; si dos corren a la vez, sin este candado ninguno ve el envío del otro
+      # y el mesero recibe el aviso dos veces. El candado es por comanda y se suelta al terminar la transacción.
+      KitchenOrder.transaction do
+        KitchenOrder.connection.execute(KitchenOrder.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, ?)", LOCK_NAMESPACE, @kitchen_order.id ]))
+        deliver_once(company, waiter, check)
+      end
+    end
+
+    private
+
+    def deliver_once(company, waiter, check)
       last = last_sent_at(company)
       return Result.new(status: :retry, retry_at: last + MIN_GAP) if last && last > @now - MIN_GAP
 
@@ -41,8 +53,6 @@ module Push
       Deliver.call(company: company, user: waiter, message: message(check, items.count), subject_key: subject_key, attempt: @attempt)
       result(:sent)
     end
-
-    private
 
     def subject_key = "kitchen_order:#{@kitchen_order.id}"
 

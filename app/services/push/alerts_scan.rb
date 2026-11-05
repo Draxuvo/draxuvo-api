@@ -80,7 +80,8 @@ module Push
     def notify(company, alert, labels)
       label = ->(locale) { Message.truncate(labels.dig(locale, alert.id) || labels.dig("es", alert.id), LABEL_MAX) }
       message = Message.new(kind: KIND, company: company, path: "/alertas", subject_id: alert.subject[:id],
-                            body_key: BODY_KEYS.fetch(alert.kind), body_args: { label: label, minutes: alert.minutes })
+                            body_key: BODY_KEYS.fetch(alert.kind),
+                            body_args: { label: label, duration: ->(locale) { Elapsed.format(alert.minutes, locale: locale) } })
       company.user_companies.where(role: %i[owner admin]).includes(:user).each do |membership|
         Deliver.call(company: company, user: membership.user, message: message, subject_key: alert.id.first(200))
       end
