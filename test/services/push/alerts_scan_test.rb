@@ -26,6 +26,11 @@ class Push::AlertsScanTest < ActiveSupport::TestCase
     assert_empty kitchen_messages(scan(now: 1.minute.from_now)), "no se repite mientras siga igual"
   end
 
+  test "a long wait reads in hours or days, like the Alerts screen" do
+    fake = scan(now: 3.hours.from_now)
+    assert_match(/\AMesa 1 · Comanda #1 · Cocina · 3 h 1[5-6] min sin atender\z/, kitchen_messages(fake).first[:body])
+  end
+
   test "staff never gets operational alerts" do
     register_device(users(:resto_waiter))
     fake = scan
