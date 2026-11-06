@@ -16,6 +16,7 @@ module Restaurant
       Check.transaction do
         @check.lock!
         fail!(:check_not_open) unless @check.status_open?
+        ChargePolicy.forbid! if @context.restricted? # spec 058: el personal no cobra
         raise ApiErrors::ForbiddenError.new(message: I18n.t("auth.not_authorized")) unless Permissions.pay?(@check, @context)
 
         method = @params[:method].to_s

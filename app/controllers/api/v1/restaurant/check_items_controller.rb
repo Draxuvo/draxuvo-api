@@ -17,6 +17,8 @@ module Api
 
           @check.check_items.create!(company: current_company, product: product, name: product.name,
                                      unit_price: product.price || 0, quantity: quantity, note: note_param)
+          # Spec 058: agregar un artículo quita «cobro pedido»; el mesero lo vuelve a pedir cuando corresponda.
+          @check.update_columns(charge_requested_at: nil, charge_requested_by_id: nil, updated_at: Time.current) if @check.charge_requested_at
           render json: serialize_check(@check.reload), status: :created
         end
 

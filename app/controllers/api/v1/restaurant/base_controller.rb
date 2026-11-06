@@ -10,7 +10,7 @@ module Api
         private
 
         def restaurant_context
-          @restaurant_context ||= ::Restaurant::Permissions::Context.new(user: current_user, role: current_role)
+          @restaurant_context ||= ::Restaurant::Permissions::Context.new(user: current_user, role: current_role, company: current_company)
         end
 
         def checks_scope = current_company.checks

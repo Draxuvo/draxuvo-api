@@ -9,7 +9,7 @@ class SubscriptionSerializer
   end
 
   def as_json(*)
-    return { plan: "basic", status: "expired", active_access: false, active_modules: [], available_modules: [] } if @s.nil?
+    return { plan: "basic", status: "expired", active_access: false, active_modules: [], available_modules: [], boss_only_charge: false } if @s.nil?
 
     {
       id: @s.id,
@@ -27,6 +27,8 @@ class SubscriptionSerializer
       active_modules: @company.active_modules.map(&:to_s),
       available_modules: @company.available_modules.map(&:to_s),
       module_sources: @company.module_sources,
+      # Spec 058: «Cobro solo por jefes», en solo lectura para dueño y administrador.
+      boss_only_charge: @company.boss_only_charge,
       managed_by_parent: @company.branch?,
       demo: @company.demo?,
       amount: @s.amount,

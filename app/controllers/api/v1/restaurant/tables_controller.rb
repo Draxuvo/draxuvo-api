@@ -76,7 +76,7 @@ module Api
         # Cambia cuando cambia cualquier mesa, cuenta abierta o artículo: la consulta sin cambios responde 304.
         def fingerprint(tables, open_checks, closed_today)
           items = CheckItem.where(company_id: current_company.id)
-          [ current_user.id, current_role, tables.maximum(:updated_at), open_checks.map { |c| [ c.id, c.updated_at, c.waiter_id ] },
+          [ current_user.id, current_role, current_company.boss_only_charge, tables.maximum(:updated_at), open_checks.map { |c| [ c.id, c.updated_at, c.waiter_id ] },
             closed_today.map { |c| [ c.id, c.updated_at ] },
             items.maximum(:updated_at), items.count, current_company.products.maximum(:updated_at) ]
         end

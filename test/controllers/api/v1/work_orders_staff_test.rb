@@ -240,4 +240,47 @@ class Api::V1::WorkOrdersStaffTest < ActionDispatch::IntegrationTest
     post "#{BASE}/#{@mine.id}/items", params: { product_id: supply.id, quantity: 1 }, headers: @headers, as: :json
     assert_response :unprocessable_entity
   end
+
+  # --- Spec 058: «Cobro solo por jefes» ---
+
+  test "with owner-only charging the assignee cannot charge and sees why" do
+    @company.update!(boss_only_charge: true)
+    order = work_orders(:pro_done)
+    order.update_columns(employee_id: employees(:pro_staff_employee).id)
+
+    get "#{BASE}/#{order.id}", headers: @headers
+    assert_equal "boss_only", response.parsed_body["charge_blocked_reason"]
+    assert_not_includes response.parsed_body["allowed_actions"], "charge"
+    assert_includes response.parsed_body["allowed_actions"], "reopen"
+
+    assert_no_difference "Ticket.count" do
+      post "#{BASE}/#{order.id}/charge", params: { payment_method: "cash", amount_received: 900 }, headers: @headers, as: :json
+    end
+    assert_response :forbidden
+    assert_equal "charge_boss_only", response.parsed_body.dig("error", "details", "code")
+    assert order.reload.done?
+  end
+
+  test "with owner-only charging the owner still charges the order of the staff" do
+    @company.update!(boss_only_charge: true)
+    order = work_orders(:pro_done)
+    order.update_columns(employee_id: employees(:pro_staff_employee).id)
+    owner_headers = auth_headers(users(:pro_co_owner), @company)
+
+    get "#{BASE}/#{order.id}", headers: owner_headers
+    assert_nil response.parsed_body["charge_blocked_reason"]
+    assert_includes response.parsed_body["allowed_actions"], "charge"
+
+    post "#{BASE}/#{order.id}/charge", params: { payment_method: "cash", amount_received: 900 }, headers: owner_headers, as: :json
+    assert_response :ok
+    assert_equal "paid", response.parsed_body["status"]
+  end
+
+  test "with the option off the assignee charges as before and has no blocked reason" do
+    order = work_orders(:pro_done)
+    order.update_columns(employee_id: employees(:pro_staff_employee).id)
+    get "#{BASE}/#{order.id}", headers: @headers
+    assert_nil response.parsed_body["charge_blocked_reason"]
+    assert_includes response.parsed_body["allowed_actions"], "charge"
+  end
 end

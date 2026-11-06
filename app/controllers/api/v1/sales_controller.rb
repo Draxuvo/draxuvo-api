@@ -1,5 +1,6 @@
 # Venta de mostrador (spec 050, contracts/api.md). Exige el módulo `pos`. El staff solo ve y opera las ventas que
-# abrió; dueño y administrador ven todas. Las reglas finas viven en Sales::Permissions.
+# abrió; dueño y administrador ven todas. Las reglas finas viven en Sales::Permissions. Spec 058: con «Cobro solo por
+# jefes» el staff no cobra, pasa la venta a cobro (`submit`) y un jefe la cobra o la regresa (`return`).
 module Api
   module V1
     class SalesController < BaseController
@@ -10,9 +11,12 @@ module Api
       idempotent :charge
 
       before_action :set_sale, except: %i[index create catalog]
+      before_action :ensure_editable!, only: %i[add_item update_item remove_item destroy]
 
-      # GET /api/v1/sales
+      # GET /api/v1/sales — `queue=1` (spec 058, solo jefes): las ventas listas para cobro, de la más antigua a la más reciente.
       def index
+        return queue if params[:queue].present?
+
         sales = filtered_sales.includes(:opened_by, :charged_by, :sale_items, :ticket)
         sales = params[:status].blank? ? sales.reorder(Arel.sql("CASE WHEN sales.status = 0 THEN 0 ELSE 1 END"), created_at: :desc) : sales.reorder(created_at: :desc)
         @pagy, sales = pagy(sales)
@@ -62,8 +66,25 @@ module Api
 
       # POST /api/v1/sales/:id/charge
       def charge
+        ChargePolicy.forbid! if context.restricted?
         result = Sales::Charge.call(@sale, current_user, params)
         render json: { sale: serialize(result.sale.reload), shortages: result.shortages }
+      end
+
+      # POST /api/v1/sales/:id/submit — { lock_version }. Solo quien la abrió (spec 058).
+      def submit
+        forbid! unless context.opener_of?(@sale) && !context.boss?
+
+        sale = Sales::Submit.call(@sale, params[:lock_version])
+        ::Push::ChargePendingJob.perform_later("sale", sale.id, current_user.id)
+        render json: serialize(sale.reload)
+      end
+
+      # POST /api/v1/sales/:id/return — un jefe la regresa al cajero (spec 058).
+      def return_sale
+        forbid! unless context.boss?
+
+        render json: serialize(Sales::Return.call(@sale, current_user).reload)
       end
 
       # POST /api/v1/sales/:id/cancel — { reason }. Solo dueño y administrador.
@@ -110,7 +131,7 @@ module Api
       end
 
       def context
-        @context ||= Sales::Permissions::Context.new(user: current_user, role: current_role)
+        @context ||= Sales::Permissions::Context.new(user: current_user, role: current_role, company: current_company)
       end
 
       def base_scope
@@ -173,6 +194,21 @@ module Api
           stock: type&.counted ? Product.quantity(product.stock) : nil, fractional: !!type&.fractional,
           barcodes: product.barcode_codes
         }
+      end
+
+      # Una venta lista para cobro solo la tocan los jefes (spec 058).
+      def ensure_editable!
+        return if Sales::Permissions.edit?(@sale, context)
+
+        raise ApiErrors::ForbiddenError.new(message: I18n.t("sale.errors.sale_submitted"), details: { code: "sale_submitted" })
+      end
+
+      def queue
+        forbid! unless context.boss?
+
+        sales = current_company.boss_only_charge ? current_company.sales.queued : current_company.sales.none
+        @pagy, sales = pagy(sales.includes(:opened_by, :charged_by, :sale_items, :ticket))
+        render json: paginate_response(@pagy, sales.map { |sale| SaleSerializer.new(sale, context: context, detailed: false).as_json })
       end
 
       def raise_sale_not_open!

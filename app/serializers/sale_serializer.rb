@@ -20,10 +20,16 @@ class SaleSerializer
       cancelled_by: TicketSerializer.person(@sale.cancelled_by),
       cancel_reason: @sale.cancel_reason,
       lock_version: @sale.lock_version,
+      submitted_at: @sale.submitted_at,
+      returned_at: @sale.returned_at,
+      returned_by: TicketSerializer.person(@sale.returned_by),
       created_at: @sale.created_at,
       folio: @sale.ticket&.folio
     }
-    base[:actions] = Sales::Permissions.actions(@sale, @context) if @context
+    if @context
+      base[:actions] = Sales::Permissions.actions(@sale, @context)
+      base[:charge_blocked_reason] = Sales::Permissions.charge_blocked_reason(@sale, @context)
+    end
     return base unless @detailed
 
     base.merge(items: @sale.sale_items.map { |item| item_json(item) }, ticket: ticket_json)

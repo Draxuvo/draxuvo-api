@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_06_100300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -103,6 +103,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
     t.index ["employee_id"], name: "index_attendances_on_employee_id"
   end
 
+  create_table "charge_policy_changes", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "actor_id", null: false
+    t.boolean "enabled", null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_charge_policy_changes_on_actor_id"
+    t.index ["company_id", "created_at"], name: "index_charge_policy_changes_on_company_id_and_created_at"
+  end
+
   create_table "check_items", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.bigint "check_id", null: false
@@ -163,7 +172,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
     t.text "cancel_reason"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "charge_requested_at"
+    t.bigint "charge_requested_by_id"
+    t.index ["charge_requested_by_id"], name: "index_checks_on_charge_requested_by_id"
     t.index ["company_id", "status"], name: "index_checks_on_company_id_and_status"
+    t.index ["company_id"], name: "index_checks_on_company_charge_requested", where: "((status = 0) AND (charge_requested_at IS NOT NULL))"
     t.index ["company_id"], name: "index_checks_on_company_id"
     t.index ["dining_table_id"], name: "index_checks_on_dining_table_id"
     t.index ["dining_table_id"], name: "index_checks_on_open_dining_table", unique: true, where: "(status = 0)"
@@ -182,6 +195,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
     t.integer "order_mode", default: 0, null: false
     t.bigint "barcode_sequence", default: 0, null: false
     t.boolean "demo", default: false, null: false
+    t.boolean "boss_only_charge", default: false, null: false
     t.index ["demo"], name: "index_companies_on_demo_true", where: "demo"
     t.index ["parent_company_id"], name: "index_companies_on_parent_company_id"
   end
@@ -322,6 +336,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
     t.boolean "push_work_order_assigned", default: true, null: false
     t.boolean "push_operational_alerts", default: true, null: false
     t.boolean "push_low_stock", default: true, null: false
+    t.boolean "push_charge_pending", default: true, null: false
     t.index ["company_id"], name: "index_notification_preferences_on_company_id"
     t.index ["user_id", "company_id"], name: "index_notification_preferences_on_user_and_company", unique: true
     t.index ["user_id"], name: "index_notification_preferences_on_user_id"
@@ -571,12 +586,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
     t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "submitted_at"
+    t.datetime "returned_at"
+    t.bigint "returned_by_id"
     t.index ["cancelled_by_id"], name: "index_sales_on_cancelled_by_id"
     t.index ["charged_by_id"], name: "index_sales_on_charged_by_id"
     t.index ["company_id", "opened_by_id", "status"], name: "index_sales_on_company_id_and_opened_by_id_and_status"
     t.index ["company_id", "status", "created_at"], name: "index_sales_on_company_id_and_status_and_created_at"
+    t.index ["company_id", "submitted_at"], name: "index_sales_on_company_queued", where: "((status = 0) AND (submitted_at IS NOT NULL))"
     t.index ["company_id"], name: "index_sales_on_company_id"
     t.index ["opened_by_id"], name: "index_sales_on_opened_by_id"
+    t.index ["returned_by_id"], name: "index_sales_on_returned_by_id"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -1098,6 +1118,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
   add_foreign_key "attendances", "employees"
   add_foreign_key "attendances", "users", column: "checkin_by_id"
   add_foreign_key "attendances", "users", column: "checkout_by_id"
+  add_foreign_key "charge_policy_changes", "companies", on_delete: :cascade
+  add_foreign_key "charge_policy_changes", "users", column: "actor_id"
   add_foreign_key "check_items", "checks"
   add_foreign_key "check_items", "companies"
   add_foreign_key "check_items", "kitchen_orders"
@@ -1110,6 +1132,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
   add_foreign_key "check_payments", "users", column: "created_by_id"
   add_foreign_key "checks", "companies"
   add_foreign_key "checks", "dining_tables"
+  add_foreign_key "checks", "users", column: "charge_requested_by_id"
   add_foreign_key "checks", "users", column: "opened_by_id"
   add_foreign_key "checks", "users", column: "waiter_id"
   add_foreign_key "demo_invites", "users", column: "created_by_id"
@@ -1163,6 +1186,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_05_100300) do
   add_foreign_key "sales", "users", column: "cancelled_by_id"
   add_foreign_key "sales", "users", column: "charged_by_id"
   add_foreign_key "sales", "users", column: "opened_by_id"
+  add_foreign_key "sales", "users", column: "returned_by_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

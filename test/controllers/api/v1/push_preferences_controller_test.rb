@@ -42,4 +42,23 @@ class Api::V1::PushPreferencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal({ "stock_email" => true }, response.parsed_body)
   end
+
+  # --- Spec 058: «Por cobrar» ---
+
+  test "charge_pending is offered to bosses only with owner-only charging on, and can be turned off" do
+    get "/api/v1/push_preference", headers: auth_headers(users(:resto_owner), @company)
+    assert_not_includes response.parsed_body["available"], "charge_pending"
+
+    @company.update!(boss_only_charge: true)
+    get "/api/v1/push_preference", headers: auth_headers(users(:resto_owner), @company)
+    assert_includes response.parsed_body["available"], "charge_pending"
+    assert_equal true, response.parsed_body["charge_pending"]
+
+    get "/api/v1/push_preference", headers: auth_headers(users(:resto_waiter), @company)
+    assert_not_includes response.parsed_body["available"], "charge_pending"
+
+    patch "/api/v1/push_preference", params: { charge_pending: false }, headers: auth_headers(users(:resto_owner), @company), as: :json
+    assert_response :ok
+    assert_equal false, NotificationPreference.find_by(user: users(:resto_owner), company: @company).push_charge_pending
+  end
 end

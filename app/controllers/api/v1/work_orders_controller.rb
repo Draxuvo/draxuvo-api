@@ -114,6 +114,10 @@ module Api
 
         transition = WorkOrders::Transition.new(order, action, work_order_context, transition_params)
         transition.call
+        # Spec 058: con «Cobro solo por jefes», una orden terminada avisa a los jefes que espera cobro.
+        if action == "finish" && order.done? && current_company.boss_only_charge
+          ::Push::ChargePendingJob.perform_later("work_order", order.id, current_user.id)
+        end
         render_order(order, shortages: (transition.shortages if action == "charge"))
       end
 

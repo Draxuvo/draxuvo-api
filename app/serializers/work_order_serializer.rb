@@ -116,6 +116,8 @@ class WorkOrderSerializer
 
   def charge_blocked_reason
     return nil unless @context && @order.done?
+    # Spec 058: el asignado ve por qué no cobra; va antes de la guarda de permiso, que con la regla activa sale con nil.
+    return ChargePolicy::REASON if WorkOrders::Transition.boss_only?(@order, @context) && @context.assigned_to?(@order)
     return nil unless WorkOrders::Transition.permitted?(@order, :charge, @context)
 
     priced = @order.work_order_items.any? { |item| item.unit_price.to_f.positive? }

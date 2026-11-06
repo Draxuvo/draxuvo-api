@@ -432,6 +432,8 @@ en:
       exceeds_balance: "The payment exceeds the outstanding balance"
       incomplete_items: "Some items are not completed"
       check_not_open: "The check is no longer open"
+      charge_policy_off: "This company does not have owner-only charging turned on."
+      nothing_to_submit: "The check has nothing to charge yet."
       invalid_transition: "That item already changed state"
       reason_required: "Write the reason"
       has_sent_items: "The check has sent items"
@@ -509,6 +511,10 @@ en:
       since: "Since %{time}."
       open: "Open WhatsApp in Draxuvo"
 
+  # Owner-only charging (spec 058).
+  charge_policy:
+    errors:
+      charge_boss_only: "Charging is done by an administrator or the owner."
   # Counter point of sale (spec 050).
   sale:
     status:
@@ -531,6 +537,11 @@ en:
       invalid_quantity:    "The quantity is not valid."
       item_not_found:      "The item is not in the sale."
       stale_object:        "The sale changed while you were looking at it. Review it and charge again."
+      sale_submitted:      "The sale is ready to charge; only an administrator or the owner can change it."
+      charge_policy_off:   "This company does not have owner-only charging turned on."
+      nothing_to_submit:   "Add at least one item before sending it to charge."
+      already_submitted:   "The sale was already sent to charge."
+      not_submitted:       "The sale is not ready to charge."
     pdf:
       title:    "PURCHASE RECEIPT"
       cashier:  "Cashier"
@@ -568,6 +579,7 @@ en:
       work_order_assigned: "Work order assigned"
       operational_alert: "Alert"
       low_stock: "Low stock"
+      charge_pending: "To charge"
     bodies:
       check_ready_table:
         one: "Table %{table} · 1 item ready"
@@ -584,6 +596,10 @@ en:
       low_stock:
         one: "1 product below minimum: %{names}"
         other: "%{count} products below minimum: %{names}"
+      charge_pending_sale: "Sale to charge from %{cashier}"
+      charge_pending_work_order: "Order #%{number} ready to charge"
+      charge_pending_table: "Table %{table} asked for the check"
+      charge_pending_takeout: "Takeout check #%{number} asked to be charged"
     errors:
       invalid_token: "The device identifier is not valid."
       invalid_platform: "Platform must be android or ios."
