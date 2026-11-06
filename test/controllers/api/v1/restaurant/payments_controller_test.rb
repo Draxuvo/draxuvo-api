@@ -105,4 +105,34 @@ class Api::V1::Restaurant::PaymentsControllerTest < ActionDispatch::IntegrationT
       pay({ method: "cash", amount_received: "500" })
     end
   end
+
+  # --- Spec 058: «Cobro solo por jefes» ---
+
+  test "with owner-only charging the waiter gets 403 charge_boss_only and the check does not change" do
+    @company.update!(boss_only_charge: true)
+    assert_no_difference "CheckPayment.count" do
+      pay({ method: "cash", amount: "155", amount_received: "200" })
+    end
+    assert_response :forbidden
+    assert_equal "charge_boss_only", response.parsed_body.dig("error", "details", "code")
+    assert @check.reload.status_open?
+  end
+
+  test "with owner-only charging the owner charges the check of a waiter" do
+    @company.update!(boss_only_charge: true)
+    pay({ method: "cash", amount: "155", amount_received: "200" }, auth_headers(users(:resto_owner), @company))
+    assert_response :created
+    assert_equal "closed", response.parsed_body.dig("check", "status")
+  end
+
+  test "a partial payment made before turning the option on is kept and the owner charges the rest" do
+    pay({ method: "cash", amount: "55", amount_received: "55" })
+    assert_response :created
+    @company.update!(boss_only_charge: true)
+
+    pay({ method: "cash", amount: "100", amount_received: "100" }, auth_headers(users(:resto_owner), @company))
+    assert_response :created
+    assert_equal 2, @check.reload.check_payments.count
+    assert_equal "closed", response.parsed_body.dig("check", "status")
+  end
 end

@@ -38,6 +38,9 @@ Rails.application.routes.draw do
       resource :company, only: [] do
         get   :modules, to: "company_modules#show"
         patch :modules, to: "company_modules#update"
+        # Spec 058: «Cobro solo por jefes» (solo super admin).
+        get   :charge_policy, to: "company_charge_policies#show"
+        patch :charge_policy, to: "company_charge_policies#update"
         patch :order_mode, to: "company_order_modes#update"
         resources :members, controller: "company_members", param: :user_id, only: [ :index, :create, :update, :destroy ]
         resources :branches, only: [ :index, :create ]
@@ -167,6 +170,8 @@ Rails.application.routes.draw do
           patch  "items/:item_id",  action: :update_item
           delete "items/:item_id",  action: :remove_item
           post   :charge
+          post   :submit
+          post   :return,           action: :return_sale
           post   :cancel
           get    "ticket.pdf",      action: :ticket_pdf
           get    :ticket
@@ -183,6 +188,8 @@ Rails.application.routes.draw do
       # Alertas operativas (spec 045)
       resource :alert_settings, only: %i[show update]
       resource :notification_preference, only: %i[show update]
+      # Spec 058: cola «Por cobrar» (solo jefes).
+      resource :charge_queue, only: :show
       # Spec 057: avisos push de la app (dispositivos de la persona y tipos por empresa).
       resources :push_devices, only: %i[create destroy], param: :token, constraints: { token: %r{[^/]+} }
       resource :push_preference, only: %i[show update]
@@ -226,6 +233,7 @@ Rails.application.routes.draw do
             post :cancel
             post :rounds,   to: "rounds#create"
             post :payments, to: "payments#create"
+            post :charge_request, to: "charge_requests#create"
             post :close,    to: "check_closures#create"
           end
           resources :items, only: %i[create update destroy], controller: "check_items" do

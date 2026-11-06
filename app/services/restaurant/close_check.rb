@@ -15,7 +15,7 @@ module Restaurant
     def call
       ticket = create_ticket
       shortages = deduct_stock
-      @check.update!(status: :closed, closed_at: Time.current)
+      @check.update!(status: :closed, closed_at: Time.current, charge_requested_at: nil, charge_requested_by: nil)
       Result.new(ticket: ticket, shortages: shortages)
     end
 

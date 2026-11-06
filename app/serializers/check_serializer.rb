@@ -18,7 +18,9 @@ class CheckSerializer
     summary = {
       id: check.id, opened_at: check.opened_at,
       counts: %w[new preparing ready delivered].index_with { |s| counts.fetch(s, 0) },
-      mine: own
+      mine: own,
+      # Spec 058: «cobro pedido» se ve en el plano de mesas.
+      charge_requested_at: check.charge_requested_at
     }
     return summary unless own || context.boss?
 
@@ -35,6 +37,8 @@ class CheckSerializer
       items: items.map { |item| item_json(item) },
       payments: c.check_payments.order(:id).map { |p| self.class.payment(p) },
       ticket_id: c.ticket&.id,
+      charge_requested_at: c.charge_requested_at, charge_requested_by: self.class.person(c.charge_requested_by),
+      charge_blocked_reason: Restaurant::Permissions.charge_blocked_reason(c, @context),
       allowed_actions: Restaurant::Permissions.check_actions(c, @context)
     }
   end

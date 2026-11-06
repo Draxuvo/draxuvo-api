@@ -38,12 +38,17 @@ module WorkOrders
     end
 
     def self.permitted?(order, action, context)
+      # Spec 058: con «Cobro solo por jefes» el asignado (personal) termina la orden, pero no la cobra.
+      return false if action.to_sym == :charge && boss_only?(order, context)
+
       case RULES.fetch(action)[:who]
       when :worker then context.boss? || context.assigned_to?(order)
       when :boss   then context.boss?
       when :admin  then context.admin?
       end
     end
+
+    def self.boss_only?(order, context) = ChargePolicy.restricted?(order.company, context.role)
 
     def initialize(order, action, context, params)
       @order   = order
@@ -55,6 +60,7 @@ module WorkOrders
 
     def call
       rule = RULES[@action] or raise ApiErrors::BadRequestError.new(details: @action.to_s)
+      ChargePolicy.forbid! if @action == :charge && self.class.boss_only?(@order, @context)
       raise ApiErrors::ForbiddenError.new(message: I18n.t("auth.not_authorized")) unless self.class.permitted?(@order, @action, @context)
 
       WorkOrder.transaction do

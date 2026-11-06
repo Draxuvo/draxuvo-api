@@ -39,4 +39,23 @@ class Api::V1::WorkOrdersPushTest < ActionDispatch::IntegrationTest
       patch "/api/v1/work_orders/#{order.id}", params: { work_order: { employee_id: "" } }, headers: @headers, as: :json
     end
   end
+
+  # --- Spec 058: «Por cobrar» al terminar ---
+
+  test "finishing an order notifies the bosses only with owner-only charging on" do
+    order = work_orders(:pro_open)
+
+    assert_no_enqueued_jobs(only: Push::ChargePendingJob) do
+      post "/api/v1/work_orders/#{order.id}/finish", headers: @headers, as: :json
+    end
+    assert_response :ok
+
+    @company.update!(boss_only_charge: true)
+    other = work_orders(:pro_started)
+    staff_headers = auth_headers(users(:pro_staff), @company)
+    assert_enqueued_with(job: Push::ChargePendingJob, args: [ "work_order", other.id, users(:pro_staff).id ]) do
+      post "/api/v1/work_orders/#{other.id}/finish", headers: staff_headers, as: :json
+    end
+    assert_response :ok
+  end
 end

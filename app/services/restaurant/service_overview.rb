@@ -16,7 +16,9 @@ module Restaurant
         open_checks: @open_checks.size,
         to_pay_total: format("%.2f", to_pay.sum(&:balance)),
         pending_comandas: pending,
-        oldest_open_minutes: oldest && ((Time.current - oldest) / 60).floor
+        oldest_open_minutes: oldest && ((Time.current - oldest) / 60).floor,
+        # Spec 058: cuentas con «cobro pedido».
+        charge_requested: @open_checks.count { |check| check.charge_requested_at.present? }
       }
     end
   end

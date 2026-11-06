@@ -432,6 +432,8 @@ es:
       exceeds_balance: "El pago excede el saldo pendiente"
       incomplete_items: "Hay artículos sin completar"
       check_not_open: "La cuenta ya no está abierta"
+      charge_policy_off: "Esta empresa no tiene activo el cobro solo por jefes."
+      nothing_to_submit: "La cuenta no tiene nada por cobrar todavía."
       invalid_transition: "Ese artículo ya cambió de estado"
       reason_required: "Escribe el motivo"
       has_sent_items: "La cuenta tiene artículos mandados"
@@ -509,6 +511,10 @@ es:
       since: "Desde %{time}."
       open: "Abrir WhatsApp en Draxuvo"
 
+  # Cobro solo por jefes (spec 058).
+  charge_policy:
+    errors:
+      charge_boss_only: "El cobro lo hace un administrador o el dueño."
   # Punto de venta de mostrador (spec 050).
   sale:
     status:
@@ -531,6 +537,11 @@ es:
       invalid_quantity:    "La cantidad no es válida."
       item_not_found:      "El artículo no está en la venta."
       stale_object:        "La venta cambió mientras la veías. Revísala y vuelve a cobrar."
+      sale_submitted:      "La venta ya está lista para cobro; solo un administrador o el dueño la puede cambiar."
+      charge_policy_off:   "Esta empresa no tiene activo el cobro solo por jefes."
+      nothing_to_submit:   "Agrega al menos un artículo antes de pasar a cobro."
+      already_submitted:   "La venta ya se pasó a cobro."
+      not_submitted:       "La venta no está lista para cobro."
     pdf:
       title:    "TICKET DE COMPRA"
       cashier:  "Cajero"
@@ -568,6 +579,7 @@ es:
       work_order_assigned: "Orden asignada"
       operational_alert: "Alerta"
       low_stock: "Stock bajo"
+      charge_pending: "Por cobrar"
     bodies:
       check_ready_table:
         one: "Mesa %{table} · 1 artículo listo"
@@ -584,6 +596,10 @@ es:
       low_stock:
         one: "1 producto bajo el mínimo: %{names}"
         other: "%{count} productos bajo el mínimo: %{names}"
+      charge_pending_sale: "Venta por cobrar de %{cashier}"
+      charge_pending_work_order: "Orden #%{number} lista para cobrar"
+      charge_pending_table: "Mesa %{table} pidió la cuenta"
+      charge_pending_takeout: "Cuenta para llevar #%{number} pidió cobro"
     errors:
       invalid_token: "El identificador del dispositivo no es válido."
       invalid_platform: "La plataforma debe ser android o ios."

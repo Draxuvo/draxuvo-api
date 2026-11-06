@@ -4,6 +4,7 @@ class Check < ApplicationRecord
   belongs_to :dining_table, optional: true
   belongs_to :opened_by, class_name: "User"
   belongs_to :waiter, class_name: "User"
+  belongs_to :charge_requested_by, class_name: "User", optional: true
   has_many :kitchen_orders, dependent: :destroy
   has_many :check_items, dependent: :destroy
   has_many :check_payments, dependent: :destroy
@@ -22,6 +23,9 @@ class Check < ApplicationRecord
   end
 
   def takeout? = dining_table_id.nil?
+
+  # «Cobro pedido» (spec 058): el mesero avisó que el cliente pidió la cuenta.
+  def charge_requested? = status_open? && charge_requested_at.present?
 
   def paid_total = check_payments.sum(:amount)
 

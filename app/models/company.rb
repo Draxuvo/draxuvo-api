@@ -19,6 +19,7 @@ class Company < ApplicationRecord
   has_many :payment_terminals, dependent: :destroy
   has_many :product_types, dependent: :destroy
   has_many :module_changes, dependent: :destroy
+  has_many :charge_policy_changes, dependent: :delete_all
   has_many :payroll_runs, dependent: :destroy
   has_many :payroll_payments, dependent: :destroy
   has_many :payroll_adjustments, dependent: :destroy

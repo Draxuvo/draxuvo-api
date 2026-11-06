@@ -18,7 +18,9 @@ class UserSerializer < ActiveModel::Serializer
         parent_company_id: company.parent_company_id, order_mode: company.order_mode, demo: company.demo?,
         # Spec 054: los módulos activos de la empresa (plan más extras vigentes, menos los que el super admin apagó), para que
         # el personal, que no puede leer la suscripción, sepa qué hay sin probar rutas que responden 403.
-        modules: company.active_modules.map(&:to_s) }
+        modules: company.active_modules.map(&:to_s),
+        # Spec 058: «Cobro solo por jefes». Solo decide si el panel muestra el contador «Por cobrar»; la regla vive en la API.
+        boss_only_charge: company.boss_only_charge }
     end
   end
 

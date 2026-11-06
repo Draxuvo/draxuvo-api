@@ -1,7 +1,7 @@
 # Bitácora de avisos push (spec 057, FR-023): una fila por persona y aviso, con el resultado y los tickets de Expo
 # (`[{ "id", "device_id" }]`). Nunca guarda el token del dispositivo.
 class PushDelivery < ApplicationRecord
-  KINDS = %w[check_ready work_order_assigned operational_alert low_stock].freeze
+  KINDS = %w[check_ready work_order_assigned operational_alert low_stock charge_pending].freeze
   STATUSES = %w[sent skipped_preference off_shift no_devices invalid_device failed expired].freeze
   RETENTION = 90.days
 

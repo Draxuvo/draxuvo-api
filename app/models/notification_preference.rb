@@ -9,7 +9,8 @@ class NotificationPreference < ApplicationRecord
     "check_ready" => :push_check_ready,
     "work_order_assigned" => :push_work_order_assigned,
     "operational_alert" => :push_operational_alerts,
-    "low_stock" => :push_low_stock
+    "low_stock" => :push_low_stock,
+    "charge_pending" => :push_charge_pending
   }.freeze
 
   belongs_to :user
