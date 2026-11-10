@@ -5,7 +5,7 @@ require "json"
 # despues de su vencimiento: esta prueba falla si la entrada sigue en el archivo.
 class BrakemanIgnoreExpiryTest < ActiveSupport::TestCase
   IGNORE_FILE = Rails.root.join("config/brakeman.ignore")
-  EXPIRY = Date.new(2026, 11, 7)
+  EXPIRY = Date.new(2026, 12, 9)
 
   test "la entrada vigente menciona la fecha de vencimiento" do
     entry = eol_rails_entries(load_ignore).first
@@ -14,14 +14,14 @@ class BrakemanIgnoreExpiryTest < ActiveSupport::TestCase
   end
 
   test "la excepcion es valida antes del vencimiento" do
-    travel_to Time.zone.local(2026, 11, 6, 12) do
+    travel_to Time.zone.local(2026, 12, 8, 12) do
       assert_not expired_entry?(load_ignore)
     end
   end
 
   test "la excepcion vencida falla si la entrada sigue en el archivo" do
     data = load_ignore
-    travel_to Time.zone.local(2026, 11, 7, 12) do
+    travel_to Time.zone.local(2026, 12, 9, 12) do
       assert expired_entry?(data)
     end
     travel_to Time.zone.local(2027, 1, 1, 12) do
