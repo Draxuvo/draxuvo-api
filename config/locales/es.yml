@@ -444,7 +444,20 @@ es:
       invalid_amount: "Monto inválido"
       waiter_not_member: "Esa persona no es de la empresa"
       cancelled_item: "El artículo ya está cancelado"
+      invalid_tables: "Algunas mesas no existen o están desactivadas"
+      no_tables: "No hay mesas activas que imprimir"
+      too_many_tables: "Se pueden imprimir hasta %{max} mesas a la vez"
     stock_note: "Cuenta #%{id}"
+    # Tarjetas QR de las mesas (spec 059)
+    menu_cards:
+      title: "Tarjetas QR"
+      scan_hint: "Escanea para ver el menú"
+      table: "Mesa %{name}"
+  # Menú público de una mesa (spec 059)
+  public_menu:
+    errors:
+      menu_link_invalid: "Este enlace no es válido."
+      menu_unavailable: "El menú no está disponible por el momento."
   # Alertas operativas (spec 045)
   alerts:
     labels:

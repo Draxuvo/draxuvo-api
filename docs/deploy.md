@@ -152,6 +152,20 @@ desactiva teléfonos con 30 días sin uso y borra la bitácora `push_deliveries`
 asignada» se encolan al momento (`Push::CheckReadyJob`, `Push::WorkOrderAssignedJob`); el stock bajo sale con
 `StockAlerts::Dispatch`. Para revisar un envío: `PushDelivery.order(:id).last(20)` en la consola (nunca guarda el token).
 
+## Menú QR de las mesas (spec 059)
+
+Cada mesa tiene un enlace público `https://draxuvo.com/m/<token>` que se imprime como QR en las tarjetas
+(`POST /api/v1/restaurant/menu_cards/pdf`). El comensal lo abre en `web`, que pide el menú directo a
+`GET /api/v1/public/menus/:token` desde su teléfono (sin sesión).
+
+| Variable | Uso |
+|---|---|
+| `PUBLIC_SITE_URL` | Base del sitio público que va en el QR y único origen CORS de `/api/v1/public/*`. En producción `https://draxuvo.com` (en `render.yaml`; sin la variable, la API usa ese mismo valor en producción). |
+| `PUBLIC_MENU_RATE_LIMIT` | Opcional (por omisión `120`). Peticiones por minuto por IP al menú público; las de más responden 429. |
+
+El enlace queda impreso: si cambia el dominio de `web`, el dominio viejo debe redirigir `/m/*` al nuevo o hay que
+reimprimir las tarjetas. Regenerar el enlace de una mesa (desde el panel) invalida solo las tarjetas de esa mesa.
+
 ## Versión mínima de la app móvil (FR-015)
 
 `MIN_APP_VERSION_IOS` y `MIN_APP_VERSION_ANDROID` en Render (semver). Subirlas obliga a actualizar sin publicar otra

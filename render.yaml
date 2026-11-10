@@ -43,6 +43,8 @@ services:
         value: https://app.draxuvo.com
       - key: FRONTEND_URL_UI       # sitio público (web): CORS
         value: https://draxuvo.com
+      - key: PUBLIC_SITE_URL       # menú QR (spec 059): lo que codifica el QR y origen CORS de /api/v1/public/*
+        value: https://draxuvo.com
       # Correo (Resend)
       - key: RESEND_API_KEY
         sync: false

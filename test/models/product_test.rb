@@ -105,4 +105,29 @@ class ProductTest < ActiveSupport::TestCase
     assert product.valid?, product.errors.full_messages.to_sentence
     assert_not_nil product.product_type
   end
+
+  # --- Spec 059: una sola consulta para Tomar pedido y el menú público ---
+
+  test "menu_for in order mode keeps available products of sellable types in the menu" do
+    company = companies(:resto_co)
+    product_types(:resto_co_counted).update!(in_menu: false)
+    products(:resto_agua).update!(available: false)
+    supply = company.products.create!(sku: "INSUMO-059", name: "Harina", product_type: product_types(:resto_co_supply), price: 1)
+
+    names = Product.menu_for(company).map(&:name)
+    assert_includes names, "Sopa del día"
+    assert_not_includes names, "Tacos al pastor", "tipo fuera del menú"
+    assert_not_includes names, "Agua de horchata", "no disponible"
+    assert_not_includes names, supply.name, "no se vende"
+  end
+
+  test "menu_for in service mode uses every sellable type and orders by category and name" do
+    company = companies(:resto_co)
+    company.update!(order_mode: :service)
+    product_types(:resto_co_counted).update!(in_menu: false)
+
+    list = Product.menu_for(company).to_a
+    assert_includes list.map(&:name), "Tacos al pastor", "en modo servicio no importa in_menu"
+    assert_equal list.sort_by { |p| [ p.category.to_s, p.name ] }.map(&:id), list.map(&:id)
+  end
 end

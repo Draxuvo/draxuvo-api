@@ -92,3 +92,6 @@ group :development, :test do
 end
 
 gem "barby", "~> 0.7"
+
+# Matriz del QR de las tarjetas de mesa (spec 059); Ruby puro, se dibuja con Prawn.
+gem "rqrcode_core", "~> 2.0"

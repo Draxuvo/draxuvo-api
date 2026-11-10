@@ -61,6 +61,13 @@ class Product < ApplicationRecord
     value == value.round ? value.to_i : value.to_f
   end
 
+  # Lo que ofrece el menú de la empresa (Tomar pedido y el menú público de la spec 059): disponible y, con mesas
+  # (modo pedido), solo tipos `in_menu` (spec 032); si no, todo lo que se vende. Una sola consulta para que nunca difieran.
+  def self.menu_for(company)
+    sold = company.order_mode_order? ? :on_menu : :sellable
+    company.products.available.public_send(sold).includes(:product_type).order(:category, :name)
+  end
+
   def barcode_codes = barcodes.map(&:code)
 
   # Reemplaza la lista de códigos (formulario del producto); quita los que ya no están y agrega los nuevos.
