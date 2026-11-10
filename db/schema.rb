@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_06_100300) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_10_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -244,8 +244,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_06_100300) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "menu_token"
+    t.datetime "menu_token_generated_at"
     t.index ["company_id", "name"], name: "index_dining_tables_on_company_id_and_name", unique: true
     t.index ["company_id"], name: "index_dining_tables_on_company_id"
+    t.index ["menu_token"], name: "index_dining_tables_on_menu_token", unique: true, where: "(menu_token IS NOT NULL)"
   end
 
   create_table "employees", force: :cascade do |t|

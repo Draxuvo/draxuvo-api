@@ -444,7 +444,20 @@ en:
       invalid_amount: "Invalid amount"
       waiter_not_member: "That person does not belong to the company"
       cancelled_item: "The item is already cancelled"
+      invalid_tables: "Some tables do not exist or are inactive"
+      no_tables: "There are no active tables to print"
+      too_many_tables: "You can print up to %{max} tables at a time"
     stock_note: "Check #%{id}"
+    # Tarjetas QR de las mesas (spec 059)
+    menu_cards:
+      title: "QR cards"
+      scan_hint: "Scan to see the menu"
+      table: "Table %{name}"
+  # Menú público de una mesa (spec 059)
+  public_menu:
+    errors:
+      menu_link_invalid: "This link is not valid."
+      menu_unavailable: "The menu is not available right now."
   # Operational alerts (spec 045)
   alerts:
     labels:

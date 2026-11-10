@@ -226,6 +226,10 @@ Rails.application.routes.draw do
         end
         resources :tables, only: :index
         resources :tables, only: %i[create update], controller: "dining_tables"
+        # Menú QR (spec 059): enlaces de las mesas, regenerar uno y PDF de tarjetas (dueño y administrador).
+        resources :menu_links, only: :index
+        post "tables/:id/menu_link", to: "menu_links#regenerate", as: :regenerate_menu_link
+        post "menu_cards/pdf",       to: "menu_cards#pdf",        as: :menu_cards_pdf
         resources :stock_alerts, only: :index
         resources :checks, only: %i[create show update] do
           get :waiters, on: :collection
@@ -271,6 +275,11 @@ Rails.application.routes.draw do
           post   "photos",                 to: "work_orders#create_photo", as: :create_photo
           delete "photos/:photo_id",       to: "work_orders#destroy_photo", as: :destroy_photo
         end
+      end
+
+      # Menú de una mesa para el comensal (spec 059): público, sin sesión ni X-Company-Id.
+      namespace :public do
+        get "menus/:token", to: "menus#show", as: :menu
       end
 
       # Spec 055 (H-61): lo que ninguna ruta anterior atiende responde JSON 404 en vez de la página HTML de Rails.
