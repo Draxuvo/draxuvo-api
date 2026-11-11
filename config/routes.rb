@@ -136,6 +136,8 @@ Rails.application.routes.draw do
           get  :template
         end
         resources :stock_movements, only: [ :index, :create ]
+        # Spec 061: foto para el menú QR (PUT sube o reemplaza, PATCH cambia el estilo, DELETE la quita).
+        resource :photo, only: [ :update, :destroy ], controller: "product_photos"
       end
 
       resources :product_imports, only: [ :index, :show ]

@@ -1,4 +1,5 @@
-# Menú público de una mesa (spec 059). Lista blanca exacta de specs/059-menu-qr-mesas/contracts/api.md: nada de ids,
+# Menú público de una mesa (spec 059). Lista blanca exacta de specs/059-menu-qr-mesas/contracts/api.md, más `photo` de
+# specs/061-imagenes-menu-qr/contracts/api.md: nada de ids,
 # SKU, códigos, costos, existencias, tipos, estaciones, cuentas ni personas (FR-013). Si hace falta un campo nuevo,
 # se agrega aquí a propósito y en la prueba de claves del controlador.
 class PublicMenuSerializer
@@ -27,7 +28,9 @@ class PublicMenuSerializer
       price_cents: (product.price.to_d * 100).round.to_i,
       # Ya resuelto como en el panel (spec 026): el del producto, si no el de su tipo.
       icon: product.icon.presence || product.product_type&.icon.presence,
-      sold_out: item.sold_out
+      sold_out: item.sold_out,
+      # Spec 061: estilo y URLs firmadas de la foto (sin ids ni el nombre original); null sin foto o si aún no está lista.
+      photo: product.photo_payload(public: true)
     }
   end
 end

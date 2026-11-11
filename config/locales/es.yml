@@ -229,6 +229,12 @@ es:
       taken: "El código %{barcode} ya pertenece a %{product}"
     menu:
       uncategorized: "Sin categoría"
+    photo:
+      invalid_type:  "Formato no admitido: usa JPG, PNG o WebP"
+      too_large:     "La foto pesa más de 10 MB"
+      missing:       "Elige una foto"
+      invalid_style: "El estilo de la foto debe ser tarjeta o miniatura"
+      not_found:     "El producto no tiene foto"
     import:
       stock_note: "Importación de Excel"
       interrupted: "La importación se interrumpió. Vuelve a subir el archivo."
