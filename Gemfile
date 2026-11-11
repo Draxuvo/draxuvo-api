@@ -79,7 +79,7 @@ gem "prawn-table"
 gem "roo"
 gem "caxlsx"
 
-gem "stripe", "~> 13.0"
+gem "stripe", "~> 20.0"
 
 # Image uploads
 gem "cloudinary", "~> 2.0"      # Opción 1: Cloudinary (25 GB free)
