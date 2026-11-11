@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_10_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_11_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -507,11 +507,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_10_100000) do
     t.bigint "product_type_id", null: false
     t.string "unit_key"
     t.string "icon"
+    t.string "photo_style", default: "card", null: false
+    t.bigint "photo_updated_by_id"
     t.index ["available"], name: "index_products_on_available"
     t.index ["category"], name: "index_products_on_category"
     t.index ["company_id"], name: "index_products_on_company_id"
     t.index ["product_type_id"], name: "index_products_on_product_type_id"
     t.index ["station_id"], name: "index_products_on_station_id"
+    t.check_constraint "photo_style::text = ANY (ARRAY['card'::character varying, 'thumbnail'::character varying]::text[])", name: "products_photo_style_check"
   end
 
   create_table "push_alert_notices", force: :cascade do |t|
@@ -1178,6 +1181,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_10_100000) do
   add_foreign_key "products", "companies"
   add_foreign_key "products", "product_types"
   add_foreign_key "products", "stations"
+  add_foreign_key "products", "users", column: "photo_updated_by_id", on_delete: :nullify
   add_foreign_key "push_alert_notices", "companies", on_delete: :cascade
   add_foreign_key "push_deliveries", "companies", on_delete: :cascade
   add_foreign_key "push_deliveries", "users", on_delete: :nullify

@@ -17,6 +17,12 @@ module Api
 
       private
 
+      # URLs del servicio de disco (desarrollo y pruebas) con el host y el puerto de la petición (spec 061). Van por
+      # separado: un `host` con puerto pierde contra el `port` de routes.default_url_options. En R2 no se usan.
+      def use_request_host_for_storage!
+        ActiveStorage::Current.url_options = { protocol: request.protocol, host: request.host, port: request.port }
+      end
+
       # Aplica orden a un scope. Solo permite columnas explícitamente declaradas.
       # Uso: apply_sort(scope, allowed: %i[name created_at])
       def apply_sort(scope, allowed:, default: :created_at, default_dir: :asc)

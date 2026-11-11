@@ -73,6 +73,29 @@ class Api::V1::ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Platillo", body.dig("product_type", "name")
   end
 
+  # Spec 061: solo el detalle del producto trae la foto del menú; las listas y el resto del panel no (FR-021).
+  test "show includes photo, null without one" do
+    product = @company.products.first
+    get "/api/v1/products/#{product.id}", headers: auth_headers(@owner, @company)
+    assert_response :ok
+    assert response.parsed_body.key?("photo")
+    assert_nil response.parsed_body["photo"]
+  end
+
+  test "lists, menu and lookups do not include photo" do
+    product = @company.products.first
+    file = Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/foto.png"), "image/png")
+    product.attach_photo!(file)
+    headers = auth_headers(@owner, @company)
+
+    get "/api/v1/products", headers: headers
+    assert response.parsed_body["results"].none? { |p| p.key?("photo") }
+    get "/api/v1/products/by_code", params: { code: product.sku }, headers: headers
+    assert_not response.parsed_body.key?("photo")
+    get "/api/v1/products/menu", headers: headers
+    assert_not_includes response.body, "\"photo\""
+  end
+
   def create_product(sku, stock:, min_stock:)
     # Un tipo que se cuenta (spec 016): solo esos tienen existencia, agotado y bajo inventario.
     counted = ProductTypes::Defaults.create_missing(@company).find_by!(kind: "counted_sold")

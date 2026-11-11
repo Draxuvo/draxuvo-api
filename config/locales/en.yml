@@ -229,6 +229,12 @@ en:
       taken: "The code %{barcode} already belongs to %{product}"
     menu:
       uncategorized: "Uncategorized"
+    photo:
+      invalid_type:  "Unsupported format: use JPG, PNG or WebP"
+      too_large:     "The photo is larger than 10 MB"
+      missing:       "Choose a photo"
+      invalid_style: "The photo style must be card or thumbnail"
+      not_found:     "The product has no photo"
     import:
       stock_note: "Excel import"
       interrupted: "The import was interrupted. Upload the file again."

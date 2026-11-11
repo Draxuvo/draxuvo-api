@@ -46,7 +46,9 @@ module Api
 
       # Con ProductSerializer: tipo, unidad y existencias como números (spec 016).
       def show
-        render json: ProductSerializer.new(@product).as_json
+        # Spec 061: el formulario del producto ve su foto del menú.
+        use_request_host_for_storage!
+        render json: ProductSerializer.new(@product, photo: true).as_json
       end
 
       def create

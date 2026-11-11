@@ -289,4 +289,18 @@ class Products::ImportServiceTest < ActiveSupport::TestCase
       assert_equal 2, Products::ImportService.count_rows(file)
     end
   end
+
+  # Spec 061 (FR-022): la importación no toca la foto del menú ni su estilo.
+  test "an import that updates a product keeps its menu photo and style" do
+    product = products(:one)
+    file = Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/foto.png"), "image/png")
+    product.attach_photo!(file, style: "thumbnail")
+    blob = product.reload.photo.blob
+
+    import(csv("#{product.sku},Contacto triple,,Eléctrico,99,50,30,5,yes"))
+    product.reload
+    assert_equal "Contacto triple", product.name
+    assert_equal blob, product.photo.blob
+    assert_equal "thumbnail", product.photo_style
+  end
 end

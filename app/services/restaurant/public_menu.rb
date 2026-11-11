@@ -44,7 +44,8 @@ module Restaurant
     # Mismo orden que Tomar pedido (categoría y nombre); los agotados al final de su categoría (FR-012a).
     def categories_for(company)
       availability = Availability.new(company)
-      Product.menu_for(company).group_by(&:category).map do |name, products|
+      # Con la foto y sus versiones precargadas (spec 061): saber si está lista y firmar sus URLs sin una consulta por producto.
+      Product.menu_for(company).with_photo_variants.group_by(&:category).map do |name, products|
         items = products.map { |product| Item.new(product: product, sold_out: availability.sold_out?(product)) }
         Category.new(name: name || I18n.t("products.menu.uncategorized"), items: items.sort_by { |item| item.sold_out ? 1 : 0 })
       end

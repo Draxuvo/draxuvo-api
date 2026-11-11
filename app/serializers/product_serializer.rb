@@ -1,12 +1,23 @@
 # app/serializers/product_serializer.rb
 class ProductSerializer
   # `availability` (Restaurant::Availability) se comparte entre productos para no repetir la consulta.
-  def initialize(product, availability: nil)
+  # `photo: true` agrega la foto del menú QR (spec 061); solo el detalle del producto la pide, el resto del panel no la
+  # muestra (FR-021) y así no firma URLs en las listas.
+  def initialize(product, availability: nil, photo: false)
     @product = product
     @availability = availability || Restaurant::Availability.new(product.company)
+    @photo = photo
   end
 
   def as_json(*)
+    json = attributes
+    json[:photo] = @product.photo_payload(public: false) if @photo
+    json
+  end
+
+  private
+
+  def attributes
     type = @product.product_type
     counted = type&.counted
     unit = @product.unit

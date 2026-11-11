@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Demo::PurgeTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   Demo::Scenarios.keys.each do |key|
     test "#{key} leaves zero residue after provisioning and purging" do
       before = table_row_counts
@@ -75,5 +77,17 @@ class Demo::PurgeTest < ActiveSupport::TestCase
 
     assert_operator blobs_before, :>=, 0
     assert_equal 0, ActiveStorage::Attachment.where(record_type: "WorkOrderAttachment").where.not(record_id: WorkOrderAttachment.select(:id)).count
+  end
+
+  # Spec 061: la foto de un producto de la demo se purga con la empresa, sin dejar archivos.
+  test "purging a demo purges its product photos" do
+    result = Demo::Provision.call(plan: "pro", scenario: "pro_restaurant", locale: "es")
+    product = result.company.products.first
+    file = Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/foto.png"), "image/png")
+    product.attach_photo!(file)
+    blob = product.reload.photo.blob
+
+    assert_enqueued_with(job: ActiveStorage::PurgeJob, args: [ blob ]) { Demo::Purge.call(result.company) }
+    assert_not ActiveStorage::Attachment.exists?(record_type: "Product", record_id: product.id)
   end
 end

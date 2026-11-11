@@ -16,6 +16,7 @@ module Api
         # GET /api/v1/public/menus/:token
         def show
           response.headers["Cache-Control"] = "no-store"
+          use_request_host_for_storage!
           result = ::Restaurant::PublicMenu.call(params[:token])
 
           case result.status

@@ -1,5 +1,7 @@
 # app/models/product.rb
 class Product < ApplicationRecord
+  include ProductPhoto
+
   belongs_to :company
   belongs_to :product_type
   has_many :stock_movements, dependent: :destroy
