@@ -4,6 +4,9 @@ class User < ApplicationRecord
   has_many :user_companies, dependent: :destroy
   has_many :companies, through: :user_companies
   has_many :push_devices, dependent: :delete_all
+  # Las respuestas guardadas de sus peticiones con Idempotency-Key no sirven sin él (spec 062: impedían borrar al dueño
+  # de una demo en la que se cobró algo y atoraban la limpieza de demos).
+  has_many :idempotency_keys, dependent: :delete_all
   has_secure_password
   has_many :created_work_orders, class_name: "WorkOrder", as: :created_by
   has_one :employee, dependent: :nullify

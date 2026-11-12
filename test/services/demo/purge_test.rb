@@ -90,4 +90,27 @@ class Demo::PurgeTest < ActiveSupport::TestCase
     assert_enqueued_with(job: ActiveStorage::PurgeJob, args: [ blob ]) { Demo::Purge.call(result.company) }
     assert_not ActiveStorage::Attachment.exists?(record_type: "Product", record_id: product.id)
   end
+
+
+  # Spec 062: el dueño de una demo en la que se cobró algo tiene llaves de idempotencia; antes impedían borrarlo
+  # (ForeignKeyViolation) y la demo nunca se purgaba.
+  test "a demo whose owner left idempotency keys is purged with them" do
+    result = Demo::Provision.call(plan: "basic", scenario: "basic_retail", locale: "es")
+    owner = result.user
+    2.times { |i| idempotency_key_for(owner, "cobro-#{i}") }
+
+    Demo::Purge.call(result.company)
+
+    assert_not Company.exists?(result.company.id)
+    assert_not User.exists?(owner.id)
+    assert_equal 0, IdempotencyKey.where(user_id: owner.id).count
+    assert result.session.reload.purged_at
+  end
+
+  private
+
+  def idempotency_key_for(user, key)
+    IdempotencyKey.create!(user: user, key: key, request_method: "POST", request_path: "/api/v1/sales/1/charge",
+                           response_status: 200, response_body: "{}")
+  end
 end

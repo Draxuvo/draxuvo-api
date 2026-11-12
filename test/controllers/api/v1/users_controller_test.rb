@@ -187,6 +187,19 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not User.exists?(email: "nueva@persona.test")
   end
 
+  # Spec 062: un usuario con llaves de idempotencia se puede borrar.
+  test "the super admin deletes a user that has idempotency keys" do
+    target = create_member(companies(:pro_co), role: :admin)
+    IdempotencyKey.create!(user: target, key: "cobro-1", request_method: "POST", request_path: "/api/v1/sales/1/charge",
+                           response_status: 200, response_body: "{}")
+
+    delete "#{BASE}/#{target.id}", headers: super_admin_headers
+
+    assert_response :ok
+    assert_not User.exists?(target.id)
+    assert_equal 0, IdempotencyKey.where(user_id: target.id).count
+  end
+
   private
 
   def super_admin_headers

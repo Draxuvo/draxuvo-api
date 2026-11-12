@@ -166,4 +166,21 @@ class UserTest < ActiveSupport::TestCase
     assert_includes User.managing, nobody
     assert_equal 1, User.managing.where(id: mixed.id).count
   end
+
+
+  # Spec 062: borrar a un usuario se lleva sus llaves de idempotencia y deja las de los demás.
+  test "destroying a user deletes its idempotency keys only" do
+    user = build_user(email: "con-llaves@example.test")
+    user.save!
+    other = users(:pro_staff)
+    [ user, other ].each do |owner|
+      IdempotencyKey.create!(user: owner, key: "k-#{owner.id}", request_method: "POST", request_path: "/api/v1/x",
+                             response_status: 200, response_body: "{}")
+    end
+
+    user.destroy!
+
+    assert_equal 0, IdempotencyKey.where(user_id: user.id).count
+    assert_equal 1, IdempotencyKey.where(user_id: other.id).count
+  end
 end
