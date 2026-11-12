@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_11_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_12_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -230,6 +230,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_11_100000) do
     t.datetime "purged_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "purge_failed_at"
     t.index ["company_id"], name: "index_demo_sessions_on_company_id"
     t.index ["created_at"], name: "index_demo_sessions_on_created_at"
     t.index ["demo_invite_id"], name: "index_demo_sessions_on_demo_invite_id"
@@ -1148,7 +1149,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_11_100000) do
   add_foreign_key "dining_tables", "companies"
   add_foreign_key "employees", "companies"
   add_foreign_key "employees", "users"
-  add_foreign_key "idempotency_keys", "users"
+  add_foreign_key "idempotency_keys", "users", on_delete: :cascade
   add_foreign_key "kitchen_orders", "checks"
   add_foreign_key "kitchen_orders", "companies"
   add_foreign_key "kitchen_orders", "users", column: "sent_by_id"

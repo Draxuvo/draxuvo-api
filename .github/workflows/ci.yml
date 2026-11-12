@@ -7,7 +7,7 @@ on:
 
 jobs:
   scan_ruby:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -23,7 +23,7 @@ jobs:
         run: bin/brakeman --no-pager
 
   scan_js:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -39,7 +39,7 @@ jobs:
         run: bin/importmap audit
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
         run: bin/rubocop -f github
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -101,7 +101,7 @@ jobs:
           if-no-files-found: ignore
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     services:
@@ -211,7 +211,7 @@ jobs:
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [scan_ruby, scan_js, lint, test, e2e]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: deploy-production

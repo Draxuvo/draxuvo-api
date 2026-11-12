@@ -21,6 +21,9 @@ class DemoSession < ApplicationRecord
   scope :active, -> { where(purged_at: nil, ended_at: nil).where("expires_at > ?", Time.current) }
   # Lo que le toca a la purga: vencida o terminada y todavía sin purgar.
   scope :purgeable, -> { where(purged_at: nil).where("expires_at <= :now OR ended_at IS NOT NULL", now: Time.current) }
+  # Orden de la purga (spec 062): primero las que nunca fallaron, por vencimiento; al final las que fallaron, la que
+  # falló hace más primero. Una demo que falla siempre rota al final y no ocupa el lote de las sanas.
+  scope :purge_order, -> { order(Arel.sql("purge_failed_at ASC NULLS FIRST"), :expires_at) }
 
   def expired? = expires_at <= Time.current
 
