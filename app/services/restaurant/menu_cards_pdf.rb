@@ -5,6 +5,8 @@ module Restaurant
   # Tarjetas QR de las mesas (spec 059): hoja carta partida en 2 × 2 (≈ 10.8 × 14 cm por tarjeta) con líneas de corte.
   # Cada tarjeta lleva el nombre del negocio, el QR con el enlace de la mesa, el nombre de la mesa y el texto de ayuda,
   # sin marca Draxuvo (FR-026). Recibe mesas que ya tienen token: el controlador lo asegura y valida la lista.
+  # Spec 065: con logo de la empresa (spec 063) se dibuja arriba y el nombre va debajo, más chico; para que quepa sin
+  # achicar el QR se acortan las separaciones. Sin logo, o si no se puede leer, la tarjeta queda como antes.
   class MenuCardsPdf
     MM = 72 / 25.4
     PAGE_WIDTH = 612.0  # carta
@@ -27,7 +29,25 @@ module Restaurant
     NAME_HEIGHT = TABLE_SIZE + 6
     HINT_GAP = 4
     HINT_HEIGHT = HINT_SIZE + 6
-    CONTENT_HEIGHT = BUSINESS_HEIGHT + QR_GAP + QR_SIZE + NAME_GAP + NAME_HEIGHT + HINT_GAP + HINT_HEIGHT
+    # Con logo: franja del logo, nombre más chico debajo y separaciones de 3 mm alrededor del QR (research R1).
+    LOGO_HEIGHT = 19 * MM
+    LOGO_GAP = 3
+    LOGO_BUSINESS_SIZE = 12
+    LOGO_BUSINESS_HEIGHT = 20
+    LOGO_QR_GAP = 3 * MM
+    LOGO_NAME_GAP = 3 * MM
+
+    Layout = Struct.new(:logo, :business_height, :business_size, :qr_gap, :name_gap, keyword_init: true) do
+      def header_height = (logo ? LOGO_HEIGHT + LOGO_GAP : 0) + business_height
+
+      def content_height = header_height + qr_gap + QR_SIZE + name_gap + NAME_HEIGHT + HINT_GAP + HINT_HEIGHT
+    end
+
+    PLAIN = Layout.new(logo: false, business_height: BUSINESS_HEIGHT, business_size: BUSINESS_SIZE, qr_gap: QR_GAP, name_gap: NAME_GAP).freeze
+    WITH_LOGO = Layout.new(logo: true, business_height: LOGO_BUSINESS_HEIGHT, business_size: LOGO_BUSINESS_SIZE,
+                           qr_gap: LOGO_QR_GAP, name_gap: LOGO_NAME_GAP).freeze
+
+    def self.content_height(logo:) = (logo ? WITH_LOGO : PLAIN).content_height
 
     def initialize(company:, tables:)
       @company = company
@@ -37,6 +57,8 @@ module Restaurant
     end
 
     def call
+      @logo = read_logo
+      @layout = @logo ? WITH_LOGO : PLAIN
       pdf = Prawn::Document.new(page_size: [ PAGE_WIDTH, PAGE_HEIGHT ], margin: 0,
                                 info: { Title: I18n.t("restaurant.menu_cards.title") })
       @tables.each_slice(PER_PAGE).with_index do |page_tables, page|
@@ -66,18 +88,26 @@ module Restaurant
       width = CARD_WIDTH - (2 * PADDING)
       # El bloque va centrado en vertical dentro del área imprimible de la tarjeta.
       inner_height = CARD_HEIGHT - (2 * PADDING)
-      top = PAGE_HEIGHT - (slot / COLUMNS) * CARD_HEIGHT - PADDING - ((inner_height - CONTENT_HEIGHT) / 2)
+      layout = @layout
+      top = PAGE_HEIGHT - (slot / COLUMNS) * CARD_HEIGHT - PADDING - ((inner_height - layout.content_height) / 2)
+
+      business_top = top
+      if layout.logo
+        draw_logo(pdf, left, top, width)
+        business_top = top - LOGO_HEIGHT - LOGO_GAP
+      end
 
       pdf.fill_color "141414"
       pdf.font("Helvetica", style: :bold) do
-        pdf.text_box latin(@company.name), at: [ left, top ], width: width, height: BUSINESS_HEIGHT, size: BUSINESS_SIZE,
-                     align: :center, valign: :center, overflow: :shrink_to_fit, min_font_size: 9, disable_wrap_by_char: true
+        pdf.text_box latin(@company.name), at: [ left, business_top ], width: width, height: layout.business_height,
+                     size: layout.business_size,
+                     align: :center, valign: :center, overflow: :shrink_to_fit, min_font_size: 8, disable_wrap_by_char: true
       end
 
-      qr_top = top - BUSINESS_HEIGHT - QR_GAP
+      qr_top = top - layout.header_height - layout.qr_gap
       draw_qr(pdf, table.menu_url, left + ((width - QR_SIZE) / 2), qr_top)
 
-      name_top = qr_top - QR_SIZE - NAME_GAP
+      name_top = qr_top - QR_SIZE - layout.name_gap
       pdf.font("Helvetica", style: :bold) do
         pdf.text_box latin(self.class.table_label(table.name)), at: [ left, name_top ], width: width, height: NAME_HEIGHT,
                      size: TABLE_SIZE,
@@ -90,6 +120,21 @@ module Restaurant
                      width: width, height: HINT_HEIGHT, size: HINT_SIZE, align: :center, overflow: :shrink_to_fit
       end
       pdf.fill_color "000000"
+    end
+
+    # El logo (versión para imprimir de la spec 063) centrado en su franja, sin deformarse ni recortarse.
+    def draw_logo(pdf, left, top, width)
+      pdf.bounding_box([ left, top ], width: width, height: LOGO_HEIGHT) do
+        pdf.image StringIO.new(@logo), fit: [ width, LOGO_HEIGHT ], position: :center, vposition: :center
+      end
+    end
+
+    # Se lee una vez por PDF. Si no se puede (almacenamiento caído, versión sin preparar), las tarjetas salen sin logo.
+    def read_logo
+      @company.logo_print_io&.read
+    rescue StandardError => e
+      Rails.logger.warn("[MenuCardsPdf] company=#{@company.id} logo skipped: #{e.class}: #{e.message}")
+      nil
     end
 
     # Cada módulo oscuro es un cuadro (vectorial, nítido en cualquier impresora); los oscuros seguidos de una fila se
