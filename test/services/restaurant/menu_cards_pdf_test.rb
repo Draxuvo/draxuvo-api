@@ -64,4 +64,57 @@ class Restaurant::MenuCardsPdfTest < ActiveSupport::TestCase
     table = @company.dining_tables.create!(name: "Nueva")
     assert_raises(ArgumentError) { Restaurant::MenuCardsPdf.new(company: @company, tables: [ table ]) }
   end
+
+  # Spec 065: con logo (spec 063) cada tarjeta lo muestra arriba; el QR no cambia.
+  def attach_logo
+    file = Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/logo.png"), "image/png", original_filename: "logo.png")
+    @company.attach_logo!(file)
+    @company.reload
+  end
+
+  def image_count(bytes) = bytes.b.scan("/Subtype /Image").size
+
+  # Rectángulos del QR de la tarjeta de arriba a la izquierda (x < media hoja, y > media hoja).
+  def first_qr_bounds(bytes)
+    rects = bytes.b.scan(/^(-?[\d.]+) (-?[\d.]+) ([\d.]+) ([\d.]+) re$/).map { |r| r.map(&:to_f) }
+                 .select { |x, y, w, h| x < 306 && y > 396 && w < 120 && h < 10 }
+    xs = rects.map { |x, _y, w, _h| [ x, x + w ] }.flatten
+    ys = rects.map { |_x, y, _w, h| [ y, y + h ] }.flatten
+    { width: xs.max - xs.min, height: ys.max - ys.min, top: ys.max }
+  end
+
+  test "without a logo the cards have no image (as before)" do
+    assert_equal 0, image_count(render_pdf)
+  end
+
+  test "with a logo every sheet draws it and keeps the business, the table and the help text" do
+    attach_logo
+    bytes = render_pdf
+    assert_operator image_count(bytes), :>=, 1
+    assert_equal 4, bytes.b.scan(/\/I\d+ Do/).size, "el logo se dibuja en las 4 tarjetas"
+    text = pdf_text(bytes)
+    assert_equal 4, text.scan("Restaurante Prueba").size
+    assert_equal 4, text.scan("Escanea para ver el menú").size
+  end
+
+  test "if the logo cannot be read the cards are generated without it" do
+    attach_logo
+    @company.stub(:logo_print_io, -> { raise "R2 caído" }) do
+      bytes = render_pdf
+      assert bytes.start_with?("%PDF")
+      assert_equal 0, image_count(bytes)
+    end
+  end
+
+  test "with a logo the QR keeps its size and everything fits inside the 10 mm margin" do
+    plain = first_qr_bounds(render_pdf)
+    attach_logo
+    with_logo = first_qr_bounds(render_pdf)
+    assert_in_delta plain[:width], with_logo[:width], 0.01
+    assert_in_delta plain[:height], with_logo[:height], 0.01
+
+    usable = Restaurant::MenuCardsPdf::CARD_HEIGHT - (2 * Restaurant::MenuCardsPdf::PADDING)
+    assert_operator Restaurant::MenuCardsPdf.content_height(logo: true), :<=, usable
+    assert_operator Restaurant::MenuCardsPdf.content_height(logo: false), :<=, usable
+  end
 end
