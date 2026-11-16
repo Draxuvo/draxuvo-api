@@ -20,7 +20,9 @@ class UserSerializer < ActiveModel::Serializer
         # el personal, que no puede leer la suscripción, sepa qué hay sin probar rutas que responden 403.
         modules: company.active_modules.map(&:to_s),
         # Spec 058: «Cobro solo por jefes». Solo decide si el panel muestra el contador «Por cobrar»; la regla vive en la API.
-        boss_only_charge: company.boss_only_charge }
+        boss_only_charge: company.boss_only_charge,
+        # Spec 063: logo de la empresa (redirección sin caducidad, para la sesión guardada) o null.
+        logo_url: company.logo_redirect_url }
     end
   end
 

@@ -42,6 +42,8 @@ Rails.application.routes.draw do
         get   :charge_policy, to: "company_charge_policies#show"
         patch :charge_policy, to: "company_charge_policies#update"
         patch :order_mode, to: "company_order_modes#update"
+        # Spec 063: logo propio de la empresa (dueño, administrador y super admin).
+        resource :logo, only: %i[update destroy], controller: "company_logos"
         resources :members, controller: "company_members", param: :user_id, only: [ :index, :create, :update, :destroy ]
         resources :branches, only: [ :index, :create ]
       end

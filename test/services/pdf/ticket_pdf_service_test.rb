@@ -243,4 +243,44 @@ class Pdf::TicketPdfServiceTest < ActiveSupport::TestCase
     bytes = Pdf::TicketPdfService.new(tickets(:pro_paid_ticket)).generate
     assert_equal 1, bytes.b.scan(%r{/Type /Page$|/Type /Page\b(?!s)}).size
   end
+
+  # Spec 063 (FR-017): el logo de la empresa en el encabezado del ticket, en carta y en el rollo térmico.
+  def attach_logo(company)
+    file = Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/logo.png"), "image/png", original_filename: "logo.png")
+    company.attach_logo!(file, user: nil)
+  end
+
+  def image_count(bytes) = bytes.b.scan("/Subtype /Image").size
+
+  test "without a logo the ticket has no image besides the folio barcode" do
+    assert_equal 0, image_count(pdf_for(tickets(:pro_paid_ticket)))
+  end
+
+  test "with a logo the a4 ticket draws it in the header" do
+    ticket = tickets(:pro_paid_ticket)
+    attach_logo(ticket.company)
+    bytes = pdf_for(ticket.reload)
+    assert_operator image_count(bytes), :>=, 1
+    assert_includes pdf_text(bytes), "SERVICIOS PRO"
+  end
+
+  test "with a logo the thermal tickets of 58 and 80 mm draw it too" do
+    ticket = sale_ticket
+    attach_logo(ticket.company)
+    %w[thermal58 thermal80].each do |format|
+      bytes = Pdf::TicketPdfService.new(ticket.reload, format: format).generate
+      assert_operator image_count(bytes), :>=, 1, format
+    end
+  end
+
+  test "if the logo cannot be read the ticket is generated without it" do
+    ticket = tickets(:pro_paid_ticket)
+    attach_logo(ticket.company)
+    company = ticket.reload.company
+    company.stub(:logo_print_io, -> { raise "R2 caído" }) do
+      bytes = Pdf::TicketPdfService.new(ticket).generate
+      assert bytes.start_with?("%PDF")
+      assert_equal 0, image_count(bytes)
+    end
+  end
 end

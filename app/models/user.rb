@@ -98,7 +98,8 @@ class User < ApplicationRecord
 
   # Membresías en orden de alta; la primera define el rol "por compatibilidad" de las respuestas.
   def ordered_memberships
-    user_companies.includes(:company).order(:id)
+    # Spec 063: el logo de cada empresa sale en la sesión; se precarga para no consultar por empresa.
+    user_companies.includes(company: { logo_attachment: :blob }).order(:id)
   end
 
   def compat_role
