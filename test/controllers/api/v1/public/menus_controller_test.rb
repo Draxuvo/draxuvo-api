@@ -29,7 +29,7 @@ class Api::V1::Public::MenusControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
 
     assert_equal %w[business categories table], body.keys.sort
-    assert_equal %w[name], body["business"].keys
+    assert_equal %w[logo_url name], body["business"].keys.sort
     assert_equal %w[name], body["table"].keys
     body["categories"].each do |category|
       assert_equal %w[items name], category.keys.sort
@@ -163,5 +163,27 @@ class Api::V1::Public::MenusControllerTest < ActionDispatch::IntegrationTest
       open_menu(headers: { "Origin" => "https://sitio-ajeno.example" })
       assert_nil response.headers["Access-Control-Allow-Origin"]
     end
+  end
+
+  # Spec 063 (FR-018): el logo de la empresa en el encabezado del menú.
+  test "business logo_url is null without a logo or while it is being prepared" do
+    open_menu
+    assert_nil response.parsed_body.dig("business", "logo_url")
+
+    file = Rack::Test::UploadedFile.new(FILES.join("logo.png"), "image/png", original_filename: "Logo de Juan.png")
+    @table.company.attach_logo!(file)
+    open_menu
+    assert_nil response.parsed_body.dig("business", "logo_url")
+  end
+
+  test "business logo_url is a signed url of the prepared version, without ids nor the original name" do
+    file = Rack::Test::UploadedFile.new(FILES.join("logo.png"), "image/png", original_filename: "Logo de Juan.png")
+    @table.company.attach_logo!(file)
+    perform_enqueued_jobs
+    open_menu
+    url = response.parsed_body.dig("business", "logo_url")
+    assert_match %r{logo\.webp}, url
+    assert_not_includes url, "Juan"
+    assert_not_includes url, "redirect"
   end
 end

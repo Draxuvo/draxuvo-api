@@ -1,5 +1,7 @@
 # app/models/company.rb
 class Company < ApplicationRecord
+  include CompanyLogo
+
   has_many :user_companies, dependent: :destroy
   has_many :users, through: :user_companies
   has_many :attendances, dependent: :destroy

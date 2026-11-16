@@ -43,4 +43,18 @@ class Api::V1::CompaniesControllerTest < ActionDispatch::IntegrationTest
     post "/api/v1/companies", params: { company: { name: "Otra" } }, headers: auth_headers(owner), as: :json
     assert_response :forbidden
   end
+
+  # Spec 063 (US3): el super admin ve el logo de cada empresa en la lista.
+  test "the list carries the logo of each company, or null" do
+    company = companies(:resto_co)
+    file = Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/logo.png"), "image/png", original_filename: "logo.png")
+    company.attach_logo!(file, user: users(:resto_owner))
+
+    get "/api/v1/companies", params: { page_size: 100 }, headers: as_super_admin
+    assert_response :ok
+    rows = json["results"].index_by { |c| c["id"] }
+    assert_match %r{/rails/active_storage/representations/redirect/}, rows[company.id].dig("logo", "url")
+    assert_equal users(:resto_owner).id, rows[company.id].dig("logo", "updated_by", "id")
+    assert_nil rows[companies(:pro_co).id]["logo"]
+  end
 end

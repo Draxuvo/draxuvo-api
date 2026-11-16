@@ -22,6 +22,9 @@ module Pdf
     A4_BARCODE_WIDTH = 220
     A4_BARCODE_HEIGHT = 40
     THERMAL_BARCODE_HEIGHT = 32
+    # Logo de la empresa (spec 063): recuadro blanco en la franja azul (carta) y alto máximo en el rollo térmico.
+    A4_LOGO_BOX = [ 140, 54 ].freeze
+    THERMAL_LOGO_MAX_MM = 18
 
     def initialize(ticket, format: "a4")
       raise ArgumentError, "unknown ticket format: #{format.inspect}" unless FORMATS.include?(format.to_s)
@@ -54,15 +57,54 @@ module Pdf
     private
 
     def draw_header(pdf)
+      top = pdf.cursor
       pdf.fill_color PRIMARY
-      pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, 70
+      pdf.fill_rectangle [ 0, top ], pdf.bounds.width, 70
+      text_width = pdf.bounds.width - 30
+      text_width -= A4_LOGO_BOX[0] + 10 if draw_header_logo(pdf, top)
       pdf.fill_color WHITE
-      pdf.bounding_box([ 15, pdf.cursor - 12 ], width: pdf.bounds.width - 30) do
+      pdf.bounding_box([ 15, top - 12 ], width: text_width) do
         pdf.text @company.name.upcase, size: 18, style: :bold
         pdf.text(@sale ? I18n.t("sale.pdf.title") : "TICKET DE COBRO", size: 10)
       end
       pdf.fill_color BLACK
       pdf.move_down 85
+    end
+
+    # Spec 063 (FR-017): el logo vigente de la empresa a la derecha de la franja, sobre un recuadro blanco (puede ser
+    # oscuro). Devuelve si lo dibujó; sin logo, o si no se pudo leer, el encabezado queda como antes.
+    def draw_header_logo(pdf, top)
+      io = logo_io
+      return false unless io
+
+      box_w, box_h = A4_LOGO_BOX
+      x = pdf.bounds.width - box_w - 8
+      y = top - (70 - box_h) / 2.0
+      pdf.fill_color WHITE
+      pdf.fill_rounded_rectangle [ x, y ], box_w, box_h, 6
+      pdf.bounding_box([ x + 4, y - 4 ], width: box_w - 8, height: box_h - 8) do
+        pdf.image io, fit: [ box_w - 8, box_h - 8 ], position: :center, vposition: :center
+      end
+      true
+    rescue StandardError => e
+      Rails.logger.warn("[TicketPdf] ticket=#{@ticket.id} logo skipped: #{e.class}: #{e.message}")
+      false
+    end
+
+    def draw_thermal_logo(pdf)
+      io = logo_io
+      return unless io
+
+      pdf.image io, fit: [ pdf.bounds.width, THERMAL_LOGO_MAX_MM * POINTS_PER_MM ], position: :center
+      pdf.move_down 4
+    rescue StandardError => e
+      Rails.logger.warn("[TicketPdf] ticket=#{@ticket.id} logo skipped: #{e.class}: #{e.message}")
+    end
+
+    # Una sola descarga por PDF: el térmico dibuja dos veces (medida y página real).
+    def logo_io
+      @logo_bytes = @company.logo_print_io&.read unless defined?(@logo_bytes)
+      @logo_bytes && StringIO.new(@logo_bytes)
     end
 
     def draw_info(pdf)
@@ -225,6 +267,7 @@ module Pdf
     end
 
     def draw_thermal(pdf)
+      draw_thermal_logo(pdf)
       pdf.text safe(@company.name.upcase), size: 11, style: :bold, align: :center
       pdf.text(@sale ? I18n.t("sale.pdf.title") : "TICKET", size: 8, align: :center)
       pdf.move_down 4

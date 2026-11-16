@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_12_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_16_024226) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -196,7 +196,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_100000) do
     t.bigint "barcode_sequence", default: 0, null: false
     t.boolean "demo", default: false, null: false
     t.boolean "boss_only_charge", default: false, null: false
+    t.bigint "logo_updated_by_id"
+    t.datetime "logo_updated_at"
     t.index ["demo"], name: "index_companies_on_demo_true", where: "demo"
+    t.index ["logo_updated_by_id"], name: "index_companies_on_logo_updated_by_id"
     t.index ["parent_company_id"], name: "index_companies_on_parent_company_id"
   end
 
@@ -1142,6 +1145,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_100000) do
   add_foreign_key "checks", "users", column: "charge_requested_by_id"
   add_foreign_key "checks", "users", column: "opened_by_id"
   add_foreign_key "checks", "users", column: "waiter_id"
+  add_foreign_key "companies", "users", column: "logo_updated_by_id", on_delete: :nullify
   add_foreign_key "demo_invites", "users", column: "created_by_id"
   add_foreign_key "demo_sessions", "companies", on_delete: :nullify
   add_foreign_key "demo_sessions", "demo_invites"

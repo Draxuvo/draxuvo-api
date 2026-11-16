@@ -1,5 +1,5 @@
 # Menú público de una mesa (spec 059). Lista blanca exacta de specs/059-menu-qr-mesas/contracts/api.md, más `photo` de
-# specs/061-imagenes-menu-qr/contracts/api.md: nada de ids,
+# specs/061-imagenes-menu-qr/contracts/api.md y `business.logo_url` de specs/063-logo-empresa/contracts/api.md: nada de ids,
 # SKU, códigos, costos, existencias, tipos, estaciones, cuentas ni personas (FR-013). Si hace falta un campo nuevo,
 # se agrega aquí a propósito y en la prueba de claves del controlador.
 class PublicMenuSerializer
@@ -9,7 +9,8 @@ class PublicMenuSerializer
 
   def as_json(*)
     {
-      business: { name: @result.company.name },
+      # Spec 063: logo de la empresa con URL firmada que caduca (como las fotos), o null sin logo o mientras se prepara.
+      business: { name: @result.company.name, logo_url: @result.company.logo_public_url },
       table: { name: @result.table.name },
       categories: @result.categories.map do |category|
         { name: category.name, items: category.items.map { |item| item_json(item) } }

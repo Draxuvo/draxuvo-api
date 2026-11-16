@@ -294,6 +294,11 @@ es:
 
   companies:
     not_found: "Empresa no encontrada"
+    logo:
+      missing: "Elige una imagen para el logo"
+      invalid_type: "El archivo debe ser JPG, PNG o WebP"
+      too_large: "El logo no puede pasar de 5 MB"
+      not_found: "La empresa no tiene logo"
 
   subscription:
     trial_started: "Período de prueba iniciado (30 días)"

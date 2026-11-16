@@ -120,6 +120,8 @@ Uses Rails 8 defaults: **Solid Queue** for jobs, **Solid Cache** for caching, **
 
 Active Storage; dev uses local disk. Production supports Cloudinary or S3-compatible (AWS, Backblaze, Supabase) via env vars. Order photos are `WorkOrderAttachment` (`has_one_attached :file`; images only, 10 MB, 10 per order).
 
+Company logo (spec 063): concern `CompanyLogo` on `Company` (`has_one_attached :logo`, preprocessed variants `display` WebP 512 and `print` PNG 600, no metadata, no crop; JPG/PNG/WebP up to 5 MB). `PUT|DELETE /company/logo` (`CompanyLogosController`, `require_boss!`); `logo_redirect_url` (session, never expires), `logo_public_url` (public menu, signed 1 h), `logo_payload` (super admin list) and `logo_print_io` (ticket PDF; errors are logged and the PDF is generated without the logo).
+
 ### Deployment
 
 Dockerized with Kamal for orchestration. Also has `render.yaml` for Render.com deployment. Health check at `/up`.
