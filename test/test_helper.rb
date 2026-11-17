@@ -17,6 +17,10 @@ module ActiveSupport
     # inician sesión con la misma cuenta se acumulan y dependen de cuántos workers haya.
     setup { Api::V1::AuthenticationController::RATE_LIMIT_STORE.clear }
 
+    # `ApplicationController#set_locale` asigna `I18n.locale` en el hilo de la prueba: una petición con
+    # `Accept-Language: en` dejaba el inglés puesto para las pruebas siguientes del mismo proceso (spec 067).
+    setup { I18n.locale = I18n.default_locale }
+
     include StripeHelpers
     include CacheHelpers
     include EnvHelpers
