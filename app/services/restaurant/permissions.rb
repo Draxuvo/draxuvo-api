@@ -39,6 +39,9 @@ module Restaurant
       context.boss? || context.waiter_of?(item.check)
     end
 
+    # Se puede liberar mientras no quede un renglón vigente: borradores y cancelados no cuentan (spec 068).
+    def releasable?(check) = check.check_items.counted.none?
+
     def deliver_item?(item, _context) = item.status_ready?
 
     def check_actions(check, context)
@@ -49,7 +52,7 @@ module Restaurant
       actions << "pay" if pay?(check, context)
       actions << "request_charge" if request_charge?(check, context)
       actions << "reassign" if context.boss?
-      actions << "cancel" if check.check_items.where.not(status: :draft).none? && (context.boss? || context.waiter_of?(check))
+      actions << "cancel" if releasable?(check) && (context.boss? || context.waiter_of?(check))
       actions << "close" if check.total.zero? && check.check_items.counted.none? && context.boss? && check.check_items.status_draft.none?
       actions
     end

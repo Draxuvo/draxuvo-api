@@ -55,4 +55,15 @@ class Restaurant::PermissionsTest < ActiveSupport::TestCase
     assert_includes Restaurant::Permissions.check_actions(empty, @other), "cancel"
     assert_empty Restaurant::Permissions.check_actions(checks(:closed_check), @boss)
   end
+
+  test "a check with a live item cannot be released, one with everything cancelled can" do
+    assert_not Restaurant::Permissions.releasable?(checks(:open_check))
+    assert_not_includes Restaurant::Permissions.check_actions(checks(:open_check), @boss), "cancel"
+
+    check = checks(:takeout_check)
+    check.check_items.create!(company: check.company, product: products(:resto_agua), name: "Agua", unit_price: 25, quantity: 1)
+      .update_columns(status: CheckItem.statuses[:cancelled])
+    assert Restaurant::Permissions.releasable?(check)
+    assert_includes Restaurant::Permissions.check_actions(check, @boss), "cancel"
+  end
 end

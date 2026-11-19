@@ -114,6 +114,23 @@ class Api::V1::Restaurant::ChecksControllerTest < ActionDispatch::IntegrationTes
     assert_equal "has_sent_items", response.parsed_body.dig("error", "details", "code")
   end
 
+  test "a check whose sent items are all cancelled can be released, and its items are kept" do
+    check = @company.checks.create!(dining_table: dining_tables(:table_4), opened_by: users(:resto_waiter),
+                                    waiter: users(:resto_waiter), opened_at: Time.current)
+    item = check.check_items.create!(company: @company, product: products(:resto_agua), name: "Agua", unit_price: 25, quantity: 1)
+    item.update_columns(status: CheckItem.statuses[:cancelled], cancelled_at: Time.current, cancel_reason: "N")
+
+    get "/api/v1/restaurant/checks/#{check.id}", headers: headers_for(users(:resto_owner))
+    assert_includes response.parsed_body["allowed_actions"], "cancel"
+
+    post "/api/v1/restaurant/checks/#{check.id}/cancel", headers: headers_for(users(:resto_owner)), params: { reason: "Prueba" }, as: :json
+
+    assert_response :ok
+    assert_equal "cancelled", response.parsed_body["status"]
+    assert_equal 1, check.check_items.reload.count
+    assert_not dining_tables(:table_4).occupied?
+  end
+
   test "another waiter cannot cancel an empty check that is not theirs" do
     post "/api/v1/restaurant/checks/#{checks(:takeout_check).id}/cancel", headers: headers_for(users(:resto_waiter)), as: :json
 
