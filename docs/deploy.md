@@ -15,10 +15,12 @@ Runbook de la API de Draxuvo. Spec: `specs/012-deploy-produccion/` del workspace
 | Correo | Resend, dominio `draxuvo.com` | remitente `Draxuvo <no-reply@draxuvo.com>` |
 | Cobros | Stripe, modo prueba al lanzar | webhook → `https://api.draxuvo.com/api/v1/stripe/webhooks` |
 
-Las variables viven en Render, nunca en el repo: las comunes de la API y el worker en el grupo de variables
-**`draxuvo-api-shared`** (Render → Environment Groups), ligado a los dos, y en cada servicio solo las suyas (`WEB_CONCURRENCY`
-en la API; `SOLID_QUEUE_SUPERVISOR_MODE=async` y `RAILS_MAX_THREADS=10` en el worker). Una variable del servicio gana sobre la
-del grupo: no dejes copias. Lista y motivos: `specs/064-separar-solid-queue/contracts/render-services.md` del workspace. Si falta alguna obligatoria, la API no
+Las variables viven en Render, nunca en el repo, y la **API es la única fuente**: se cambian en `draxuvo-api` → Environment.
+El worker copia de ahí las que comparte (`fromService` en `render.yaml`) y solo define las suyas (`SOLID_QUEUE_SUPERVISOR_MODE=async`,
+`RAILS_MAX_THREADS=10`). La copia se refresca **en cada sync del Blueprint**, no al cambiar la variable: después de cambiar una
+compartida en la API, sincroniza el Blueprint (abajo) y despliega el worker. Si agregas a la API una variable que un trabajo usa,
+agrégala también al worker en `render.yaml`. Lista y motivos: `specs/064-separar-solid-queue/contracts/render-services.md` del
+workspace. Si falta alguna obligatoria, la API no
 arranca y el log dice cuáles (`RequiredEnv::MissingError`, `config/initializers/required_env.rb`).
 
 ## Desplegar
@@ -104,8 +106,8 @@ La contraseña inicial salió de un generador aleatorio de 28 caracteres, no de 
   `esperando migraciones…`), `SolidQueue-1.4.x Started Supervisor(async)`, y después cada trabajo con `Performing` / `Performed`.
   Si faltan variables, no arranca y el log dice `RequiredEnv::MissingError`.
 - **Misma llave en los dos:** la API y el worker escriben al arrancar `[boot] secret_key_base sha256:<8 hex>`; deben coincidir.
-  Si no, uno tiene otra `SECRET_KEY_BASE` (sesiones inválidas y la llave de WhatsApp ilegible): revisa que no esté duplicada en
-  el servicio fuera del grupo.
+  Si no, el worker tiene una copia vieja de `SECRET_KEY_BASE` (sesiones inválidas y la llave de WhatsApp ilegible): sincroniza
+  el Blueprint y despliega el worker.
 - **Memoria:** MCP de Render, `get_metrics` con `memory_usage` de cada servicio; `list_events` muestra `server_failed`
   (`oomKilled`) si alguno se queda sin memoria.
 - **web y ui:** Cloudflare → Workers → `draxuvo-web` / `draxuvo-ui` → **Observability** (activada en la config).
@@ -203,16 +205,20 @@ con la imagen de producción) y la API sola usa ~160 MB.
 Corte en producción, en este orden; cada paso solo si el anterior se verificó (detalle y verificaciones en
 `specs/064-separar-solid-queue/quickstart.md` del workspace):
 
-1. **Antes de fusionar (dueño):** crear el grupo `draxuvo-api-shared` con las variables comunes (copiando `SECRET_KEY_BASE` tal
-   cual) y ligarlo a `draxuvo-api` (quitar del servicio las que pasaron al grupo; comprobar `/up`); crear el Background Worker
-   `draxuvo-jobs` desde `main` (Docker, Virginia, `0.5c-512mb`, comando `./bin/jobs`, Auto-Deploy Off, retraso de apagado
-   120 s, grupo ligado, `SOLID_QUEUE_SUPERVISOR_MODE=async`, `RAILS_MAX_THREADS=10`); copiar su Deploy Hook al secreto
-   `RENDER_WORKER_DEPLOY_HOOK_URL` del repo. Mientras tanto la API sigue procesando también: Solid Queue reparte los trabajos
-   sin duplicarlos.
+1. **Antes de fusionar:** crear el worker con el Blueprint `draxuvo-api` (`exs-dbvjmpt9fdbs73bf44cg`, hecho el 2026-11-19 con el MCP
+   de Render) y copiar su Deploy Hook al secreto `RENDER_WORKER_DEPLOY_HOOK_URL` del repo (solo desde el dashboard: el MCP no
+   lo expone). Mientras tanto la API sigue procesando también: Solid Queue reparte los trabajos sin duplicarlos.
 2. **Fusionar el PR.** El CI despliega los dos al mismo commit.
 3. **Quitar `SOLID_QUEUE_IN_PUMA` de `draxuvo-api`.** Desde aquí solo el worker procesa.
 4. **Medir 24 h** la memoria y los eventos de los dos.
-5. **Bajar `draxuvo-api` a `0.5c-512mb`** (dueño) y medir 48 h: sin `server_failed` y memoria máxima ≤ 435 MB en cada uno.
+5. **Bajar `draxuvo-api` a `0.5c-512mb`** (`plan` en `render.yaml` y sync del Blueprint) y medir 48 h: sin `server_failed` y memoria máxima ≤ 435 MB en cada uno.
+
+### Blueprint
+
+`render.yaml` es el Blueprint `draxuvo-api` (`exs-dbvjmpt9fdbs73bf44cg`) **sin sincronización automática**: un cambio en el
+archivo no se aplica solo. Para aplicarlo: «plan» del Blueprint (dashboard o `plan_blueprint` del MCP), revisar el plan y
+«approve». La sync conserva las variables de la API que no aparecen en el archivo (no las borra); el Blueprint lee la rama
+`main`. Un cambio de `plan` también se aplica así.
 
 ## Versión mínima de la app móvil (FR-015)
 
