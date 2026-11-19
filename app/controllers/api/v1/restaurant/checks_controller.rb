@@ -34,14 +34,14 @@ module Api
           render json: serialize_check(check)
         end
 
-        # Solo una cuenta sin artículos mandados (FR-032).
+        # Solo una cuenta sin renglones vigentes: vacía, con borradores o con todo cancelado (FR-032, spec 068).
         def cancel
           check = find_check
           Check.transaction do
             check.lock!
             invalid!(:check_not_open) unless check.status_open?
             forbid! unless restaurant_context.boss? || restaurant_context.waiter_of?(check)
-            invalid!(:has_sent_items) if check.check_items.where.not(status: :draft).exists?
+            invalid!(:has_sent_items) unless ::Restaurant::Permissions.releasable?(check)
 
             check.check_items.status_draft.destroy_all
             check.update!(status: :cancelled, closed_at: Time.current, cancel_reason: params[:reason].to_s.strip.presence)
