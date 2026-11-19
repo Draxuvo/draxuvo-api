@@ -205,9 +205,11 @@ jobs:
           if-no-files-found: ignore
 
   # Despliegue a producción (Render): solo tras un push a main con todos los jobs anteriores en verde (FR-002).
-  # El servicio no está conectado a la app de GitHub de Render, así que se dispara su Deploy Hook.
-  # Secreto del repo: RENDER_DEPLOY_HOOK_URL (Render → draxuvo-api → Settings → Deploy Hook).
-  # Con este job, Auto-Deploy del servicio debe estar en "Off" para no desplegar dos veces.
+  # Los servicios no están conectados a la app de GitHub de Render, así que se disparan sus Deploy Hooks:
+  # la API (draxuvo-api) y el worker de trabajos (draxuvo-jobs, spec 064), siempre al mismo commit.
+  # Secretos del repo: RENDER_DEPLOY_HOOK_URL y RENDER_WORKER_DEPLOY_HOOK_URL (Render → servicio → Settings → Deploy Hook).
+  # Si falta cualquiera, el job falla sin llamar a ninguno. Auto-Deploy de los dos debe estar en "Off".
+  # El worker no migra: bin/jobs espera a que la API termine de migrar antes de tomar trabajos.
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [scan_ruby, scan_js, lint, test, e2e]
@@ -218,14 +220,21 @@ jobs:
       cancel-in-progress: false
 
     steps:
-      - name: Disparar el despliegue en Render
+      - name: Disparar el despliegue en Render (API y worker)
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_WORKER_DEPLOY_HOOK_URL }}
         run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "::error::Falta el secreto RENDER_DEPLOY_HOOK_URL (ver docs/deploy.md)"
-            exit 1
-          fi
+          missing=0
+          for name in RENDER_DEPLOY_HOOK_URL RENDER_WORKER_DEPLOY_HOOK_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Falta el secreto ${name} (ver docs/deploy.md)"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
           # ref: despliega exactamente el commit que acaba de pasar el CI
           curl --fail --silent --show-error -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
-          echo "Despliegue solicitado para ${GITHUB_SHA}"
+          echo "Despliegue de la API solicitado para ${GITHUB_SHA}"
+          curl --fail --silent --show-error -X POST "${RENDER_WORKER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
+          echo "Despliegue del worker solicitado para ${GITHUB_SHA}"

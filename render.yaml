@@ -1,8 +1,14 @@
 # Blueprint de producción de la API de Draxuvo (spec 012). Inventario de variables, con valores
 # esperados y responsables: specs/012-deploy-produccion/contracts/env-inventory.md del workspace.
 #
-# Plan web `0.5c-512mb` (antes Starter) y base `0.1c-256mb` (antes Basic-256mb). Los precios cambian:
-# confirmarlos en render.com/pricing. El almacenamiento de la base se cobra aparte (1 GB).
+# Dos servicios con la misma imagen (spec 064): la API (web) y el worker de trabajos en segundo plano
+# (draxuvo-jobs, Solid Queue en modo async). Meta: los dos en `0.5c-512mb` (~$7 al mes cada uno) y la base en
+# `0.1c-256mb`. Desde el 2026-11-16 la API está en `1c-2g` (~$25) porque Solid Queue corría dentro de Puma y no
+# cabía en 512 MB; se baja en el último paso del corte de la spec 064 (cambiar `plan` aquí y sincronizar). Los
+# precios cambian: confirmarlos en render.com/pricing. El almacenamiento de la base se cobra aparte (1 GB).
+#
+# Este archivo es un Blueprint de Render (`draxuvo-api`) sin sincronización automática: un cambio aquí no se aplica
+# solo; se aplica con «plan» y «approve» del Blueprint (dashboard o MCP de Render), revisando el plan antes.
 
 # La base de datos NO está en este Blueprint: `draxuvo-db` (Postgres 17, plan 0.1c-256mb, Virginia, 1 GB,
 # sin acceso externo) se creó aparte en el workspace Draxuvo. Su URL interna se carga como DATABASE_URL.
@@ -12,67 +18,85 @@ services:
     name: draxuvo-api
     runtime: docker
     region: virginia             # misma región que la base (conexión por red privada)
-    plan: 0.5c-512mb
+    plan: 1c-2g                  # meta 0.5c-512mb tras el corte de la spec 064
+    branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /up
     # El despliegue lo dispara el job `deploy` de .github/workflows/ci.yml con el Deploy Hook, solo con el CI en
     # verde (FR-002). El servicio no está conectado a la app de GitHub de Render, así que no hay auto-deploy propio.
     autoDeployTrigger: "off"
+    # Las variables de la API viven solo en Render (Environment del servicio) y el Blueprint no las toca: una sync
+    # conserva las que no aparecen aquí. Son la única fuente: el worker copia las suyas de aquí (fromService).
+    #   RAILS_ENV=production, RAILS_LOG_TO_STDOUT=true, WEB_CONCURRENCY=0 (Puma single: con workers no cabe)
+    #   DATABASE_URL (URL interna de draxuvo-db), SECRET_KEY_BASE (firma los JWT y cifra la llave de WhatsApp)
+    #   APP_HOST y ALLOWED_HOSTS=api.draxuvo.com, FRONTEND_URL=https://app.draxuvo.com,
+    #   FRONTEND_URL_UI y PUBLIC_SITE_URL=https://draxuvo.com
+    #   RESEND_API_KEY, RESEND_FROM_EMAIL, STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, SUPER_ADMIN_PASSWORD
+    #   MIN_APP_VERSION_IOS / _ANDROID, ACTIVE_STORAGE_SERVICE=r2, R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID,
+    #   R2_SECRET_ACCESS_KEY, y las opcionales (PUSH_ENABLED, EXPO_ACCESS_TOKEN, DEMO_*, LOGIN_RATE_*, ...)
+    # La API ya no procesa la cola (spec 064): lo hace draxuvo-jobs. Vuelta de emergencia si el worker falla:
+    # SOLID_QUEUE_IN_PUMA=true en la API (corre Solid Queue dentro de Puma, config/puma.rb), con la API en 1c-2g.
+
+  # Trabajos en segundo plano (spec 064): recurrentes de config/recurring.yml y encolados (correos, fotos, importaciones,
+  # push). Misma imagen que la API; bin/jobs espera a que la API termine de migrar antes de tomar trabajos.
+  - type: worker
+    name: draxuvo-jobs
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerCommand: ./bin/jobs
+    # SIGTERM al desplegar: Solid Queue deja terminar los trabajos hasta 100 s (config.solid_queue.shutdown_timeout)
+    # y Render espera 120 s antes de SIGKILL.
+    maxShutdownDelaySeconds: 120
+    # Lo despliega el mismo job `deploy` del CI con su propio Deploy Hook, siempre al mismo commit que la API.
+    autoDeployTrigger: "off"
     envVars:
+      # Un solo proceso (Solid Queue 1.4.x): supervisor, despachador, programador y trabajadores como hilos.
+      - key: SOLID_QUEUE_SUPERVISOR_MODE
+        value: async
+      # Grupo de conexiones a la base del worker (config/database.yml). En async lo comparten los hilos de trabajo,
+      # el despachador, el programador y los latidos.
+      - key: RAILS_MAX_THREADS
+        value: "10"
       - key: RAILS_ENV
         value: production
       - key: RAILS_LOG_TO_STDOUT
         value: "true"
-      # Corre Solid Queue dentro de Puma (config/puma.rb): sin esto los jobs se encolan y nadie los ejecuta.
-      - key: SOLID_QUEUE_IN_PUMA
-        value: "true"
-      # Puma en modo single (sin workers): en 512 MB el worker extra agotaba la memoria y Render mataba
-      # la instancia (oomKilled, health check con timeout). Con 0 la API usa ~350 MB.
-      - key: WEB_CONCURRENCY
-        value: "0"
-      - key: DATABASE_URL        # URL interna de draxuvo-db (misma región, red privada)
-        sync: false
+      # Todo lo demás se copia de la API (fromService), para que nunca difieran: SECRET_KEY_BASE distinta cierra las
+      # sesiones y deja ilegible la llave de WhatsApp (los dos escriben `[boot] secret_key_base sha256:` al arrancar
+      # para comprobarlo). La copia se refresca en cada sync del Blueprint, no al cambiar la variable en la API: tras
+      # cambiar una de estas en la API, sincronizar el Blueprint y desplegar el worker.
+      - key: DATABASE_URL
+        fromService: { type: web, name: draxuvo-api, envVarKey: DATABASE_URL }
       - key: SECRET_KEY_BASE
-        generateValue: true      # firma los JWT: rotarla cierra todas las sesiones
-      # Hosts y orígenes (CORS): ver FR-001 y FR-005 de la spec 012.
+        fromService: { type: web, name: draxuvo-api, envVarKey: SECRET_KEY_BASE }
       - key: APP_HOST
-        value: api.draxuvo.com
+        fromService: { type: web, name: draxuvo-api, envVarKey: APP_HOST }
       - key: ALLOWED_HOSTS
-        value: api.draxuvo.com
-      - key: FRONTEND_URL          # panel (ui): enlaces de correo y CORS
-        value: https://app.draxuvo.com
-      - key: FRONTEND_URL_UI       # sitio público (web): CORS
-        value: https://draxuvo.com
-      - key: PUBLIC_SITE_URL       # menú QR (spec 059): lo que codifica el QR y origen CORS de /api/v1/public/*
-        value: https://draxuvo.com
-      # Correo (Resend)
+        fromService: { type: web, name: draxuvo-api, envVarKey: ALLOWED_HOSTS }
+      - key: FRONTEND_URL
+        fromService: { type: web, name: draxuvo-api, envVarKey: FRONTEND_URL }
+      - key: FRONTEND_URL_UI
+        fromService: { type: web, name: draxuvo-api, envVarKey: FRONTEND_URL_UI }
       - key: RESEND_API_KEY
-        sync: false
+        fromService: { type: web, name: draxuvo-api, envVarKey: RESEND_API_KEY }
       - key: RESEND_FROM_EMAIL
-        value: Draxuvo <no-reply@draxuvo.com>
-      # Stripe: modo prueba al lanzar (FR-008)
+        fromService: { type: web, name: draxuvo-api, envVarKey: RESEND_FROM_EMAIL }
       - key: STRIPE_API_KEY
-        sync: false
+        fromService: { type: web, name: draxuvo-api, envVarKey: STRIPE_API_KEY }
       - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      # Solo la leen los seeds al crear el super admin (db:prepare en la primera ejecución)
-      - key: SUPER_ADMIN_PASSWORD
-        sync: false
-      # Versión mínima de la app móvil; se sube aquí sin publicar una build nueva (FR-015)
-      - key: MIN_APP_VERSION_IOS
-        value: 0.0.0
-      - key: MIN_APP_VERSION_ANDROID
-        value: 0.0.0
-      # Archivos subidos (avatares, fotos de órdenes, imágenes de productos): Cloudflare R2.
-      # El disco del contenedor es efímero; sin esto se pierden en cada despliegue.
+        fromService: { type: web, name: draxuvo-api, envVarKey: STRIPE_WEBHOOK_SECRET }
       - key: ACTIVE_STORAGE_SERVICE
-        value: r2
+        fromService: { type: web, name: draxuvo-api, envVarKey: ACTIVE_STORAGE_SERVICE }
       - key: R2_ACCOUNT_ID
-        value: 653dfb7bcb7b75b826d6cef4f1a9947d
+        fromService: { type: web, name: draxuvo-api, envVarKey: R2_ACCOUNT_ID }
       - key: R2_BUCKET
-        value: draxuvo-uploads
+        fromService: { type: web, name: draxuvo-api, envVarKey: R2_BUCKET }
       - key: R2_ACCESS_KEY_ID
-        sync: false
+        fromService: { type: web, name: draxuvo-api, envVarKey: R2_ACCESS_KEY_ID }
       - key: R2_SECRET_ACCESS_KEY
-        sync: false
-      # WhatsApp (WHATSAPP_*) queda sin definir a propósito: desactivado en el lanzamiento (FR-009).
+        fromService: { type: web, name: draxuvo-api, envVarKey: R2_SECRET_ACCESS_KEY }
+      # No se copian las que la API no define y usan su valor por omisión en los dos (PUBLIC_SITE_URL, PUSH_ENABLED,
+      # EXPO_ACCESS_TOKEN, DEMO_*, ...): si se agrega una a la API y la usa un trabajo, agregarla aquí también.

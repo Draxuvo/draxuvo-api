@@ -57,6 +57,11 @@ Rails.application.configure do
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
 
+  # Spec 064: al desplegar, Render manda SIGTERM al worker draxuvo-jobs y espera 120 s (maxShutdownDelaySeconds) antes de
+  # SIGKILL. Solid Queue deja terminar los trabajos en curso hasta 100 s (por omisión, 5) y regresa a la cola los que no
+  # acaben; una importación de Excel de 5,000 filas tarda ~43 s.
+  config.solid_queue.shutdown_timeout = 100.seconds
+
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
