@@ -5,9 +5,8 @@ require "solid_queue/cli"
 
 # Spec 064: en producción corre en su propio servicio de Render (draxuvo-jobs). Solo la API migra al arrancar y los dos se
 # despliegan a la vez, así que aquí se espera a que no queden migraciones pendientes antes de tomar trabajos; si pasa el
-# tope (MIGRATION_WAIT_SECONDS) sale con error y Render lo reinicia. Va aquí y no en bin/docker-entrypoint porque no está
-# documentado que Render conserve el ENTRYPOINT con un Docker Command; la línea de jemalloc (que activa el entrypoint)
-# dice en el log cuál de los dos casos es.
+# tope (MIGRATION_WAIT_SECONDS) sale con error y Render lo reinicia. El Docker Command de Render no pasa por el ENTRYPOINT
+# de la imagen, así que render.yaml llama a bin/docker-entrypoint a mano (activa jemalloc); la línea de jemalloc lo comprueba.
 if Rails.env.production?
   logger = Logger.new($stdout)
   logger.info("[jobs] jemalloc #{ENV['LD_PRELOAD'].to_s.include?('jemalloc') ? 'activo' : 'inactivo'}")

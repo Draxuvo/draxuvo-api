@@ -34,8 +34,8 @@ services:
     #   RESEND_API_KEY, RESEND_FROM_EMAIL, STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, SUPER_ADMIN_PASSWORD
     #   MIN_APP_VERSION_IOS / _ANDROID, ACTIVE_STORAGE_SERVICE=r2, R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID,
     #   R2_SECRET_ACCESS_KEY, y las opcionales (PUSH_ENABLED, EXPO_ACCESS_TOKEN, DEMO_*, LOGIN_RATE_*, ...)
-    # La API ya no procesa la cola (spec 064): lo hace draxuvo-jobs. Vuelta de emergencia si el worker falla:
-    # SOLID_QUEUE_IN_PUMA=true en la API (corre Solid Queue dentro de Puma, config/puma.rb), con la API en 1c-2g.
+    # La API ya no procesa la cola (spec 064): lo hace draxuvo-jobs, y en la API SOLID_QUEUE_IN_PUMA=false. Vuelta de emergencia
+    # si el worker falla: SOLID_QUEUE_IN_PUMA=true (corre Solid Queue dentro de Puma, config/puma.rb), con la API en 1c-2g.
 
   # Trabajos en segundo plano (spec 064): recurrentes de config/recurring.yml y encolados (correos, fotos, importaciones,
   # push). Misma imagen que la API; bin/jobs espera a que la API termine de migrar antes de tomar trabajos.
@@ -46,7 +46,10 @@ services:
     plan: 0.5c-512mb
     branch: main
     dockerfilePath: ./Dockerfile
-    dockerCommand: ./bin/jobs
+    # El Docker Command de Render reemplaza también el ENTRYPOINT de la imagen (comprobado el 2026-11-19: con `./bin/jobs` el log
+    # decía `[jobs] jemalloc inactivo`), así que se llama al entrypoint a mano para activar jemalloc. El entrypoint solo migra
+    # con `./bin/rails server`; aquí no.
+    dockerCommand: /rails/bin/docker-entrypoint ./bin/jobs
     # SIGTERM al desplegar: Solid Queue deja terminar los trabajos hasta 100 s (config.solid_queue.shutdown_timeout)
     # y Render espera 120 s antes de SIGKILL.
     maxShutdownDelaySeconds: 120
