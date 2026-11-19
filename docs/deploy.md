@@ -8,7 +8,7 @@ Runbook de la API de Draxuvo. Spec: `specs/012-deploy-produccion/` del workspace
 | Pieza | Dónde | Dato clave |
 |---|---|---|
 | API (este repo) | Render, workspace **Draxuvo**, servicio `draxuvo-api` (`srv-db96bftg1s2s739tfi30`) | Docker, Virginia, plan `0.5c-512mb` (`1c-2g` desde el 2026-11-16 hasta terminar el corte de la spec 064), `https://api.draxuvo.com`, health check `/up` |
-| Trabajos en segundo plano | Render, Background Worker `draxuvo-jobs` (spec 064) | Misma imagen, comando `./bin/jobs`, Solid Queue en modo `async` (un proceso), plan `0.5c-512mb`, sin HTTP |
+| Trabajos en segundo plano | Render, Background Worker `draxuvo-jobs` (spec 064) | Misma imagen, comando `/rails/bin/docker-entrypoint ./bin/jobs` (activa jemalloc), Solid Queue en modo `async` (un proceso), plan `0.5c-512mb`, sin HTTP |
 | Base de datos | Render, `draxuvo-db` (`dpg-db95kh5g1s2s73b3nutg-a`) | Postgres 17, plan `0.1c-256mb`, 1 GB, **solo red privada** (sin acceso externo) |
 | Archivos subidos | Cloudflare R2, bucket privado `draxuvo-uploads` | `ACTIVE_STORAGE_SERVICE=r2`; la API entrega URLs firmadas |
 | DNS | Cloudflare, zona `draxuvo.com` | `api` → CNAME a `draxuvo-api.onrender.com`, **sin proxy** |
@@ -52,8 +52,8 @@ arranca y el log dice cuáles (`RequiredEnv::MissingError`, `config/initializers
 porque reutiliza la imagen ya construida. **Haz lo mismo en `draxuvo-jobs`, al mismo commit.** Comprueba después
 `https://api.draxuvo.com/up` y que el log del worker diga `Started Supervisor(async)`.
 
-**El worker falla y la cola se detiene.** Vuelta de emergencia: en `draxuvo-api` agrega `SOLID_QUEUE_IN_PUMA=true` (Solid Queue
-vuelve a correr dentro de Puma, `config/puma.rb`). Solo con la API en `1c-2g`: en 512 MB así se caía por memoria. Mientras tanto,
+**El worker falla y la cola se detiene.** Vuelta de emergencia: en `draxuvo-api` pon `SOLID_QUEUE_IN_PUMA=true` (Solid Queue
+vuelve a correr dentro de Puma, `config/puma.rb`; solo `true` o `1` lo activan). Solo con la API en `1c-2g`: en 512 MB así se caía por memoria. Mientras tanto,
 detén `draxuvo-jobs` (Suspend) o no habrá dos programadores de recurrentes, aunque Solid Queue no duplica una misma corrida.
 
 **Migraciones.** Revertir código no revierte la base. Antes de desplegar una migración destructiva (borrar o renombrar
@@ -101,8 +101,8 @@ La contraseña inicial salió de un generador aleatorio de 28 caracteres, no de 
 ## Logs y errores (FR-016)
 
 - **API:** Render → `draxuvo-api` → **Logs** (filtra por `error`). También con el MCP de Render (`list_logs`).
-- **Trabajos:** Render → `draxuvo-jobs` → **Logs**. Señales al arrancar: `[jobs] jemalloc activo` (si dice `inactivo`, Render
-  no pasó el comando por `bin/docker-entrypoint` y el worker usa más memoria), `[migration_wait] base al día` (o
+- **Trabajos:** Render → `draxuvo-jobs` → **Logs**. Señales al arrancar: `[jobs] jemalloc activo` (si dice `inactivo`, el
+  comando del worker no pasa por `/rails/bin/docker-entrypoint`: el Docker Command de Render reemplaza el `ENTRYPOINT` de la imagen), `[migration_wait] base al día` (o
   `esperando migraciones…`), `SolidQueue-1.4.x Started Supervisor(async)`, y después cada trabajo con `Performing` / `Performed`.
   Si faltan variables, no arranca y el log dice `RequiredEnv::MissingError`.
 - **Misma llave en los dos:** la API y el worker escriben al arrancar `[boot] secret_key_base sha256:<8 hex>`; deben coincidir.
@@ -209,7 +209,8 @@ Corte en producción, en este orden; cada paso solo si el anterior se verificó 
    de Render) y copiar su Deploy Hook al secreto `RENDER_WORKER_DEPLOY_HOOK_URL` del repo (solo desde el dashboard: el MCP no
    lo expone). Mientras tanto la API sigue procesando también: Solid Queue reparte los trabajos sin duplicarlos.
 2. **Fusionar el PR.** El CI despliega los dos al mismo commit.
-3. **Quitar `SOLID_QUEUE_IN_PUMA` de `draxuvo-api`.** Desde aquí solo el worker procesa.
+3. **`SOLID_QUEUE_IN_PUMA=false` en `draxuvo-api`** (con el MCP basta: solo `true` o `1` lo activan) y desplegar la API. Desde aquí
+   solo el worker procesa.
 4. **Medir 24 h** la memoria y los eventos de los dos.
 5. **Bajar `draxuvo-api` a `0.5c-512mb`** (`plan` en `render.yaml` y sync del Blueprint) y medir 48 h: sin `server_failed` y memoria máxima ≤ 435 MB en cada uno.
 
