@@ -2,10 +2,9 @@
 # esperados y responsables: specs/012-deploy-produccion/contracts/env-inventory.md del workspace.
 #
 # Dos servicios con la misma imagen (spec 064): la API (web) y el worker de trabajos en segundo plano
-# (draxuvo-jobs, Solid Queue en modo async). Meta: los dos en `0.5c-512mb` (~$7 al mes cada uno) y la base en
-# `0.1c-256mb`. Desde el 2026-11-16 la API está en `1c-2g` (~$25) porque Solid Queue corría dentro de Puma y no
-# cabía en 512 MB; se baja en el último paso del corte de la spec 064 (cambiar `plan` aquí y sincronizar). Los
-# precios cambian: confirmarlos en render.com/pricing. El almacenamiento de la base se cobra aparte (1 GB).
+# (draxuvo-jobs, Solid Queue en modo async), los dos en `0.5c-512mb` (~$7 al mes cada uno), y la base en `0.1c-256mb`.
+# Del 2026-11-16 al 2026-11-19 la API estuvo en `1c-2g` (~$25) porque Solid Queue corría dentro de Puma y no cabía en
+# 512 MB. Los precios cambian: confirmarlos en render.com/pricing. El almacenamiento de la base se cobra aparte (1 GB).
 #
 # Este archivo es un Blueprint de Render (`draxuvo-api`) sin sincronización automática: un cambio aquí no se aplica
 # solo; se aplica con «plan» y «approve» del Blueprint (dashboard o MCP de Render), revisando el plan antes.
@@ -18,7 +17,7 @@ services:
     name: draxuvo-api
     runtime: docker
     region: virginia             # misma región que la base (conexión por red privada)
-    plan: 1c-2g                  # meta 0.5c-512mb tras el corte de la spec 064
+    plan: 0.5c-512mb             # con SOLID_QUEUE_IN_PUMA=true (emergencia) necesita 1c-2g
     branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /up
