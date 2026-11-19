@@ -7,7 +7,7 @@ Runbook de la API de Draxuvo. Spec: `specs/012-deploy-produccion/` del workspace
 
 | Pieza | Dónde | Dato clave |
 |---|---|---|
-| API (este repo) | Render, workspace **Draxuvo**, servicio `draxuvo-api` (`srv-db96bftg1s2s739tfi30`) | Docker, Virginia, plan `0.5c-512mb` (`1c-2g` desde el 2026-11-16 hasta terminar el corte de la spec 064), `https://api.draxuvo.com`, health check `/up` |
+| API (este repo) | Render, workspace **Draxuvo**, servicio `draxuvo-api` (`srv-db96bftg1s2s739tfi30`) | Docker, Virginia, plan `0.5c-512mb` (estuvo en `1c-2g` del 2026-11-16 al 2026-11-19, spec 064), `https://api.draxuvo.com`, health check `/up` |
 | Trabajos en segundo plano | Render, Background Worker `draxuvo-jobs` (spec 064) | Misma imagen, comando `/rails/bin/docker-entrypoint ./bin/jobs` (activa jemalloc), Solid Queue en modo `async` (un proceso), plan `0.5c-512mb`, sin HTTP |
 | Base de datos | Render, `draxuvo-db` (`dpg-db95kh5g1s2s73b3nutg-a`) | Postgres 17, plan `0.1c-256mb`, 1 GB, **solo red privada** (sin acceso externo) |
 | Archivos subidos | Cloudflare R2, bucket privado `draxuvo-uploads` | `ACTIVE_STORAGE_SERVICE=r2`; la API entrega URLs firmadas |
@@ -212,7 +212,7 @@ Corte en producción, en este orden; cada paso solo si el anterior se verificó 
 3. **`SOLID_QUEUE_IN_PUMA=false` en `draxuvo-api`** (con el MCP basta: solo `true` o `1` lo activan) y desplegar la API. Desde aquí
    solo el worker procesa.
 4. **Medir 24 h** la memoria y los eventos de los dos.
-5. **Bajar `draxuvo-api` a `0.5c-512mb`** (`plan` en `render.yaml` y sync del Blueprint) y medir 48 h: sin `server_failed` y memoria máxima ≤ 435 MB en cada uno.
+5. **Bajar `draxuvo-api` a `0.5c-512mb`** (`plan` en `render.yaml` y sync del Blueprint; hecho el 2026-11-19) y medir 48 h: sin `server_failed` y memoria máxima ≤ 435 MB en cada uno.
 
 ### Blueprint
 
