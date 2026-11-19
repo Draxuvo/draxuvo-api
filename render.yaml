@@ -80,8 +80,6 @@ services:
         fromService: { type: web, name: draxuvo-api, envVarKey: FRONTEND_URL }
       - key: FRONTEND_URL_UI
         fromService: { type: web, name: draxuvo-api, envVarKey: FRONTEND_URL_UI }
-      - key: PUBLIC_SITE_URL
-        fromService: { type: web, name: draxuvo-api, envVarKey: PUBLIC_SITE_URL }
       - key: RESEND_API_KEY
         fromService: { type: web, name: draxuvo-api, envVarKey: RESEND_API_KEY }
       - key: RESEND_FROM_EMAIL
@@ -100,8 +98,5 @@ services:
         fromService: { type: web, name: draxuvo-api, envVarKey: R2_ACCESS_KEY_ID }
       - key: R2_SECRET_ACCESS_KEY
         fromService: { type: web, name: draxuvo-api, envVarKey: R2_SECRET_ACCESS_KEY }
-      # Push (spec 057): los avisos salen desde los trabajos.
-      - key: PUSH_ENABLED
-        fromService: { type: web, name: draxuvo-api, envVarKey: PUSH_ENABLED }
-      - key: EXPO_ACCESS_TOKEN
-        fromService: { type: web, name: draxuvo-api, envVarKey: EXPO_ACCESS_TOKEN }
+      # No se copian las que la API no define y usan su valor por omisión en los dos (PUBLIC_SITE_URL, PUSH_ENABLED,
+      # EXPO_ACCESS_TOKEN, DEMO_*, ...): si se agrega una a la API y la usa un trabajo, agregarla aquí también.
