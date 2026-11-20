@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_16_024226) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -174,6 +174,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_16_024226) do
     t.datetime "updated_at", null: false
     t.datetime "charge_requested_at"
     t.bigint "charge_requested_by_id"
+    t.bigint "cancelled_by_id"
+    t.index ["cancelled_by_id"], name: "index_checks_on_cancelled_by_id"
     t.index ["charge_requested_by_id"], name: "index_checks_on_charge_requested_by_id"
     t.index ["company_id", "status"], name: "index_checks_on_company_id_and_status"
     t.index ["company_id"], name: "index_checks_on_company_charge_requested", where: "((status = 0) AND (charge_requested_at IS NOT NULL))"
@@ -1142,6 +1144,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_16_024226) do
   add_foreign_key "check_payments", "users", column: "created_by_id"
   add_foreign_key "checks", "companies"
   add_foreign_key "checks", "dining_tables"
+  add_foreign_key "checks", "users", column: "cancelled_by_id", on_delete: :nullify
   add_foreign_key "checks", "users", column: "charge_requested_by_id"
   add_foreign_key "checks", "users", column: "opened_by_id"
   add_foreign_key "checks", "users", column: "waiter_id"

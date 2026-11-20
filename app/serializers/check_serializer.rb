@@ -27,12 +27,23 @@ class CheckSerializer
     summary.merge(waiter: person(check.waiter), total: money(check.total))
   end
 
+  # Fila del filtro «Canceladas» (spec 070). Solo llega a un jefe o al mesero de la cuenta (lo recorta el listado).
+  def self.cancelled_summary(check, context, cancelled_items:)
+    {
+      id: check.id, table: check.dining_table && { id: check.dining_table.id, name: check.dining_table.name },
+      takeout_name: check.takeout_name, waiter: person(check.waiter), opened_at: check.opened_at,
+      cancelled_at: check.closed_at, cancel_reason: check.cancel_reason, cancelled_by: person(check.cancelled_by),
+      cancelled_items: cancelled_items, mine: check.waiter_id == context.user.id
+    }
+  end
+
   def as_json(*)
     c = @check
     {
       id: c.id, status: c.status,
       table: c.dining_table && { id: c.dining_table.id, name: c.dining_table.name },
       takeout_name: c.takeout_name, waiter: self.class.person(c.waiter), opened_at: c.opened_at,
+      closed_at: c.closed_at, cancel_reason: c.cancel_reason, cancelled_by: self.class.person(c.cancelled_by),
       total: self.class.money(c.total), paid: self.class.money(c.paid_total), balance: self.class.money(c.balance),
       items: items.map { |item| item_json(item) },
       payments: c.check_payments.order(:id).map { |p| self.class.payment(p) },
@@ -55,7 +66,7 @@ class CheckSerializer
   private
 
   def items
-    @check.check_items.includes(:station, :kitchen_order, :check, product: :product_type).order(:id)
+    @check.check_items.includes(:station, :kitchen_order, :check, :cancelled_by, product: :product_type).order(:id)
   end
 
   def item_json(item)
@@ -64,7 +75,9 @@ class CheckSerializer
       type_icon: item.product&.product_type&.icon, quantity: item.quantity, unit_price: self.class.money(item.unit_price),
       note: item.note, status: item.status, station: item.station && { id: item.station.id, name: item.station.name },
       kitchen_order_number: item.kitchen_order&.number, sent_at: item.kitchen_order&.sent_at,
-      ready_at: item.ready_at, allowed_actions: Restaurant::Permissions.item_actions(item, @context)
+      ready_at: item.ready_at, cancel_reason: item.cancel_reason, cancelled_at: item.cancelled_at,
+      cancelled_by: self.class.person(item.cancelled_by),
+      allowed_actions: Restaurant::Permissions.item_actions(item, @context)
     }
   end
 end

@@ -5,6 +5,8 @@ class Check < ApplicationRecord
   belongs_to :opened_by, class_name: "User"
   belongs_to :waiter, class_name: "User"
   belongs_to :charge_requested_by, class_name: "User", optional: true
+  # Spec 070: quién liberó la mesa; las cuentas canceladas antes del arreglo no lo tienen.
+  belongs_to :cancelled_by, class_name: "User", optional: true
   has_many :kitchen_orders, dependent: :destroy
   has_many :check_items, dependent: :destroy
   has_many :check_payments, dependent: :destroy
