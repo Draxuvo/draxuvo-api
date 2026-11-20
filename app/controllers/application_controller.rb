@@ -9,6 +9,16 @@ class ApplicationController < ActionController::API
 
   private
 
+  # Spec 071 (US3): datos de la línea JSON de la petición (lib/request_log.rb). Solo lo que ya se cargó: no fuerza la
+  # consulta del usuario ni de la empresa, y las rutas sin sesión los dejan vacíos.
+  def append_info_to_payload(payload)
+    super
+    payload[:request_id] = request.request_id
+    payload[:user_id] = @current_user&.id
+    payload[:company_id] = @current_company&.id
+    payload[:demo] = Current.demo
+  end
+
   def set_locale
     header = request.env["HTTP_LOCALE"] || request.env["HTTP_ACCEPT_LANGUAGE"]
     lang   = header&.split(",")

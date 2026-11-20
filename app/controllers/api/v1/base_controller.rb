@@ -14,8 +14,17 @@ module Api
       before_action :authenticate_request
       before_action :check_subscription!
       before_action :enter_demo_context
+      before_action :set_monitoring_context
 
       private
+
+      # Spec 071: contexto de los errores que se reporten en esta petición. Solo el id del usuario (nunca correo ni
+      # nombre), la empresa y si es demo, y solo con lo que ya se cargó: las rutas públicas (menú QR, webhooks, demo)
+      # no tienen usuario ni empresa y no se fuerza ninguna consulta.
+      def set_monitoring_context
+        Sentry.set_user(id: @current_user.id) if @current_user
+        Sentry.set_tags(company_id: @current_company.id, demo: Current.demo ? true : false) if @current_company
+      end
 
       # URLs del servicio de disco (desarrollo y pruebas) con el host y el puerto de la petición (spec 061). Van por
       # separado: un `host` con puerto pierde contra el `port` de routes.default_url_options. En R2 no se usan.

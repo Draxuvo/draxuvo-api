@@ -95,3 +95,8 @@ gem "barby", "~> 0.7"
 
 # Matriz del QR de las tarjetas de mesa (spec 059); Ruby puro, se dibuja con Prawn.
 gem "rqrcode_core", "~> 2.0"
+
+# Monitoreo externo (spec 071): errores a Sentry (sin DSN no se inicializa) y una línea JSON por petición en producción.
+gem "sentry-ruby", "~> 7.3"
+gem "sentry-rails", "~> 7.3"
+gem "lograge", "~> 0.16"
