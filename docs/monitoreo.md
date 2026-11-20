@@ -44,8 +44,8 @@ Stack Errors, que recibe los mismos SDK sin tocar código.
 | `HEARTBEAT_URL` | Render, Environment de `draxuvo-api` (el worker la copia) | URL del latido de Better Stack. **Secreta**: quien la conoce mantiene vivo el monitor |
 | `RENDER_GIT_COMMIT` | la pone Render | `release` de los errores |
 | `NEXT_PUBLIC_SENTRY_DSN` | GitHub de `ui` y `web`, variable del repo | Errores del panel y del sitio (un DSN es público por diseño) |
-| `SENTRY_AUTH_TOKEN` | GitHub de `ui`/`web` y EAS, secreto (opcional) | Subir source maps |
-| `EXPO_PUBLIC_SENTRY_DSN` | EAS, ambientes `preview` y `production` | Errores de la app (llega con la siguiente compilación) |
+| `SENTRY_AUTH_TOKEN` | EAS, secreto (opcional) | Subir source maps de la app (y quitar `SENTRY_DISABLE_AUTO_UPLOAD` de `eas.json`); `ui` y `web` no suben source maps |
+| `EXPO_PUBLIC_SENTRY_DSN` | EAS, ambientes `preview` y `production` | Errores de la app (llega con la siguiente compilación de EAS: el SDK es nativo) |
 
 Tras agregar o cambiar una variable de la API: sincronizar el Blueprint `draxuvo-api` (plan → revisar → approve) y
 desplegar los dos servicios ([deploy.md](deploy.md#blueprint)).
@@ -67,8 +67,12 @@ worker, así que su ausencia significa worker caído, atorado, sin base o espera
 
 - **API**: `ErrorHandler#handle_internal_error` reporta todo 500 (con `rescue_from StandardError` el middleware de Sentry no
   lo vería). Los trabajos que fallan se reportan una vez, al agotar sus reintentos. Los 4xx esperados no se reportan.
+- **Panel y sitio** (`ui`, `web`): `@sentry/browser`, solo en el navegador (`src/lib/monitoring.ts`). Los errores del render
+  en el servidor del Worker no van a Sentry: se ven en Cloudflare → Workers → `draxuvo-ui` / `draxuvo-web` →
+  Observability. Sin source maps: las trazas salen minificadas.
+- **App**: `@sentry/react-native` (errores de JavaScript y cierres nativos), etiqueta `screen` con la ruta de expo-router.
 - **Contexto**: `user.id`, etiquetas `company_id`, `demo` (filtra las demos con `demo:true`) y `request_id`; `release` es
-  el commit desplegado.
+  el commit desplegado (en la app, versión y número de compilación).
 - **Privacidad**: sin correo, nombre, IP, cuerpo, cookies, encabezados (salvo User-Agent), query string ni argumentos de
   trabajos (`data_collection` en `config/initializers/sentry.rb` y `lib/sentry_scrubber.rb`). Regla completa:
   `specs/071-monitoreo-externo/contracts/error-event.md`.
