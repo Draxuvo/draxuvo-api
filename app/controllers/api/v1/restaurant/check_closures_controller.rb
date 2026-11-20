@@ -13,6 +13,7 @@ module Api
           ticket = Check.transaction do
             check.lock!
             invalid!(:check_not_open) unless check.status_open?
+            TerminalCharge.ensure_none_open!(check) # spec 069
             invalid!(:not_zero_total) unless check.total.zero? && check.check_items.counted.none?
 
             check.check_items.status_draft.destroy_all

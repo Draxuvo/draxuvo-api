@@ -12,6 +12,8 @@ module Api
 
       before_action :set_sale, except: %i[index create catalog]
       before_action :ensure_editable!, only: %i[add_item update_item remove_item destroy]
+      # Spec 069: con un cobro esperando en la terminal la venta no se toca (se espera, se cancela o se registra a mano).
+      before_action :ensure_no_terminal_charge!, only: %i[add_item update_item remove_item destroy charge submit return_sale cancel]
 
       # GET /api/v1/sales — `queue=1` (spec 058, solo jefes): las ventas listas para cobro, de la más antigua a la más reciente.
       def index
@@ -197,6 +199,8 @@ module Api
       end
 
       # Una venta lista para cobro solo la tocan los jefes (spec 058).
+      def ensure_no_terminal_charge! = TerminalCharge.ensure_none_open!(@sale)
+
       def ensure_editable!
         return if Sales::Permissions.edit?(@sale, context)
 

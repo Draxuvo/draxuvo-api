@@ -45,3 +45,12 @@ production:
     class: Demo::PurgeJob
     queue: default
     schedule: every 10 minutes
+  # Spec 069: terminal integrada. Barrido de solicitudes de cobro (respaldo del aviso del proveedor) y renovación de tokens.
+  terminal_charges_sweep:
+    class: TerminalCharges::SweepJob
+    queue: default
+    schedule: every minute
+  terminal_connections_refresh:
+    class: TerminalConnections::RefreshJob
+    queue: default
+    schedule: at 3am every day

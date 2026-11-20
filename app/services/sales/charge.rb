@@ -8,9 +8,12 @@ module Sales
 
     Result = Struct.new(:sale, :ticket, :shortages, keyword_init: true)
 
-    def self.call(sale, user, params) = new(sale, user, params).call
+    # `terminal_payment` (spec 069) va como cuarto argumento posicional: las llamadas de siempre pasan `params` como
+    # pares clave-valor y un argumento con nombre los confundiría.
+    def self.call(sale, user, params, terminal_payment = nil) = new(sale, user, params, terminal_payment).call
 
-    def initialize(sale, user, params)
+    def initialize(sale, user, params, terminal_payment = nil)
+      @terminal_payment = terminal_payment
       @sale = sale
       @user = user
       @company = sale.company
@@ -26,7 +29,7 @@ module Sales
         @sale.recalculate_total!
         fail!(:empty) if @sale.sale_items.none? || !@sale.total.positive?
 
-        split = WorkOrders::ChargePayments.call(@company, @sale.total, @params)
+        split = WorkOrders::ChargePayments.call(@company, @sale.total, @params, @terminal_payment)
         ticket = create_ticket(split)
         shortages = deduct_stock
         @sale.update!(status: :paid, paid_at: Time.current, charged_by: @user)

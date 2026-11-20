@@ -153,9 +153,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
     t.datetime "updated_at", null: false
     t.bigint "terminal_id"
     t.integer "source", default: 0, null: false
+    t.bigint "terminal_charge_id"
     t.index ["check_id"], name: "index_check_payments_on_check_id"
     t.index ["company_id"], name: "index_check_payments_on_company_id"
     t.index ["created_by_id"], name: "index_check_payments_on_created_by_id"
+    t.index ["terminal_charge_id"], name: "index_check_payments_on_terminal_charge_id", unique: true
     t.index ["terminal_id"], name: "index_check_payments_on_terminal_id"
   end
 
@@ -358,8 +360,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "terminal_connection_id"
+    t.string "device_id"
+    t.string "device_mode"
     t.index "company_id, lower((name)::text)", name: "index_payment_terminals_on_company_and_lower_name", unique: true
     t.index ["company_id"], name: "index_payment_terminals_on_company_id"
+    t.index ["provider", "device_id"], name: "index_payment_terminals_on_provider_device", unique: true, where: "(device_id IS NOT NULL)"
+    t.index ["terminal_connection_id"], name: "index_payment_terminals_on_terminal_connection_id"
   end
 
   create_table "payroll_adjustments", force: :cascade do |t|
@@ -888,6 +895,121 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
     t.index ["trial_ends_at"], name: "index_subscriptions_on_trial_ends_at"
   end
 
+  create_table "terminal_charges", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "payment_terminal_id", null: false
+    t.bigint "terminal_connection_id", null: false
+    t.bigint "work_order_id"
+    t.bigint "sale_id"
+    t.bigint "check_id"
+    t.bigint "created_by_id", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.jsonb "params", default: {}, null: false
+    t.string "status", default: "pending", null: false
+    t.string "status_detail"
+    t.string "external_reference", null: false
+    t.uuid "idempotency_key", null: false
+    t.string "provider_order_id"
+    t.string "provider_payment_id"
+    t.string "provider_reference"
+    t.string "card_last4", limit: 4
+    t.string "payment_type"
+    t.datetime "expires_at", null: false
+    t.datetime "last_synced_at"
+    t.datetime "resolved_at"
+    t.datetime "applied_at"
+    t.datetime "cancel_requested_at"
+    t.string "unapplied_reason"
+    t.bigint "ticket_payment_id"
+    t.bigint "check_payment_id"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["check_id"], name: "index_terminal_charges_on_check_id"
+    t.index ["check_id"], name: "index_terminal_charges_open_check_id", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'canceling'::character varying])::text[]))"
+    t.index ["company_id", "status"], name: "index_terminal_charges_on_company_id_and_status"
+    t.index ["company_id"], name: "index_terminal_charges_on_company_id"
+    t.index ["created_by_id"], name: "index_terminal_charges_on_created_by_id"
+    t.index ["external_reference"], name: "index_terminal_charges_on_external_reference", unique: true
+    t.index ["payment_terminal_id"], name: "index_terminal_charges_on_payment_terminal_id"
+    t.index ["payment_terminal_id"], name: "index_terminal_charges_open_terminal", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'canceling'::character varying])::text[]))"
+    t.index ["provider_order_id"], name: "index_terminal_charges_on_provider_order_id", unique: true
+    t.index ["sale_id"], name: "index_terminal_charges_on_sale_id"
+    t.index ["sale_id"], name: "index_terminal_charges_open_sale_id", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'canceling'::character varying])::text[]))"
+    t.index ["status", "last_synced_at"], name: "index_terminal_charges_on_status_and_last_synced_at"
+    t.index ["terminal_connection_id"], name: "index_terminal_charges_on_terminal_connection_id"
+    t.index ["work_order_id"], name: "index_terminal_charges_on_work_order_id"
+    t.index ["work_order_id"], name: "index_terminal_charges_open_work_order_id", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'canceling'::character varying])::text[]))"
+    t.check_constraint "((work_order_id IS NOT NULL)::integer + (sale_id IS NOT NULL)::integer + (check_id IS NOT NULL)::integer) = 1", name: "terminal_charges_one_owner"
+    t.check_constraint "amount > 0::numeric", name: "terminal_charges_amount_positive"
+  end
+
+  create_table "terminal_connections", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "provider", null: false
+    t.string "status", default: "connected", null: false
+    t.string "account_id"
+    t.string "account_label"
+    t.text "access_token"
+    t.text "refresh_token"
+    t.datetime "token_expires_at"
+    t.boolean "live_mode", default: true, null: false
+    t.bigint "connected_by_id"
+    t.datetime "connected_at"
+    t.datetime "disconnected_at"
+    t.datetime "last_refreshed_at"
+    t.string "error_code"
+    t.string "error_message"
+    t.datetime "problem_notified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "provider"], name: "index_terminal_connections_on_company_id_and_provider", unique: true
+    t.index ["connected_by_id"], name: "index_terminal_connections_on_connected_by_id"
+    t.index ["provider", "account_id"], name: "index_terminal_connections_on_provider_and_account_id"
+  end
+
+  create_table "terminal_events", force: :cascade do |t|
+    t.bigint "company_id"
+    t.string "kind", null: false
+    t.bigint "terminal_connection_id"
+    t.bigint "payment_terminal_id"
+    t.bigint "terminal_charge_id"
+    t.bigint "terminal_refund_id"
+    t.bigint "user_id"
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["company_id", "created_at"], name: "index_terminal_events_on_company_id_and_created_at"
+    t.index ["company_id"], name: "index_terminal_events_on_company_id"
+    t.index ["payment_terminal_id"], name: "index_terminal_events_on_payment_terminal_id"
+    t.index ["terminal_charge_id"], name: "index_terminal_events_on_terminal_charge_id"
+    t.index ["terminal_connection_id"], name: "index_terminal_events_on_terminal_connection_id"
+    t.index ["terminal_refund_id"], name: "index_terminal_events_on_terminal_refund_id"
+    t.index ["user_id"], name: "index_terminal_events_on_user_id"
+  end
+
+  create_table "terminal_refunds", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "terminal_charge_id", null: false
+    t.bigint "ticket_payment_id"
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "status", null: false
+    t.string "reason"
+    t.string "provider_refund_id"
+    t.integer "attempts", default: 1, null: false
+    t.string "idempotency_key", null: false
+    t.string "error_code"
+    t.string "error_message"
+    t.bigint "requested_by_id", null: false
+    t.datetime "requested_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_terminal_refunds_on_company_id"
+    t.index ["requested_by_id"], name: "index_terminal_refunds_on_requested_by_id"
+    t.index ["terminal_charge_id"], name: "index_terminal_refunds_on_terminal_charge_id", unique: true
+    t.index ["ticket_payment_id"], name: "index_terminal_refunds_on_ticket_payment_id"
+  end
+
   create_table "ticket_payments", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.bigint "ticket_id", null: false
@@ -904,8 +1026,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
     t.datetime "voided_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "terminal_charge_id"
     t.index ["company_id"], name: "index_ticket_payments_on_company_id"
     t.index ["created_by_id"], name: "index_ticket_payments_on_created_by_id"
+    t.index ["terminal_charge_id"], name: "index_ticket_payments_on_terminal_charge_id", unique: true
     t.index ["terminal_id"], name: "index_ticket_payments_on_terminal_id"
     t.index ["ticket_id"], name: "index_ticket_payments_on_ticket_id"
   end
@@ -1141,6 +1265,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
   add_foreign_key "check_payments", "checks"
   add_foreign_key "check_payments", "companies"
   add_foreign_key "check_payments", "payment_terminals", column: "terminal_id"
+  add_foreign_key "check_payments", "terminal_charges"
   add_foreign_key "check_payments", "users", column: "created_by_id"
   add_foreign_key "checks", "companies"
   add_foreign_key "checks", "dining_tables"
@@ -1166,6 +1291,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
   add_foreign_key "notification_preferences", "companies"
   add_foreign_key "notification_preferences", "users", on_delete: :cascade
   add_foreign_key "payment_terminals", "companies"
+  add_foreign_key "payment_terminals", "terminal_connections"
   add_foreign_key "payroll_adjustments", "companies"
   add_foreign_key "payroll_adjustments", "payroll_payments"
   add_foreign_key "payroll_adjustments", "payroll_payments", column: "corrects_payment_id"
@@ -1227,8 +1353,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
   add_foreign_key "subscription_changes", "subscriptions"
   add_foreign_key "subscription_changes", "users", column: "actor_id"
   add_foreign_key "subscriptions", "companies"
+  add_foreign_key "terminal_charges", "check_payments"
+  add_foreign_key "terminal_charges", "checks"
+  add_foreign_key "terminal_charges", "companies"
+  add_foreign_key "terminal_charges", "payment_terminals"
+  add_foreign_key "terminal_charges", "sales"
+  add_foreign_key "terminal_charges", "terminal_connections"
+  add_foreign_key "terminal_charges", "ticket_payments"
+  add_foreign_key "terminal_charges", "users", column: "created_by_id"
+  add_foreign_key "terminal_charges", "work_orders"
+  add_foreign_key "terminal_connections", "companies"
+  add_foreign_key "terminal_connections", "users", column: "connected_by_id"
+  add_foreign_key "terminal_events", "companies"
+  add_foreign_key "terminal_events", "payment_terminals"
+  add_foreign_key "terminal_events", "terminal_charges"
+  add_foreign_key "terminal_events", "terminal_connections"
+  add_foreign_key "terminal_events", "terminal_refunds"
+  add_foreign_key "terminal_events", "users"
+  add_foreign_key "terminal_refunds", "companies"
+  add_foreign_key "terminal_refunds", "terminal_charges"
+  add_foreign_key "terminal_refunds", "ticket_payments"
+  add_foreign_key "terminal_refunds", "users", column: "requested_by_id"
   add_foreign_key "ticket_payments", "companies"
   add_foreign_key "ticket_payments", "payment_terminals", column: "terminal_id"
+  add_foreign_key "ticket_payments", "terminal_charges"
   add_foreign_key "ticket_payments", "tickets"
   add_foreign_key "ticket_payments", "users", column: "created_by_id"
   add_foreign_key "ticket_voids", "companies"

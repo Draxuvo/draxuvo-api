@@ -28,8 +28,9 @@ module WorkOrders
     # Lo que no alcanzó del inventario al cobrar la orden (spec 054): [{ product_id:, name:, missing: }].
     attr_reader :shortages
 
-    def self.call(order, action, context, params = {})
-      new(order, action, context, params).call
+    # `terminal_payment` (spec 069) va posicional: las llamadas de siempre pasan `params` como pares clave-valor.
+    def self.call(order, action, context, params = {}, terminal_payment = nil)
+      new(order, action, context, params, terminal_payment).call
     end
 
     # Acciones que `context` puede ejecutar ahora sobre `order` (para allowed_actions).
@@ -50,7 +51,8 @@ module WorkOrders
 
     def self.boss_only?(order, context) = ChargePolicy.restricted?(order.company, context.role)
 
-    def initialize(order, action, context, params)
+    def initialize(order, action, context, params, terminal_payment = nil)
+      @terminal_payment = terminal_payment
       @order   = order
       @action  = action.to_sym
       @context = context
@@ -108,7 +110,7 @@ module WorkOrders
         raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("work_order.no_items"), details: { reason: "no_items" })
       end
 
-      split = ChargePayments.call(@order.company, total, @params)
+      split = ChargePayments.call(@order.company, total, @params, @terminal_payment)
       ticket = @order.ticket || @order.build_ticket(company: @order.company)
       ticket.assign_attributes(
         status: :paid, total: total, payment_method: split.payment_method, amount_received: split.amount_received,

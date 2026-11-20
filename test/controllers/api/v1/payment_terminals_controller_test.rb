@@ -31,7 +31,8 @@ class Api::V1::PaymentTerminalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     created = response.parsed_body
     assert_equal({ "name" => "Point barra", "provider" => "mercado_pago", "provider_label" => "Mercado Pago", "active" => true,
-                   "payments_count" => 0 }, created.except("id"))
+                   "payments_count" => 0, "kind" => "manual", "chargeable" => false, "connection_status" => nil,
+                   "device_id" => nil, "device_mode" => nil }, created.except("id"))
 
     patch "#{BASE}/#{created['id']}", params: { payment_terminal: { active: false } }, headers: @admin, as: :json
     assert_response :ok

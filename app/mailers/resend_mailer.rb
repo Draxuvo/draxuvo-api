@@ -105,6 +105,29 @@ class ResendMailer
       false
     end
 
+    # Aviso de que la conexión con el proveedor de terminal dejó de funcionar (spec 069, FR-030): dueño y administradores,
+    # una vez por cambio de estado. Sin tokens ni datos de la cuenta.
+    def terminal_connection_problem(user:, company_name:, provider:, reason:)
+      raise ArgumentError, "User email is required" unless user&.email.present?
+
+      provider_name = I18n.t("payment_terminal.providers.#{provider}", locale: :es)
+      send_email(
+        from:    sender_email(company_name),
+        to:      user.email,
+        subject: I18n.t("terminal_connection.email.subject", provider: provider_name, locale: :es),
+        html:    ApplicationController.render(
+                   template: "resend_mailer/terminal_connection_problem",
+                   layout:   false,
+                   locals:   { user: user, company_name: company_name, provider_name: provider_name,
+                               reason_text: I18n.t("terminal_connection.problems.#{reason}", locale: :es,
+                                                   default: I18n.t("terminal_connection.problems.generic", locale: :es)) }
+                 )
+      )
+    rescue => e
+      handle_email_error(user, e)
+      false
+    end
+
     # Aviso de stock bajo para dueño y administrador (spec 045): `kind` es "immediate" (productos que acaban de bajar)
     # o "daily" (resumen de todo lo que sigue bajo). Sin datos de clientes ni montos de cuentas (FR-025).
     def stock_alert(user:, company_name:, kind:, products:, locale: "es")

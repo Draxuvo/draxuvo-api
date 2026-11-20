@@ -112,6 +112,7 @@ module Api
         action = request.path_parameters[:transition].to_s
         raise ApiErrors::NotFoundError.new unless TRANSITIONS.include?(action)
 
+        TerminalCharge.ensure_none_open!(order) # spec 069: con un cobro esperando en la terminal no cambia de estado
         transition = WorkOrders::Transition.new(order, action, work_order_context, transition_params)
         transition.call
         # Spec 058: con «Cobro solo por jefes», una orden terminada avisa a los jefes que espera cobro.
@@ -274,6 +275,8 @@ module Api
 
       def ensure_unlocked!(order)
         raise unprocessable(I18n.t("work_order.locked")) if order.locked?
+
+        TerminalCharge.ensure_none_open!(order) # spec 069
       end
 
       def search(scope, query)
