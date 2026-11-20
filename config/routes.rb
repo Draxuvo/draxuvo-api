@@ -235,7 +235,7 @@ Rails.application.routes.draw do
         post "tables/:id/menu_link", to: "menu_links#regenerate", as: :regenerate_menu_link
         post "menu_cards/pdf",       to: "menu_cards#pdf",        as: :menu_cards_pdf
         resources :stock_alerts, only: :index
-        resources :checks, only: %i[create show update] do
+        resources :checks, only: %i[index create show update] do
           get :waiters, on: :collection
           member do
             post :cancel

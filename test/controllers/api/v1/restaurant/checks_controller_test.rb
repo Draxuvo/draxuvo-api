@@ -157,4 +157,155 @@ class Api::V1::Restaurant::ChecksControllerTest < ActionDispatch::IntegrationTes
     assert_equal "taco", taco["icon"]
     assert_equal "utensils", taco["type_icon"]
   end
+
+  # Spec 070: las cuentas canceladas se listan para el filtro «Canceladas».
+  def cancelled_check(waiter:, table: nil, takeout_name: nil, at: 1.hour.ago, reason: nil, by: nil)
+    @company.checks.create!(dining_table: table, takeout_name: takeout_name, opened_by: waiter, waiter: waiter,
+                            opened_at: at - 10.minutes, closed_at: at, status: :cancelled, cancel_reason: reason,
+                            cancelled_by: by)
+  end
+
+  def list_cancelled(user, **params)
+    get "/api/v1/restaurant/checks", params: { status: "cancelled" }.merge(params), headers: headers_for(user)
+  end
+
+  test "a boss lists the cancelled checks, newest first, without open or closed ones" do
+    older = cancelled_check(waiter: users(:resto_waiter), table: dining_tables(:table_4), at: 2.hours.ago)
+    newer = cancelled_check(waiter: users(:resto_waiter2), takeout_name: "Rosa", at: 30.minutes.ago,
+                            reason: "Se fue", by: users(:resto_owner))
+
+    list_cancelled(users(:resto_owner))
+
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal [ newer.id, older.id ], body["results"].map { |c| c["id"] }
+    assert_equal 2, body.dig("info", "total")
+    first = body["results"].first
+    assert_nil first["table"]
+    assert_equal "Rosa", first["takeout_name"]
+    assert_equal "Se fue", first["cancel_reason"]
+    assert_equal users(:resto_owner).id, first.dig("cancelled_by", "id")
+    assert_equal users(:resto_waiter2).id, first.dig("waiter", "id")
+    assert_not first["mine"]
+    assert first["cancelled_at"].present?
+    assert first["opened_at"].present?
+    assert_equal "4", body["results"].last.dig("table", "name")
+    assert_nil body["results"].last["cancelled_by"]
+  end
+
+  test "each cancelled check carries how many items were cancelled" do
+    check = @company.checks.create!(dining_table: dining_tables(:table_4), opened_by: users(:resto_waiter),
+                                    waiter: users(:resto_waiter), opened_at: Time.current)
+    2.times do
+      item = check.check_items.create!(company: @company, product: products(:resto_agua), name: "Agua", unit_price: 25, quantity: 1)
+      item.update_columns(status: CheckItem.statuses[:cancelled], cancelled_at: Time.current, cancel_reason: "N")
+    end
+    check.update_columns(status: Check.statuses[:cancelled], closed_at: Time.current)
+
+    list_cancelled(users(:resto_owner))
+
+    assert_equal 2, response.parsed_body["results"].find { |c| c["id"] == check.id }["cancelled_items"]
+  end
+
+  test "staff only see the cancelled checks they waited, even asking for another waiter" do
+    mine = cancelled_check(waiter: users(:resto_waiter), table: dining_tables(:table_4))
+    cancelled_check(waiter: users(:resto_waiter2), takeout_name: "Otro")
+
+    list_cancelled(users(:resto_waiter), waiter_id: users(:resto_waiter2).id)
+
+    assert_response :ok
+    assert_equal [ mine.id ], response.parsed_body["results"].map { |c| c["id"] }
+    assert response.parsed_body["results"].first["mine"]
+  end
+
+  test "a boss filters the cancelled checks by waiter" do
+    cancelled_check(waiter: users(:resto_waiter), table: dining_tables(:table_4))
+    theirs = cancelled_check(waiter: users(:resto_waiter2), takeout_name: "Otro")
+
+    list_cancelled(users(:resto_owner), waiter_id: users(:resto_waiter2).id)
+
+    assert_equal [ theirs.id ], response.parsed_body["results"].map { |c| c["id"] }
+  end
+
+  test "search matches the table, the takeout name and the waiter" do
+    table = cancelled_check(waiter: users(:resto_waiter), table: dining_tables(:table_4))
+    takeout = cancelled_check(waiter: users(:resto_waiter), takeout_name: "Rosa Pérez")
+    waiter = cancelled_check(waiter: users(:resto_waiter2), takeout_name: "Juan")
+
+    list_cancelled(users(:resto_owner), search: "4")
+    assert_includes response.parsed_body["results"].map { |c| c["id"] }, table.id
+
+    list_cancelled(users(:resto_owner), search: "rosa")
+    assert_equal [ takeout.id ], response.parsed_body["results"].map { |c| c["id"] }
+
+    list_cancelled(users(:resto_owner), search: "waiter2")
+    assert_equal [ waiter.id ], response.parsed_body["results"].map { |c| c["id"] }
+  end
+
+  test "the cancelled list is paginated" do
+    3.times { |i| cancelled_check(waiter: users(:resto_waiter), takeout_name: "T#{i}", at: (i + 1).hours.ago) }
+
+    list_cancelled(users(:resto_owner), page_size: 2)
+
+    assert_equal 2, response.parsed_body["results"].size
+    assert_equal 3, response.parsed_body.dig("info", "total")
+  end
+
+  test "listing checks needs status=cancelled" do
+    get "/api/v1/restaurant/checks", headers: headers_for(users(:resto_owner))
+    assert_response :unprocessable_entity
+
+    list_cancelled(users(:resto_owner), status: "closed")
+    assert_response :unprocessable_entity
+  end
+
+  test "cancelled checks of another company are not listed" do
+    cancelled_check(waiter: users(:resto_waiter), takeout_name: "Mía")
+
+    get "/api/v1/restaurant/checks", params: { status: "cancelled" },
+                                     headers: auth_headers(users(:pro_co_owner), companies(:pro_co))
+
+    assert_response :ok
+    assert_empty response.parsed_body["results"]
+  end
+
+  test "a company without the restaurant module cannot list cancelled checks" do
+    @company.update!(disabled_modules: [ "restaurant" ])
+    list_cancelled(users(:resto_owner))
+
+    assert_response :forbidden
+    assert_equal "module_not_in_plan", response.parsed_body.dig("error", "details", "code")
+  end
+
+  test "releasing a table records who cancelled the check" do
+    check = @company.checks.create!(dining_table: dining_tables(:table_4), opened_by: users(:resto_waiter),
+                                    waiter: users(:resto_waiter), opened_at: Time.current)
+    post "/api/v1/restaurant/checks/#{check.id}/cancel", headers: headers_for(users(:resto_owner)),
+                                                          params: { reason: "Se fueron" }, as: :json
+
+    assert_response :ok
+    assert_equal users(:resto_owner), check.reload.cancelled_by
+    assert_equal users(:resto_owner).id, response.parsed_body.dig("cancelled_by", "id")
+    assert_equal "Se fueron", response.parsed_body["cancel_reason"]
+    assert response.parsed_body["closed_at"].present?
+  end
+
+  test "a cancelled check shows its cancellation and its cancelled items, without actions" do
+    check = @company.checks.create!(dining_table: dining_tables(:table_4), opened_by: users(:resto_waiter),
+                                    waiter: users(:resto_waiter), opened_at: Time.current)
+    item = check.check_items.create!(company: @company, product: products(:resto_agua), name: "Agua", unit_price: 25, quantity: 1)
+    item.update_columns(status: CheckItem.statuses[:cancelled], cancelled_at: Time.current, cancel_reason: "Error",
+                        cancelled_by_id: users(:resto_waiter).id)
+    post "/api/v1/restaurant/checks/#{check.id}/cancel", headers: headers_for(users(:resto_owner)), as: :json
+
+    get "/api/v1/restaurant/checks/#{check.id}", headers: headers_for(users(:resto_owner))
+
+    body = response.parsed_body
+    assert_equal "cancelled", body["status"]
+    assert_empty body["allowed_actions"]
+    line = body["items"].first
+    assert_equal "Error", line["cancel_reason"]
+    assert_equal users(:resto_waiter).id, line.dig("cancelled_by", "id")
+    assert line["cancelled_at"].present?
+  end
 end
