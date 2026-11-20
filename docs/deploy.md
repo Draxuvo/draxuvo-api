@@ -100,7 +100,11 @@ La contraseña inicial salió de un generador aleatorio de 28 caracteres, no de 
 
 ## Logs y errores (FR-016)
 
-- **API:** Render → `draxuvo-api` → **Logs** (filtra por `error`). También con el MCP de Render (`list_logs`).
+- **Monitoreo externo (spec 071):** avisos de caída, latido del worker, errores (Sentry) y logs con búsqueda y alertas
+  (Better Stack). Cuentas, variables y qué hacer ante cada aviso: [monitoreo.md](monitoreo.md).
+- **API:** Render → `draxuvo-api` → **Logs** (filtra por `error`). También con el MCP de Render (`list_logs`). En
+  producción cada petición es una línea JSON (`{"method":…,"request_id":…}`); búscala por su `request_id` (el encabezado
+  `X-Request-Id` de la respuesta).
 - **Trabajos:** Render → `draxuvo-jobs` → **Logs**. Señales al arrancar: `[jobs] jemalloc activo` (si dice `inactivo`, el
   comando del worker no pasa por `/rails/bin/docker-entrypoint`: el Docker Command de Render reemplaza el `ENTRYPOINT` de la imagen), `[migration_wait] base al día` (o
   `esperando migraciones…`), `SolidQueue-1.4.x Started Supervisor(async)`, y después cada trabajo con `Performing` / `Performed`.

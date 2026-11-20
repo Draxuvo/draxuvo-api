@@ -45,3 +45,8 @@ production:
     class: Demo::PurgeJob
     queue: default
     schedule: every 10 minutes
+  # Spec 071: latido del worker hacia Better Stack (HEARTBEAT_URL); si deja de llegar, avisa que los trabajos se detuvieron.
+  monitoring_heartbeat:
+    class: Monitoring::HeartbeatJob
+    queue: default
+    schedule: every 5 minutes

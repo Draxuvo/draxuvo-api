@@ -215,6 +215,12 @@ GEM
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     logger (1.7.0)
+    lograge (0.16.0)
+      actionpack (>= 4)
+      activesupport (>= 4)
+      logger
+      railties (>= 4)
+      request_store (~> 1.0)
     loofah (2.24.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
@@ -352,6 +358,8 @@ GEM
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
+    request_store (1.7.0)
+      rack (>= 1.4)
     resend (0.22.0)
       httparty (>= 0.21.0)
     rexml (3.4.1)
@@ -402,6 +410,13 @@ GEM
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 4.0)
       websocket (~> 1.0)
+    sentry-rails (7.3.0)
+      railties (>= 5.2.0)
+      sentry-ruby (~> 7.3.0)
+    sentry-ruby (7.3.0)
+      bigdecimal
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      logger
     solid_cable (3.0.11)
       actioncable (>= 7.2)
       activejob (>= 7.2)
@@ -490,6 +505,7 @@ DEPENDENCIES
   jbuilder
   jwt
   kamal
+  lograge (~> 0.16)
   pagy
   pg (~> 1.1)
   prawn
@@ -505,6 +521,8 @@ DEPENDENCIES
   rqrcode_core (~> 2.0)
   rubocop-rails-omakase
   selenium-webdriver
+  sentry-rails (~> 7.3)
+  sentry-ruby (~> 7.3)
   solid_cable
   solid_cache
   solid_queue (~> 1.4.0)
