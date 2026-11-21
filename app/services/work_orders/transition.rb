@@ -28,8 +28,9 @@ module WorkOrders
     # Lo que no alcanzó del inventario al cobrar la orden (spec 054): [{ product_id:, name:, missing: }].
     attr_reader :shortages
 
-    def self.call(order, action, context, params = {})
-      new(order, action, context, params).call
+    # `terminal_payment` (spec 069) va posicional: las llamadas de siempre pasan `params` como pares clave-valor.
+    def self.call(order, action, context, params = {}, terminal_payment = nil)
+      new(order, action, context, params, terminal_payment).call
     end
 
     # Acciones que `context` puede ejecutar ahora sobre `order` (para allowed_actions).
@@ -50,7 +51,8 @@ module WorkOrders
 
     def self.boss_only?(order, context) = ChargePolicy.restricted?(order.company, context.role)
 
-    def initialize(order, action, context, params)
+    def initialize(order, action, context, params, terminal_payment = nil)
+      @terminal_payment = terminal_payment
       @order   = order
       @action  = action.to_sym
       @context = context
@@ -63,6 +65,7 @@ module WorkOrders
       ChargePolicy.forbid! if @action == :charge && self.class.boss_only?(@order, @context)
       raise ApiErrors::ForbiddenError.new(message: I18n.t("auth.not_authorized")) unless self.class.permitted?(@order, @action, @context)
 
+      @refunds = prepare_refunds if @action == :void_charge
       WorkOrder.transaction do
         @order.lock!
         unless rule[:from].include?(@order.status)
@@ -108,7 +111,7 @@ module WorkOrders
         raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("work_order.no_items"), details: { reason: "no_items" })
       end
 
-      split = ChargePayments.call(@order.company, total, @params)
+      split = ChargePayments.call(@order.company, total, @params, @terminal_payment)
       ticket = @order.ticket || @order.build_ticket(company: @order.company)
       ticket.assign_attributes(
         status: :paid, total: total, payment_method: split.payment_method, amount_received: split.amount_received,
@@ -132,6 +135,7 @@ module WorkOrders
       ticket = @order.ticket
       now = Time.current
       voided = ticket.ticket_payments.active.to_a
+      @refunds&.settle!
       ticket.ticket_payments.active.update_all(voided_at: now, updated_at: now)
       ticket.voids.create!(company: @order.company, voided_by: @context.user, voided_at: now, reason: reason,
                            amount: ticket.total, payments: payments_summary(voided))
@@ -141,11 +145,22 @@ module WorkOrders
       event(:voided, { ticket_id: ticket.id, reason: reason, payments: payments_summary(voided) })
     end
 
+    # Spec 069: los reembolsos de los pagos integrados se piden **antes** de la transacción (la llamada al proveedor no
+    # debe quedar dentro). Solo si la anulación procede: orden cobrada y con motivo.
+    def prepare_refunds
+      return unless @order.status == "paid" && @order.ticket
+
+      TerminalRefunds::ForTicket.call(@order.ticket, user: @context.user, mode: @params[:refund], reason: require_reason!)
+    end
+
+    # Un pago integrado guarda su id para que «Anulaciones previas» muestre el estado de su reembolso (spec 069, FR-034).
     def payments_summary(payments)
       payments.map do |payment|
         method = payment.respond_to?(:payment_method) ? payment.payment_method : payment[:payment_method]
         amount = payment.respond_to?(:amount) ? payment.amount : payment[:amount]
-        { method: method.to_s, amount: amount.to_s("F") }
+        summary = { method: method.to_s, amount: amount.to_s("F") }
+        summary[:ticket_payment_id] = payment.id if payment.respond_to?(:terminal?) && payment.terminal?
+        summary
       end
     end
 

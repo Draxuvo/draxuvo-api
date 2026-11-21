@@ -12,6 +12,8 @@ module Api
 
       before_action :set_sale, except: %i[index create catalog]
       before_action :ensure_editable!, only: %i[add_item update_item remove_item destroy]
+      # Spec 069: con un cobro esperando en la terminal la venta no se toca (se espera, se cancela o se registra a mano).
+      before_action :ensure_no_terminal_charge!, only: %i[add_item update_item remove_item destroy charge submit return_sale cancel]
 
       # GET /api/v1/sales — `queue=1` (spec 058, solo jefes): las ventas listas para cobro, de la más antigua a la más reciente.
       def index
@@ -87,11 +89,12 @@ module Api
         render json: serialize(Sales::Return.call(@sale, current_user).reload)
       end
 
-      # POST /api/v1/sales/:id/cancel — { reason }. Solo dueño y administrador.
+      # POST /api/v1/sales/:id/cancel — { reason, refund? }. Solo dueño y administrador. `refund` (spec 069):
+      # `confirm` | `skip` para los pagos con terminal integrada.
       def cancel
         forbid! unless Sales::Permissions.cancel?(@sale, context)
 
-        render json: serialize(Sales::Cancel.call(@sale, current_user, params[:reason]).reload)
+        render json: serialize(Sales::Cancel.call(@sale, current_user, params[:reason], params[:refund]).reload)
       end
 
       # GET /api/v1/sales/:id/ticket — el ticket de una venta cobrada o cancelada.
@@ -197,6 +200,8 @@ module Api
       end
 
       # Una venta lista para cobro solo la tocan los jefes (spec 058).
+      def ensure_no_terminal_charge! = TerminalCharge.ensure_none_open!(@sale)
+
       def ensure_editable!
         return if Sales::Permissions.edit?(@sale, context)
 

@@ -77,6 +77,8 @@ Rails.application.routes.draw do
 
       # Webhooks de Stripe (sin autenticación)
       post "stripe/webhooks", to: "stripe_webhooks#create"
+      # Spec 069: avisos de Mercado Pago (público, lo autentica la firma).
+      post "webhooks/mercado_pago", to: "webhooks/mercado_pago#create"
 
       # Employees + checkin/checkout + sus asistencias
       # Tipos de producto de la empresa (spec 016)
@@ -85,7 +87,28 @@ Rails.application.routes.draw do
       end
 
       # Terminales de cobro del negocio (spec 015)
-      resources :payment_terminals, only: %i[index create update destroy]
+      resources :payment_terminals, only: %i[index create update destroy] do
+        member do
+          post :prepare
+          post :unlink
+        end
+      end
+      # Terminal integrada (spec 069): conexiones con proveedores y solicitudes de cobro.
+      resources :terminal_connections, only: %i[index destroy] do
+        get :devices, on: :member
+        collection do
+          post "mercado_pago/authorize", action: :authorize, defaults: { provider: "mercado_pago" }
+          post "mercado_pago/callback",  action: :callback,  defaults: { provider: "mercado_pago" }
+        end
+      end
+      resources :terminal_charges, only: %i[index show create] do
+        member do
+          post :cancel
+          post :abandon
+          post :refund
+          post :dismiss
+        end
+      end
 
       resources :employees do
         member do

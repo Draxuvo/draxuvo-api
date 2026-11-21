@@ -33,6 +33,8 @@ services:
     #   RESEND_API_KEY, RESEND_FROM_EMAIL, STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, SUPER_ADMIN_PASSWORD
     #   MIN_APP_VERSION_IOS / _ANDROID, ACTIVE_STORAGE_SERVICE=r2, R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID,
     #   R2_SECRET_ACCESS_KEY, y las opcionales (PUSH_ENABLED, EXPO_ACCESS_TOKEN, DEMO_*, LOGIN_RATE_*, ...)
+    #   Terminal integrada (spec 069, opcionales hasta tener la aplicación de Mercado Pago): MERCADO_PAGO_CLIENT_ID,
+    #   MERCADO_PAGO_CLIENT_SECRET, MERCADO_PAGO_WEBHOOK_SECRET, MERCADO_PAGO_PLATFORM_ID, MERCADO_PAGO_INTEGRATOR_ID
     #   Monitoreo (spec 071, docs/monitoreo.md; opcionales, sin ellas no se reporta nada): SENTRY_DSN,
     #   SENTRY_ENVIRONMENT=production, SENTRY_TRACES_SAMPLE_RATE (0 por omisión) y HEARTBEAT_URL (latido de Better Stack;
     #   solo la usa el worker, pero vive aquí por la regla de fuente única). RENDER_GIT_COMMIT la pone Render (release).
@@ -113,3 +115,6 @@ services:
         fromService: { type: web, name: draxuvo-api, envVarKey: HEARTBEAT_URL }
       # No se copian las que la API no define y usan su valor por omisión en los dos (PUBLIC_SITE_URL, PUSH_ENABLED,
       # EXPO_ACCESS_TOKEN, DEMO_*, ...): si se agrega una a la API y la usa un trabajo, agregarla aquí también.
+      # Spec 069: al definir en la API MERCADO_PAGO_CLIENT_ID, MERCADO_PAGO_CLIENT_SECRET (y, si existen,
+      # MERCADO_PAGO_PLATFORM_ID e MERCADO_PAGO_INTEGRATOR_ID), copiarlas aquí con fromService: la sincronización de
+      # cobros y la renovación de tokens corren en este worker.

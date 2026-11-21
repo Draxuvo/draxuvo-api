@@ -4,9 +4,11 @@ module Restaurant
     METHODS = %w[cash card transfer].freeze
     Result = Struct.new(:payment, :close, keyword_init: true)
 
-    def self.call(check, context, params) = new(check, context, params).call
+    # `terminal_payment` (spec 069): el abono con tarjeta en una terminal integrada, armado por el servidor.
+    def self.call(check, context, params, terminal_payment = nil) = new(check, context, params, terminal_payment).call
 
-    def initialize(check, context, params)
+    def initialize(check, context, params, terminal_payment = nil)
+      @terminal_payment = terminal_payment
       @check = check
       @context = context
       @params = params.respond_to?(:to_unsafe_h) ? params.to_unsafe_h.with_indifferent_access : params.to_h.with_indifferent_access
@@ -16,17 +18,20 @@ module Restaurant
       Check.transaction do
         @check.lock!
         fail!(:check_not_open) unless @check.status_open?
+        # Spec 069: con un abono esperando en la terminal no se registran otros pagos (el propio abono sí).
+        TerminalCharge.ensure_none_open!(@check) unless @terminal_payment
         ChargePolicy.forbid! if @context.restricted? # spec 058: el personal no cobra
         raise ApiErrors::ForbiddenError.new(message: I18n.t("auth.not_authorized")) unless Permissions.pay?(@check, @context)
 
-        method = @params[:method].to_s
+        method = @terminal_payment ? "card" : @params[:method].to_s
         raise ApiErrors::UnprocessableEntityError.new(message: I18n.t("ticket.invalid_payment_method")) unless METHODS.include?(method)
 
         balance = @check.balance
         fail!(:invalid_amount) unless balance.positive?
         confirm_incomplete!
 
-        payment = @check.check_payments.create!(attributes_for(method, balance).merge(company: @check.company, created_by: @context.user))
+        attrs = @terminal_payment ? terminal_attributes_for(balance) : attributes_for(method, balance)
+        payment = @check.check_payments.create!(attrs.merge(company: @check.company, created_by: @context.user))
         close = @check.balance.positive? ? nil : CloseCheck.call(@check, @context.user)
         Result.new(payment: payment, close: close)
       end
@@ -69,6 +74,17 @@ module Restaurant
       fail!(:reference_required) if method == "transfer" && reference.empty?
 
       { payment_method: method, amount: amount, reference: reference.presence }.merge(terminal_attributes(method))
+    end
+
+    # El abono de una terminal integrada (spec 069): monto y terminal los fijó la solicitud; nunca pasa del saldo.
+    def terminal_attributes_for(balance)
+      tp = @terminal_payment
+      amount = tp[:amount].to_d
+      fail!(:invalid_amount) unless amount.positive?
+      fail!(:exceeds_balance) if amount > balance
+
+      { payment_method: "card", amount: amount, terminal: tp[:terminal], source: tp[:source] || :manual,
+        terminal_charge: tp[:terminal_charge], reference: tp[:reference].presence }.compact
     end
 
     # La terminal en que se cobró con tarjeta, opcional (spec 015, FR-022).

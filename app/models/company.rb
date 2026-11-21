@@ -18,7 +18,13 @@ class Company < ApplicationRecord
   has_many :dining_tables, dependent: :destroy
   has_many :checks, dependent: :destroy
   has_many :sales, dependent: :destroy
+  # Spec 069: terminal integrada. El orden importa al borrar la empresa: bitácora, reembolsos y solicitudes antes que las
+  # terminales (que las referencian), y las conexiones al final (las terminales apuntan a ellas).
+  has_many :terminal_events, dependent: :delete_all
+  has_many :terminal_refunds, dependent: :delete_all
+  has_many :terminal_charges, dependent: :delete_all
   has_many :payment_terminals, dependent: :destroy
+  has_many :terminal_connections, dependent: :delete_all
   has_many :product_types, dependent: :destroy
   has_many :module_changes, dependent: :destroy
   has_many :charge_policy_changes, dependent: :delete_all

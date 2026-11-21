@@ -59,7 +59,10 @@ class CheckSerializer
       id: payment.id, method: payment.payment_method, amount: money(payment.amount), reference: payment.reference,
       amount_received: payment.amount_received && money(payment.amount_received),
       change_given: payment.change_given && money(payment.change_given),
-      terminal: PaymentTerminalSerializer.ref(payment.terminal)
+      terminal: PaymentTerminalSerializer.ref(payment.terminal),
+      # Spec 069: confirmado por el proveedor o registrado a mano, su referencia y el reembolso si lo hubo.
+      source: payment.source, provider_reference: payment.terminal_charge&.provider_reference,
+      refund: payment.terminal_charge&.terminal_refund&.as_payment_json
     }
   end
 

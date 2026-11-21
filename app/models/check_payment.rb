@@ -6,7 +6,9 @@ class CheckPayment < ApplicationRecord
   belongs_to :terminal, class_name: "PaymentTerminal", optional: true, inverse_of: :check_payments
 
   enum :payment_method, { cash: 0, card: 1, transfer: 2 }
-  enum :source, { manual: 0 }, default: :manual
+  # Spec 069: `terminal` = confirmado por el proveedor de una terminal integrada; solo lo crea TerminalCharges::Apply.
+  enum :source, { manual: 0, terminal: 1 }, default: :manual
+  belongs_to :terminal_charge, optional: true
 
   validates :amount, numericality: { greater_than: 0 }
   # Spec 054 (H-51): la tarjeta no exige referencia; la transferencia sí.
@@ -14,6 +16,7 @@ class CheckPayment < ApplicationRecord
   validates :amount_received, numericality: { greater_than_or_equal_to: ->(p) { p.amount || 0 } }, if: :cash?
   validate :within_balance, on: :create
   validate :terminal_usable, on: :create
+  validate :terminal_source_complete
 
   before_validation :compute_change
 
@@ -42,5 +45,12 @@ class CheckPayment < ApplicationRecord
     return unless check && amount
 
     errors.add(:amount, I18n.t("restaurant.errors.exceeds_balance")) if amount > check.balance
+  end
+
+  # Un pago confirmado por el proveedor es siempre tarjeta, en una terminal y con su solicitud (spec 069, data-model.md).
+  def terminal_source_complete
+    return unless terminal?
+
+    errors.add(:source, :invalid) unless card? && terminal_id && terminal_charge_id
   end
 end

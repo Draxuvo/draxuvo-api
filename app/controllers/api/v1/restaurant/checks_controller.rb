@@ -61,6 +61,7 @@ module Api
           Check.transaction do
             check.lock!
             invalid!(:check_not_open) unless check.status_open?
+            TerminalCharge.ensure_none_open!(check) # spec 069
             forbid! unless restaurant_context.boss? || restaurant_context.waiter_of?(check)
             invalid!(:has_sent_items) unless ::Restaurant::Permissions.releasable?(check)
 

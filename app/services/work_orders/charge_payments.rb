@@ -8,21 +8,26 @@ module WorkOrders
 
     Result = Struct.new(:payments, :payment_method, :amount_received, :change_given, keyword_init: true)
 
-    def self.call(company, total, params) = new(company, total, params).call
+    # `terminal_payment` (spec 069): el pago con tarjeta en una terminal integrada, armado por el servidor (nunca por el
+    # cliente): { amount:, terminal:, source:, terminal_charge:, reference:, card_last4: }. Se suma a los de `params`.
+    def self.call(company, total, params, terminal_payment = nil) = new(company, total, params, terminal_payment).call
 
-    def initialize(company, total, params)
+    def initialize(company, total, params, terminal_payment = nil)
       @company = company
       @total   = total
       @params  = params
+      @terminal_payment = terminal_payment
     end
 
     def call
-      list = payments_from_params
-      fail!(:too_many_payments) if list.empty? || list.size > MAX_PAYMENTS
+      list = @terminal_payment && @params[:payments].blank? ? [] : payments_from_params
+      count = list.size + (@terminal_payment ? 1 : 0)
+      fail!(:too_many_payments) if count.zero? || count > MAX_PAYMENTS
       list.each_with_index { |payment, index| check_method!(payment, index) }
       fail!(:multiple_cash) if list.count { |p| p[:method] == "cash" } > 1
 
       non_cash = list.each_with_index.filter_map { |payment, index| non_cash_attributes(payment, index) unless payment[:method] == "cash" }
+      non_cash << terminal_attributes if @terminal_payment
       paid = non_cash.sum { |attrs| attrs[:amount] }
       fail!(:exceeds_total) if paid > @total
 
@@ -85,6 +90,15 @@ module WorkOrders
 
       { payment_method: :card, amount: amount, terminal: terminal,
         authorization_code: payment[:authorization_code].to_s.strip.presence, card_last4: last4 }
+    end
+
+    # El pago de la terminal integrada: el monto y la terminal los fijó la solicitud (spec 069).
+    def terminal_attributes
+      tp = @terminal_payment
+      fail!(:invalid_amount) unless tp[:amount].to_d.positive?
+
+      { payment_method: :card, amount: tp[:amount].to_d, terminal: tp[:terminal], source: tp[:source] || :manual,
+        terminal_charge: tp[:terminal_charge], reference: tp[:reference].presence, card_last4: tp[:card_last4].presence }.compact
     end
 
     # El efectivo cubre lo que falta; lo recibido de más es el cambio.
