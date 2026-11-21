@@ -130,4 +130,94 @@ class Api::V1::TerminalChargesControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: TerminalCharges::SyncJob, args: [ due.id ]) { TerminalCharges::SweepJob.perform_now }
     assert_equal "declined", stuck.reload.status
   end
+
+  # US6: pago aprobado tarde cuando la orden ya se cobró por otra vía.
+  def unapplied_charge(fake)
+    charge = TerminalCharges::Create.call(company: @company, user: @owner,
+                                          params: { terminal_id: @terminal.id, amount: "850", work_order_id: @order.id })
+    TerminalCharges::Abandon.call(charge, user: @owner)
+    WorkOrders::Transition.call(@order.reload, :charge, WorkOrders::Transition::Context.new(user: @owner, role: "owner"),
+                                { payments: [ { method: "cash", amount_received: "850" } ] })
+    fake.charge_status = "approved"
+    TerminalCharges::Sync.call(charge.reload)
+    charge.reload.tap { |late| assert late.unapplied? }
+  end
+
+  test "pagos sin aplicar: lista, reembolso con confirmación y sin repetir" do
+    with_fake_provider do |fake|
+      charge = unapplied_charge(fake)
+      get "/api/v1/terminal_charges", headers: @headers
+      assert_response :ok
+      row = response.parsed_body["results"].sole
+      assert_equal %w[refund dismiss], row["allowed_actions"]
+
+      post "/api/v1/terminal_charges/#{charge.id}/refund", headers: @headers, as: :json
+      assert_response :unprocessable_entity
+      assert_equal "refund_confirmation_required", response.parsed_body.dig("error", "details", "code")
+
+      post "/api/v1/terminal_charges/#{charge.id}/refund", params: { confirm: true }, headers: @headers, as: :json
+      assert_response :ok
+      assert_equal "refunded", response.parsed_body["status"]
+      assert_equal "done", response.parsed_body.dig("refund", "status")
+
+      post "/api/v1/terminal_charges/#{charge.id}/refund", params: { confirm: true }, headers: @headers, as: :json
+      assert_response :conflict
+      assert_equal "already_refunded", response.parsed_body.dig("error", "details", "code")
+      get "/api/v1/terminal_charges", headers: @headers
+      assert_empty response.parsed_body["results"]
+      assert_equal 1, fake.calls_of(:refund).size
+    end
+  end
+
+  test "pagos sin aplicar: el rechazo del proveedor responde el motivo; marcar atendido lo quita de la lista" do
+    with_fake_provider do |fake|
+      charge = unapplied_charge(fake)
+      fake.refund_error = provider_error(:declined, "insufficient_money_for_refund", http_status: 400)
+      post "/api/v1/terminal_charges/#{charge.id}/refund", params: { confirm: true }, headers: @headers, as: :json
+      assert_response :unprocessable_entity
+      assert_equal "insufficient_money_for_refund", response.parsed_body.dig("error", "details", "reason")
+
+      post "/api/v1/terminal_charges/#{charge.id}/dismiss", headers: @headers, as: :json
+      assert_response :ok
+      assert_equal "skipped", response.parsed_body.dig("refund", "status")
+      assert_empty response.parsed_body["allowed_actions"]
+      get "/api/v1/terminal_charges", headers: @headers
+      assert_empty response.parsed_body["results"]
+      get "/api/v1/terminal_charges", params: { status: "all" }, headers: @headers
+      assert_equal [ charge.id ], response.parsed_body["results"].map { |r| r["id"] }
+    end
+  end
+
+  test "pagos sin aplicar: el personal no reembolsa ni marca atendido" do
+    with_fake_provider do |fake|
+      charge = unapplied_charge(fake)
+      staff = auth_headers(users(:pro_staff), @company)
+      post "/api/v1/terminal_charges/#{charge.id}/refund", params: { confirm: true }, headers: staff, as: :json
+      assert_response :forbidden
+      post "/api/v1/terminal_charges/#{charge.id}/dismiss", headers: staff, as: :json
+      assert_response :forbidden
+      assert_empty fake.calls_of(:refund)
+    end
+  end
+
+  test "anular el cobro integrado de una orden pide confirmar el reembolso" do
+    with_fake_provider do |fake|
+      charge = TerminalCharges::Create.call(company: @company, user: @owner,
+                                            params: { terminal_id: @terminal.id, amount: "850", work_order_id: @order.id })
+      fake.charge_status = "approved"
+      TerminalCharges::Sync.call(charge.reload)
+
+      post "/api/v1/work_orders/#{@order.id}/void_charge", params: { reason: "Error" }, headers: @headers, as: :json
+      assert_response :unprocessable_entity
+      refunds = response.parsed_body.dig("error", "details", "refunds")
+      assert_equal [ { "ticket_payment_id" => charge.reload.ticket_payment_id, "amount" => "850.00",
+                       "terminal" => { "id" => @terminal.id, "name" => @terminal.name, "provider" => "mercado_pago" } } ],
+                   refunds.map { |r| r.slice("ticket_payment_id", "amount", "terminal").merge("terminal" => r["terminal"].slice("id", "name", "provider")) }
+
+      post "/api/v1/work_orders/#{@order.id}/void_charge", params: { reason: "Error", refund: "confirm" }, headers: @headers, as: :json
+      assert_response :ok
+      assert_equal "done", @order.reload.status
+      assert charge.reload.terminal_refund.done?
+    end
+  end
 end

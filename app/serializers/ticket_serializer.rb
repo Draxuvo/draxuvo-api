@@ -28,7 +28,7 @@ class TicketSerializer
   def self.payment_json(payment)
     CheckSerializer.payment(payment).merge(
       method_label: I18n.t("ticket.payment_method.#{payment.payment_method}"),
-      authorization_code: payment.authorization_code, card_last4: payment.card_last4, source: payment.source,
+      authorization_code: payment.authorization_code, card_last4: payment.card_last4,
       created_by: person(payment.created_by), created_at: payment.created_at, voided_at: payment.voided_at
     )
   end
@@ -77,10 +77,17 @@ class TicketSerializer
   private
 
   # Historial de anulaciones del cobro (spec 054, H-50): sobrevive a un nuevo cobro del mismo ticket.
+  # Spec 069: cada pago integrado anulado trae el estado actual de su reembolso.
   def voids_json
+    refunds = TerminalRefund.where(ticket_payment_id: @ticket.voids.flat_map { |void| Array(void.payments).filter_map { |p| p["ticket_payment_id"] } })
+                            .index_by(&:ticket_payment_id)
     @ticket.voids.includes(:voided_by).map do |void|
+      payments = Array(void.payments).map do |payment|
+        refund = refunds[payment["ticket_payment_id"]]
+        refund ? payment.merge("refund" => refund.as_payment_json) : payment
+      end
       { id: void.id, voided_at: void.voided_at, voided_by: self.class.person(void.voided_by), reason: void.reason,
-        amount: void.amount, payments: void.payments }
+        amount: void.amount, payments: payments }
     end
   end
 

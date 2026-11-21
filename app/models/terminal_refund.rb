@@ -15,6 +15,10 @@ class TerminalRefund < ApplicationRecord
 
   before_validation :assign_key, on: :create
 
+  # En proceso en el proveedor: el barrido los consulta hasta una semana (después se revisan a mano en Mercado Pago).
+  IN_FLIGHT_WATCH = 7.days
+  scope :in_flight, -> { where(status: "requested").where("requested_at > ?", IN_FLIGHT_WATCH.ago) }
+
   def done? = status == "done"
   def skipped? = status == "skipped"
   def rejected? = status == "rejected"
@@ -29,7 +33,16 @@ class TerminalRefund < ApplicationRecord
             error_message: nil, requested_at: Time.current)
   end
 
-  def as_payment_json = { status: status, amount: amount.to_s, completed_at: completed_at, error_code: error_code }
+  # El proveedor confirmó la devolución: el reembolso queda hecho y la solicitud, reembolsada.
+  def complete!(provider_refund_id: nil)
+    update!(status: "done", completed_at: Time.current, provider_refund_id: provider_refund_id.presence || self.provider_refund_id,
+            error_code: nil, error_message: nil)
+    terminal_charge.update!(status: "refunded") unless terminal_charge.status == "refunded"
+    TerminalEvent.log!(:refund_done, charge: terminal_charge, refund: self)
+  end
+
+  def as_payment_json = { status: status, amount: format("%.2f", amount), provider_refund_id: provider_refund_id, error_code: error_code,
+      completed_at: completed_at }
 
   private
 

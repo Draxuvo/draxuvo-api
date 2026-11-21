@@ -15,7 +15,7 @@ module TerminalCharges
     end
 
     def call
-      return @charge unless WATCHED.include?(@charge.status) && @charge.provider_order_id.present?
+      return @charge unless (WATCHED.include?(@charge.status) || refund_in_flight?) && @charge.provider_order_id.present?
 
       remote = fetch
       return @charge unless remote
@@ -42,7 +42,7 @@ module TerminalCharges
 
     def resolve(remote)
       @charge.update!(last_synced_at: Time.current, status_detail: remote.detail.presence || @charge.status_detail)
-      return refund_update(remote) if @charge.status == "unapplied"
+      return refund_update(remote) if %w[applied unapplied refunded].include?(@charge.status)
 
       case remote.status
       when "approved" then approve(remote)
@@ -84,14 +84,14 @@ module TerminalCharges
       TerminalEvent.log!(:charge_expired, charge: @charge)
     end
 
-    # Un pago sin aplicar con reembolso en proceso: el aviso `order.refunded` lo da por hecho.
+    def refund_in_flight? = @charge.terminal_refund&.requested?
+
+    # Un pago (aplicado o sin aplicar) con reembolso en proceso: el aviso `order.refunded` lo da por hecho.
     def refund_update(remote)
-      refund = @charge.terminal_refund
+      refund = @charge.terminal_refund&.reload
       return unless refund&.requested? && (remote.status == "refunded" || remote.refund_status == "done")
 
-      refund.update!(status: "done", completed_at: Time.current)
-      @charge.update!(status: "refunded")
-      TerminalEvent.log!(:refund_done, charge: @charge, refund: refund)
+      refund.complete!
     end
   end
 end

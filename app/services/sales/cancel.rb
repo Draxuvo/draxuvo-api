@@ -5,21 +5,25 @@ module Sales
   class Cancel
     include Failures
 
-    def self.call(sale, user, reason) = new(sale, user, reason).call
+    # `refund` (spec 069): `confirm` o `skip` para los pagos con terminal integrada (TerminalRefunds::ForTicket).
+    def self.call(sale, user, reason, refund = nil) = new(sale, user, reason, refund).call
 
-    def initialize(sale, user, reason)
+    def initialize(sale, user, reason, refund = nil)
       @sale = sale
       @user = user
       @company = sale.company
       @reason = reason.to_s.strip
+      @refund = refund
     end
 
     def call
+      refunds = prepare_refunds
       Sale.transaction do
         @sale.lock!
         fail!(:not_paid) unless @sale.status_paid?
         fail!(:reason_required) if @reason.empty?
 
+        refunds&.settle!
         void_ticket
         return_stock
         @sale.update!(status: :cancelled, cancelled_at: Time.current, cancelled_by: @user, cancel_reason: @reason)
@@ -28,6 +32,13 @@ module Sales
     end
 
     private
+
+    # Los reembolsos se piden fuera de la transacción y solo si la cancelación procede (spec 069, research R8).
+    def prepare_refunds
+      return unless @sale.status_paid? && @reason.present? && @sale.ticket
+
+      TerminalRefunds::ForTicket.call(@sale.ticket, user: @user, mode: @refund, reason: @reason)
+    end
 
     def void_ticket
       ticket = @sale.ticket

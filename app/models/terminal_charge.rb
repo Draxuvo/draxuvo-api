@@ -37,10 +37,13 @@ class TerminalCharge < ApplicationRecord
 
   scope :open, -> { where(status: OPEN) }
   scope :unapplied, -> { where(status: "unapplied") }
+  # Pagos sin aplicar que aún piden atención: ni reembolsados ni marcados atendidos (FR-035).
+  scope :unapplied_pending, -> { unapplied.where.not(id: TerminalRefund.where(status: %w[done skipped]).select(:terminal_charge_id)) }
   # Las que el barrido debe consultar: abiertas sin sincronizar hace 30 s, y abandonadas aún vigiladas (research R5).
   scope :due_for_sync, lambda {
     stale = where("last_synced_at IS NULL OR last_synced_at < ?", 30.seconds.ago).where.not(provider_order_id: nil)
     stale.where(status: OPEN).or(stale.where(status: LATE).where("expires_at > ?", ABANDONED_WATCH.ago))
+         .or(stale.where(id: TerminalRefund.in_flight.select(:terminal_charge_id)))
   }
 
   def open? = OPEN.include?(status)

@@ -458,6 +458,12 @@ es:
       not_refundable:                "Ese cobro no se puede reembolsar"
       refund_failed:                 "El proveedor no aceptó el reembolso"
       refund_confirmation_required:  "Confirma el reembolso de los pagos con terminal antes de anular"
+    refund_reasons:
+      refund_period_exceeded:        "Ya pasó el plazo para reembolsar ese pago en el proveedor"
+      insufficient_money_for_refund: "La cuenta del proveedor no tiene saldo suficiente para el reembolso"
+      connection_error:              "La conexión con el proveedor no funciona; vuelve a conectar la cuenta o anula sin reembolso"
+      provider_unavailable:          "El proveedor no respondió al reembolso; intenta de nuevo o anula sin reembolso"
+      refund_rejected:               "El proveedor rechazó el reembolso"
     details:
       generic:                     "La terminal no completó el cobro"
       created:                     "Enviando a la terminal"

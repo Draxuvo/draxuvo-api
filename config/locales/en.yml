@@ -458,6 +458,12 @@ en:
       not_refundable:                "That charge can't be refunded"
       refund_failed:                 "The provider didn't accept the refund"
       refund_confirmation_required:  "Confirm the refund of terminal payments before voiding"
+    refund_reasons:
+      refund_period_exceeded:        "The provider's refund period for that payment is over"
+      insufficient_money_for_refund: "The provider account doesn't have enough balance for the refund"
+      connection_error:              "The provider connection isn't working; reconnect the account or void without refund"
+      provider_unavailable:          "The provider didn't answer the refund; try again or void without refund"
+      refund_rejected:               "The provider rejected the refund"
     details:
       generic:                     "The terminal didn't complete the charge"
       created:                     "Sending to the terminal"

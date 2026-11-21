@@ -6,15 +6,19 @@ module Api
     # concern Idempotent: la llamada al proveedor no debe quedar dentro de una transacción).
     class TerminalChargesController < BaseController
       requires_module :terminals
-      before_action :set_charge, only: %i[show cancel abandon]
-      before_action :require_admin!, only: %i[index]
+      before_action :set_charge, only: %i[show cancel abandon refund dismiss]
+      before_action :require_admin!, only: %i[index refund dismiss]
 
       SYNC_EVERY = 10.seconds
 
       # GET /terminal_charges?status=unapplied|all — jefes (pagos sin aplicar e historial).
       def index
         scope = current_company.terminal_charges.includes(:payment_terminal, :created_by, :terminal_refund).order(created_at: :desc)
-        scope = scope.where(status: params[:status].presence || "unapplied") unless params[:status] == "all"
+        scope = case params[:status].presence
+        when nil, "unapplied" then scope.unapplied_pending
+        when "all" then scope
+        else scope.where(status: params[:status])
+        end
         scope = scope.where(payment_terminal_id: params[:terminal_id]) if params[:terminal_id].present?
         scope = scope.where(created_at: Date.parse(params[:from]).beginning_of_day..) if params[:from].present?
         scope = scope.where(created_at: ..Date.parse(params[:to]).end_of_day) if params[:to].present?
@@ -51,7 +55,32 @@ module Api
         render json: serialize(TerminalCharges::Abandon.call(@charge, user: current_user))
       end
 
+      # POST /terminal_charges/:id/refund — { confirm: true }. Reembolsa un pago sin aplicar (FR-035).
+      def refund
+        ensure_refundable!
+        unless ActiveModel::Type::Boolean.new.cast(params[:confirm])
+          TerminalCharges::Errors.invalid!(:refund_confirmation_required)
+        end
+        TerminalRefunds::Request.call(@charge, user: current_user, reason: params[:reason])
+        render json: serialize(@charge.reload)
+      end
+
+      # POST /terminal_charges/:id/dismiss — se atendió fuera de Draxuvo (por ejemplo, se devolvió desde Mercado Pago).
+      def dismiss
+        ensure_refundable!
+        TerminalCharge.transaction do
+          @charge.lock!
+          TerminalRefunds::Skip.call(@charge, user: current_user, reason: params[:reason])
+        end
+        render json: serialize(@charge.reload)
+      end
+
       private
+
+      def ensure_refundable!
+        TerminalCharges::Errors.conflict!(:already_refunded) if @charge.status == "refunded" || @charge.terminal_refund&.settled?
+        TerminalCharges::Errors.invalid!(:not_refundable) unless @charge.unapplied?
+      end
 
       def boss? = Authorizable::ADMIN_ROLES.include?(current_role)
 

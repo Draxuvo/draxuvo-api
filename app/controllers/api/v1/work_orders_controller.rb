@@ -394,7 +394,7 @@ module Api
 
       # `payments` es el cobro con varios pagos (spec 015); `payment_method` y `amount_received`, el formato anterior.
       def transition_params
-        params.permit(:payment_method, :amount_received, :reason,
+        params.permit(:payment_method, :amount_received, :reason, :refund,
                       payments: %i[method amount amount_received terminal_id authorization_code card_last4 reference])
       end
 

@@ -89,11 +89,12 @@ module Api
         render json: serialize(Sales::Return.call(@sale, current_user).reload)
       end
 
-      # POST /api/v1/sales/:id/cancel — { reason }. Solo dueño y administrador.
+      # POST /api/v1/sales/:id/cancel — { reason, refund? }. Solo dueño y administrador. `refund` (spec 069):
+      # `confirm` | `skip` para los pagos con terminal integrada.
       def cancel
         forbid! unless Sales::Permissions.cancel?(@sale, context)
 
-        render json: serialize(Sales::Cancel.call(@sale, current_user, params[:reason]).reload)
+        render json: serialize(Sales::Cancel.call(@sale, current_user, params[:reason], params[:refund]).reload)
       end
 
       # GET /api/v1/sales/:id/ticket — el ticket de una venta cobrada o cancelada.
