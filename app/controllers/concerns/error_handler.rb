@@ -78,6 +78,9 @@ module ErrorHandler
   def handle_internal_error(error)
     Rails.logger.error("#{error.class.name}: #{error.message}")
     Rails.logger.error(error.backtrace.join("\n"))
+    # Spec 071: `rescue_from StandardError` impide que el middleware de Sentry vea el error; se reporta aquí (sin
+    # SENTRY_DSN no hace nada). La respuesta al cliente no cambia.
+    Sentry.capture_exception(error)
 
     handle_api_error(
       ApiErrors::BaseError.new(
