@@ -1,6 +1,6 @@
 # draxuvo-api
 
-API REST del ERP **Draxuvo**: multiempresa, con suscripciones y cobro. Rails 8 (solo API), Ruby 3.4.4 y PostgreSQL. Parte del [workspace Draxuvo](https://github.com/bothi3119/bothi).
+API REST del ERP **Draxuvo**: multiempresa, con suscripciones y cobro. Rails 8 (solo API), Ruby 3.4.13 y PostgreSQL. Parte del [workspace Draxuvo](https://github.com/bothi3119/bothi).
 
 ## Qué hace
 
@@ -13,7 +13,7 @@ Todo vive bajo `/api/v1/`. La autenticación usa JWT (`Authorization: Bearer`) y
 
 ## Empezar
 
-Requiere Ruby 3.4.4 (ver `mise.toml`) y PostgreSQL con un rol que pueda crear bases.
+Requiere Ruby 3.4.13 (ver `mise.toml`) y PostgreSQL con un rol que pueda crear bases.
 
 ```bash
 cp .env.example .env     # llena SECRET_KEY_BASE y los datos de la base
