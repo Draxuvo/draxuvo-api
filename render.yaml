@@ -33,6 +33,9 @@ services:
     #   RESEND_API_KEY, RESEND_FROM_EMAIL, STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, SUPER_ADMIN_PASSWORD
     #   MIN_APP_VERSION_IOS / _ANDROID, ACTIVE_STORAGE_SERVICE=r2, R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID,
     #   R2_SECRET_ACCESS_KEY, y las opcionales (PUSH_ENABLED, EXPO_ACCESS_TOKEN, DEMO_*, LOGIN_RATE_*, ...)
+    #   Monitoreo (spec 071, docs/monitoreo.md; opcionales, sin ellas no se reporta nada): SENTRY_DSN,
+    #   SENTRY_ENVIRONMENT=production, SENTRY_TRACES_SAMPLE_RATE (0 por omisión) y HEARTBEAT_URL (latido de Better Stack;
+    #   solo la usa el worker, pero vive aquí por la regla de fuente única). RENDER_GIT_COMMIT la pone Render (release).
     # La API ya no procesa la cola (spec 064): lo hace draxuvo-jobs, y en la API SOLID_QUEUE_IN_PUMA=false. Vuelta de emergencia
     # si el worker falla: SOLID_QUEUE_IN_PUMA=true (corre Solid Queue dentro de Puma, config/puma.rb), con la API en 1c-2g.
 
@@ -100,5 +103,13 @@ services:
         fromService: { type: web, name: draxuvo-api, envVarKey: R2_ACCESS_KEY_ID }
       - key: R2_SECRET_ACCESS_KEY
         fromService: { type: web, name: draxuvo-api, envVarKey: R2_SECRET_ACCESS_KEY }
+      # Monitoreo (spec 071): errores de los trabajos a Sentry y latido a Better Stack. Definirlas primero en la API y
+      # luego sincronizar el Blueprint.
+      - key: SENTRY_DSN
+        fromService: { type: web, name: draxuvo-api, envVarKey: SENTRY_DSN }
+      - key: SENTRY_ENVIRONMENT
+        fromService: { type: web, name: draxuvo-api, envVarKey: SENTRY_ENVIRONMENT }
+      - key: HEARTBEAT_URL
+        fromService: { type: web, name: draxuvo-api, envVarKey: HEARTBEAT_URL }
       # No se copian las que la API no define y usan su valor por omisión en los dos (PUBLIC_SITE_URL, PUSH_ENABLED,
       # EXPO_ACCESS_TOKEN, DEMO_*, ...): si se agrega una a la API y la usa un trabajo, agregarla aquí también.
