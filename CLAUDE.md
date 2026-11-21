@@ -22,7 +22,7 @@ Tests live in `test/models/`, `test/services/` (one file per service), `test/con
 
 ## Architecture
 
-**Rails 8.0.2 API-only**, Ruby 3.4.4, PostgreSQL. A multi-tenant ERP system for managing employees, work orders, inventory, and invoicing.
+**Rails 8.0.2 API-only**, Ruby 3.4.13, PostgreSQL. A multi-tenant ERP system for managing employees, work orders, inventory, and invoicing.
 
 ### Multi-Tenancy
 
