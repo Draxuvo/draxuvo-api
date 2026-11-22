@@ -115,6 +115,10 @@ services:
         fromService: { type: web, name: draxuvo-api, envVarKey: HEARTBEAT_URL }
       # No se copian las que la API no define y usan su valor por omisión en los dos (PUBLIC_SITE_URL, PUSH_ENABLED,
       # EXPO_ACCESS_TOKEN, DEMO_*, ...): si se agrega una a la API y la usa un trabajo, agregarla aquí también.
-      # Spec 069: al definir en la API MERCADO_PAGO_CLIENT_ID, MERCADO_PAGO_CLIENT_SECRET (y, si existen,
-      # MERCADO_PAGO_PLATFORM_ID e MERCADO_PAGO_INTEGRATOR_ID), copiarlas aquí con fromService: la sincronización de
-      # cobros y la renovación de tokens corren en este worker.
+      # Terminal integrada (spec 069): la renovación de tokens y el barrido de cobros corren en este worker. Definirlas
+      # primero en la API y luego sincronizar el Blueprint. Si la API llega a definir MERCADO_PAGO_PLATFORM_ID o
+      # MERCADO_PAGO_INTEGRATOR_ID, copiarlas aquí también (MERCADO_PAGO_WEBHOOK_SECRET solo la usa la API).
+      - key: MERCADO_PAGO_CLIENT_ID
+        fromService: { type: web, name: draxuvo-api, envVarKey: MERCADO_PAGO_CLIENT_ID }
+      - key: MERCADO_PAGO_CLIENT_SECRET
+        fromService: { type: web, name: draxuvo-api, envVarKey: MERCADO_PAGO_CLIENT_SECRET }
