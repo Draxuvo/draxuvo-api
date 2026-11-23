@@ -438,6 +438,11 @@ en:
       connection_error:     "The provider connection stopped working; connect the account again"
       provider_down:        "The provider didn't respond; try again in a moment"
       not_connected:        "The account is not connected"
+      access_token_missing: "Paste the Access Token of your Mercado Pago application"
+      access_token_invalid: "That doesn't look like a Mercado Pago Access Token (it starts with APP_USR-)"
+      access_token_rejected: "Mercado Pago didn't accept that Access Token; check that it's the production one and complete"
+      point_not_enabled:    "The Access Token works, but that application isn't allowed to use Point terminals"
+      webhook_secret_invalid: "The secret key is too long"
 
   terminal_charge:
     provider_description: "Charge at %{company}"

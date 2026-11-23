@@ -18,6 +18,12 @@ module TerminalProviders
     # ¿Tiene la plataforma lo necesario para usar este proveedor (credenciales de la aplicación)?
     def available? = raise(NotImplementedError)
 
+    # ¿Se puede conectar pegando las credenciales de la aplicación propia del negocio (sin OAuth)?
+    def own_credentials? = false
+
+    # Comprueba un token pegado por el negocio y devuelve sus `Credentials` (cuenta, nombre visible, modo).
+    def verify_token(access_token) = raise(NotImplementedError)
+
     # Autorización por OAuth. `authorize_url` recibe el `state` y el `code_challenge` (S256) ya generados.
     def authorize_url(state:, code_challenge:) = raise(NotImplementedError)
     def exchange_code(code:, code_verifier:) = raise(NotImplementedError)
@@ -39,8 +45,9 @@ module TerminalProviders
     # Reembolso total de un cobro aprobado. `idempotency_key` la decide quien llama (research R8).
     def refund(charge, idempotency_key:) = raise(NotImplementedError)
 
-    # Valida un aviso (cuerpo, encabezados y query) y lo traduce a un `Notice`, o nil si no interesa.
-    def parse_webhook(body:, headers:, params:) = raise(NotImplementedError)
+    # Valida un aviso (cuerpo, encabezados y query) y lo traduce a un `Notice`, o nil si no interesa. `secret` es la clave
+    # de la conexión con credenciales propias; sin ella se usa la de la aplicación de Draxuvo.
+    def parse_webhook(body:, headers:, params:, secret: nil) = raise(NotImplementedError)
 
     private
 

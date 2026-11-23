@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_23_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -963,9 +963,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_20_171621) do
     t.datetime "problem_notified_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "auth_method", default: "oauth", null: false
+    t.text "webhook_secret"
+    t.string "webhook_token"
     t.index ["company_id", "provider"], name: "index_terminal_connections_on_company_id_and_provider", unique: true
     t.index ["connected_by_id"], name: "index_terminal_connections_on_connected_by_id"
     t.index ["provider", "account_id"], name: "index_terminal_connections_on_provider_and_account_id"
+    t.index ["webhook_token"], name: "index_terminal_connections_on_webhook_token", unique: true
   end
 
   create_table "terminal_events", force: :cascade do |t|

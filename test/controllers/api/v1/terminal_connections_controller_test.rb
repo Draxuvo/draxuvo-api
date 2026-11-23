@@ -86,11 +86,13 @@ class Api::V1::TerminalConnectionsControllerTest < ActionDispatch::IntegrationTe
     assert_equal 2, TerminalConnection.where(account_id: "1001").count
   end
 
-  test "sin credenciales de la plataforma no se ofrece y no se autoriza" do
+  test "sin credenciales de la plataforma no se ofrece OAuth (sí las credenciales propias)" do
     with_fake_provider do |fake|
       fake.available = false
       get BASE, headers: @headers
-      assert_equal false, response.parsed_body["providers"].sole["available"]
+      provider = response.parsed_body["providers"].sole
+      assert_equal false, provider["oauth"]
+      assert provider["own_credentials"]
       post "#{BASE}/mercado_pago/authorize", headers: @headers, as: :json
       assert_response :unprocessable_entity
       assert_equal "provider_unavailable", response.parsed_body.dig("error", "details", "code")

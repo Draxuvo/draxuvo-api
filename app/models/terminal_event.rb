@@ -3,7 +3,8 @@
 class TerminalEvent < ApplicationRecord
   KINDS = %w[connected disconnected connection_error token_refreshed device_linked device_unlinked device_prepared
              charge_created charge_approved charge_applied charge_unapplied charge_declined charge_canceled charge_expired
-             charge_abandoned refund_requested refund_done refund_rejected refund_skipped webhook_ignored].freeze
+             charge_abandoned refund_requested refund_done refund_rejected refund_skipped webhook_ignored
+             webhook_secret_changed].freeze
   # Claves que nunca se guardan en `data`, a cualquier profundidad.
   SECRET_PATTERN = /token|secret|password|code_verifier/i
 

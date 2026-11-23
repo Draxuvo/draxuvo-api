@@ -79,6 +79,8 @@ Rails.application.routes.draw do
       post "stripe/webhooks", to: "stripe_webhooks#create"
       # Spec 069: avisos de Mercado Pago (público, lo autentica la firma).
       post "webhooks/mercado_pago", to: "webhooks/mercado_pago#create"
+      # Avisos de una conexión con credenciales propias: su URL lleva el `webhook_token` de la conexión.
+      post "webhooks/mercado_pago/:token", to: "webhooks/mercado_pago#create", as: :mercado_pago_connection_webhook
 
       # Employees + checkin/checkout + sus asistencias
       # Tipos de producto de la empresa (spec 016)
@@ -99,6 +101,7 @@ Rails.application.routes.draw do
         collection do
           post "mercado_pago/authorize", action: :authorize, defaults: { provider: "mercado_pago" }
           post "mercado_pago/callback",  action: :callback,  defaults: { provider: "mercado_pago" }
+          put  "mercado_pago/credentials", action: :credentials, defaults: { provider: "mercado_pago" }
         end
       end
       resources :terminal_charges, only: %i[index show create] do

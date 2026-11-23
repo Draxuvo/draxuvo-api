@@ -5,7 +5,7 @@ module TerminalProviderHelpers
     attr_reader :calls
     attr_accessor :devices_list, :charge_status, :charge_detail, :create_error, :fetch_error, :cancel_result,
                   :refund_result, :refund_error, :prepare_result, :prepare_error, :credentials, :exchange_error,
-                  :refresh_error, :devices_error, :notice, :available, :reference, :card_last4
+                  :refresh_error, :devices_error, :notice, :available, :reference, :card_last4, :verify_error
 
     def initialize
       @calls = []
@@ -25,6 +25,14 @@ module TerminalProviderHelpers
 
     def provider = "mercado_pago"
     def available? = @available
+    def own_credentials? = true
+
+    def verify_token(access_token)
+      record(:verify_token, access_token: access_token)
+      raise_error(@verify_error)
+      TerminalProviders::Credentials.new(access_token: access_token, account_id: "2002", account_label: "Cuenta propia",
+                                         live_mode: !access_token.start_with?("TEST-"))
+    end
 
     def authorize_url(state:, code_challenge:)
       record(:authorize_url, state: state, code_challenge: code_challenge)
@@ -82,8 +90,8 @@ module TerminalProviderHelpers
       @refund_result
     end
 
-    def parse_webhook(body:, headers:, params:)
-      record(:parse_webhook, params: params)
+    def parse_webhook(body:, headers:, params:, secret: nil)
+      record(:parse_webhook, params: params, secret: secret)
       raise TerminalProviders::InvalidSignature, "mismatch" if headers["x-signature"] == "bad"
 
       @notice
