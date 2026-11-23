@@ -1,6 +1,7 @@
 module TerminalProviders
   # Mercado Pago Point con la API de Orders (spec 069, research R1, R2 y R4). Cada llamada usa el token de la conexión del
-  # negocio (OAuth); las credenciales de la aplicación de Draxuvo salen de las variables MERCADO_PAGO_*.
+  # negocio: el de OAuth (las credenciales de la aplicación de Draxuvo salen de las variables MERCADO_PAGO_*) o el Access
+  # Token de la aplicación propia del negocio que pegó el dueño o administrador.
   class MercadoPago < Base
     AUTHORIZE_URL = "https://auth.mercadopago.com/authorization".freeze
     EXPIRATION = "PT3M".freeze # FR-019: 3 minutos
@@ -10,6 +11,25 @@ module TerminalProviders
     def provider = "mercado_pago"
 
     def available? = client_id.present? && client_secret.present?
+
+    def own_credentials? = true
+
+    # Comprueba el Access Token de la aplicación propia del negocio: que sea de una cuenta (`/users/me`) y que pueda usar
+    # Point (`/terminals/v1/list`). Los tokens `TEST-` son de credenciales de prueba.
+    def verify_token(access_token)
+      api = Client.new(token: access_token)
+      me = api.get("/users/me").body
+      begin
+        api.get("/terminals/v1/list", query: { limit: 1, offset: 0 })
+      rescue Error => e
+        raise unless e.failure.connection?
+
+        fail!(:connection, :point_not_enabled, http_status: e.failure.http_status)
+      end
+      Credentials.new(access_token: access_token, refresh_token: nil, expires_at: nil, account_id: me["id"]&.to_s,
+                      account_label: me["nickname"].presence || me["email"].presence,
+                      live_mode: !access_token.to_s.start_with?("TEST-"))
+    end
 
     # URL de regreso fija (debe coincidir con la registrada en la aplicación): la página de `ui` que recibe el código.
     def self.redirect_uri
@@ -110,9 +130,10 @@ module TerminalProviders
     end
 
     # Avisos: `orders` (type `order`) y `mp-connect` (desvinculación). La firma se valida siempre (research R4).
-    def parse_webhook(body:, headers:, params:)
+    def parse_webhook(body:, headers:, params:, secret: nil)
       data_id = params["data.id"].presence || params.dig("data", "id").presence || body.dig("data", "id")
-      Signature.verify!(signature: headers["x-signature"], request_id: headers["x-request-id"], data_id: data_id)
+      Signature.verify!(signature: headers["x-signature"], request_id: headers["x-request-id"], data_id: data_id,
+                        secret: secret || ENV["MERCADO_PAGO_WEBHOOK_SECRET"])
 
       type = (body["type"].presence || params["type"].presence || body["topic"]).to_s
       action = body["action"].to_s

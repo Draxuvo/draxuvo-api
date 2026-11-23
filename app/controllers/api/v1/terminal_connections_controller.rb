@@ -1,8 +1,9 @@
 module Api
   module V1
     # Conexiones con proveedores de terminal (spec 069, contracts/api.md): solo dueño y administrador, con el módulo
-    # `terminals`. La autorización es OAuth: `authorize` da la URL del proveedor y `callback` recibe el código que la
-    # página de regreso de `ui` reenvía con la sesión del usuario. Nunca se devuelven tokens.
+    # `terminals`. Dos formas de conectar: OAuth (`authorize` da la URL del proveedor y `callback` recibe el código que la
+    # página de regreso de `ui` reenvía con la sesión del usuario), solo si la plataforma tiene su aplicación, y
+    # credenciales propias (`credentials`: el Access Token de la aplicación del negocio). Nunca se devuelven tokens.
     class TerminalConnectionsController < BaseController
       requires_module :terminals
       before_action :require_admin!
@@ -11,8 +12,9 @@ module Api
       def index
         connections = current_company.terminal_connections.includes(:connected_by).index_by(&:provider)
         providers = TerminalProviders.providers.map do |provider|
-          { provider: provider, available: TerminalProviders.for(provider).available?,
-            connection: TerminalConnectionSerializer.new(connections[provider]).as_json }
+          client = TerminalProviders.for(provider)
+          { provider: provider, available: client.available? || client.own_credentials?, oauth: client.available?,
+            own_credentials: client.own_credentials?, connection: TerminalConnectionSerializer.new(connections[provider]).as_json }
         end
         render json: { providers: providers }
       end
@@ -27,6 +29,13 @@ module Api
       def callback
         connection = TerminalConnections::Connect.call(company: current_company, user: current_user, provider: params[:provider],
                                                        code: params[:code], state: params[:state])
+        render json: TerminalConnectionSerializer.new(connection).as_json
+      end
+
+      # PUT /terminal_connections/mercado_pago/credentials — { access_token, webhook_secret }
+      def credentials
+        connection = TerminalConnections::ConnectWithToken.call(company: current_company, user: current_user, provider: params[:provider],
+                                                                access_token: params[:access_token], webhook_secret: params[:webhook_secret])
         render json: TerminalConnectionSerializer.new(connection).as_json
       end
 

@@ -438,6 +438,11 @@ es:
       connection_error:     "La conexión con el proveedor dejó de funcionar; vuelve a conectar la cuenta"
       provider_down:        "El proveedor no respondió; intenta de nuevo en unos momentos"
       not_connected:        "La cuenta no está conectada"
+      access_token_missing: "Pega el Access Token de tu aplicación de Mercado Pago"
+      access_token_invalid: "Eso no parece un Access Token de Mercado Pago (empieza con APP_USR-)"
+      access_token_rejected: "Mercado Pago no aceptó ese Access Token; revisa que sea el de producción y esté completo"
+      point_not_enabled:    "El Access Token sirve, pero esa aplicación no tiene permiso para usar terminales Point"
+      webhook_secret_invalid: "La clave secreta es demasiado larga"
 
   terminal_charge:
     provider_description: "Cobro en %{company}"

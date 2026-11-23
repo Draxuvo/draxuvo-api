@@ -19,7 +19,7 @@ module TerminalConnections
       credentials = exchange(stored["verifier"])
 
       connection = @company.terminal_connections.find_or_initialize_by(provider: @provider)
-      connection.store_credentials!(credentials, user: @user)
+      connection.store_credentials!(credentials, user: @user, auth_method: "oauth")
       Health.recovered!(connection)
       TerminalEvent.log!(:connected, connection: connection, user: @user, account_label: connection.account_label,
                                      live_mode: connection.live_mode)
