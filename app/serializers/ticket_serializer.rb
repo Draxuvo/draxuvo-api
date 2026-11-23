@@ -77,14 +77,18 @@ class TicketSerializer
   private
 
   # Historial de anulaciones del cobro (spec 054, H-50): sobrevive a un nuevo cobro del mismo ticket.
-  # Spec 069: cada pago integrado anulado trae el estado actual de su reembolso.
+  # Spec 069: cada pago integrado anulado trae su origen, la referencia del proveedor y el estado actual de su reembolso.
   def voids_json
-    refunds = TerminalRefund.where(ticket_payment_id: @ticket.voids.flat_map { |void| Array(void.payments).filter_map { |p| p["ticket_payment_id"] } })
-                            .index_by(&:ticket_payment_id)
+    ids = @ticket.voids.flat_map { |void| Array(void.payments).filter_map { |p| p["ticket_payment_id"] } }
+    integrated = TicketPayment.where(id: ids).includes(:terminal, terminal_charge: :terminal_refund).index_by(&:id)
     @ticket.voids.includes(:voided_by).map do |void|
       payments = Array(void.payments).map do |payment|
-        refund = refunds[payment["ticket_payment_id"]]
-        refund ? payment.merge("refund" => refund.as_payment_json) : payment
+        paid = integrated[payment["ticket_payment_id"]]
+        next payment unless paid
+
+        payment.merge("source" => paid.source, "provider_reference" => paid.terminal_charge&.provider_reference,
+                      "terminal" => PaymentTerminalSerializer.ref(paid.terminal),
+                      "refund" => paid.terminal_charge&.terminal_refund&.as_payment_json)
       end
       { id: void.id, voided_at: void.voided_at, voided_by: self.class.person(void.voided_by), reason: void.reason,
         amount: void.amount, payments: payments }
