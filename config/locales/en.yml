@@ -708,3 +708,7 @@ en:
       invalid_token: "The device identifier is not valid."
       invalid_platform: "Platform must be android or ios."
       invalid_value: "The value must be true or false."
+  # Spec 073: sign-in log (super admin only).
+  login_attempts:
+    invalid_ip: "The IP address is not valid."
+    invalid_range: "The date range is not valid: make sure the start date is not after the end date."

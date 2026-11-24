@@ -59,3 +59,8 @@ production:
     class: Monitoring::HeartbeatJob
     queue: default
     schedule: every 5 minutes
+  # Spec 073: la bitácora de inicios de sesión guarda 90 días (la IP y el correo escrito son datos personales).
+  login_attempts_purge:
+    class: LoginAttempts::PurgeJob
+    queue: default
+    schedule: at 4am every day

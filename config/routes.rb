@@ -7,6 +7,12 @@ Rails.application.routes.draw do
       post "auth/login", to: "authentication#login"
       get  "auth/me",    to: "authentication#me"
 
+      # Spec 073 (solo super admin): bitácora de inicios de sesión y estado del sistema.
+      resources :login_attempts, only: :index do
+        collection { get :summary }
+      end
+      get "system_status", to: "system_status#show"
+
       # Passwords
       put  "passwords/update",            to: "passwords#update"
       post "passwords/reset",             to: "passwords#reset"

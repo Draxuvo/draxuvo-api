@@ -38,6 +38,9 @@ services:
     #   Monitoreo (spec 071, docs/monitoreo.md; opcionales, sin ellas no se reporta nada): SENTRY_DSN,
     #   SENTRY_ENVIRONMENT=production, SENTRY_TRACES_SAMPLE_RATE (0 por omisión) y HEARTBEAT_URL (latido de Better Stack;
     #   solo la usa el worker, pero vive aquí por la regla de fuente única). RENDER_GIT_COMMIT la pone Render (release).
+    #   Estado del sistema en el panel (spec 073, docs/monitoreo.md; opcionales y solo de la API, el worker no las usa):
+    #   BETTERSTACK_UPTIME_TOKEN (token de Better Stack Uptime), BETTERSTACK_TEAM_ID (t641548 por omisión), SENTRY_API_TOKEN
+    #   (integración interna de Sentry de solo lectura), SENTRY_ORG (draxuvo) y SENTRY_REGION_URL (https://us.sentry.io).
     # La API ya no procesa la cola (spec 064): lo hace draxuvo-jobs, y en la API SOLID_QUEUE_IN_PUMA=false. Vuelta de emergencia
     # si el worker falla: SOLID_QUEUE_IN_PUMA=true (corre Solid Queue dentro de Puma, config/puma.rb), con la API en 1c-2g.
 

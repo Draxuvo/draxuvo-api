@@ -708,3 +708,7 @@ es:
       invalid_token: "El identificador del dispositivo no es válido."
       invalid_platform: "La plataforma debe ser android o ios."
       invalid_value: "El valor debe ser verdadero o falso."
+  # Spec 073: bitácora de inicios de sesión (solo super admin).
+  login_attempts:
+    invalid_ip: "La IP no es válida."
+    invalid_range: "El rango de fechas no es válido: revisa que la fecha inicial no sea posterior a la final."

@@ -90,6 +90,29 @@ worker, así que su ausencia significa worker caído, atorado, sin base o espera
   - más de 20 respuestas con `status` 500 en 5 minutos;
   - más de 5 líneas `Error performing` de trabajos en 15 minutos.
 
+## En el panel (spec 073)
+
+Dos pantallas del super admin complementan lo de arriba con datos que viven en Draxuvo:
+
+- **Accesos** (`/accesos`): cada intento de inicio de sesión en el panel y la app, con su resultado (entró, contraseña
+  incorrecta, correo sin cuenta, cuenta inactiva, bloqueado por intentos, datos inválidos), persona, empresas, IP,
+  dispositivo y canal (panel, app o desconocido). Arriba, entradas y fallos de hoy y las IP y correos con más fallos de la
+  última hora. Tabla `login_attempts`, de solo inserción; nunca guarda la contraseña ni el token. `LoginAttempts::PurgeJob`
+  (cada día a las 4 a. m.) borra lo que pasa de **90 días**. Si guardar un intento falla, el login responde igual y la falla
+  va a Sentry (`[LoginAttempts::Record] no se guardó: <clase>` en el log).
+- **Estado del sistema** (`/estado`): versión desplegada y arranque de la API, latencia de la base, la cola de Solid Queue
+  (última señal del worker, pendientes, en curso, fallidos de 24 h sin sus argumentos y recurrentes atrasados), los
+  monitores y el latido de Better Stack y los problemas sin resolver de Sentry por proyecto. Better Stack y Sentry se
+  consultan desde la API (nunca desde el navegador), en paralelo, con 5 s como máximo y una copia de 1 minuto; si fallan,
+  se ve la última copia buena marcada como vieja.
+
+Tokens de lectura (solo en la API de Render; sin ellos, esas dos tarjetas dicen «Sin configurar»):
+
+- `BETTERSTACK_UPTIME_TOKEN`: Better Stack → Settings → API tokens → token de **Uptime** del equipo.
+- `SENTRY_API_TOKEN`: Sentry → Settings → Developer Settings → Custom Integrations → **Internal Integration** con permisos
+  de solo lectura: Project (Read), Issue & Event (Read) y Organization (Read). Los «Organization Auth Tokens» no sirven:
+  solo tienen el alcance `org:ci` y no leen problemas.
+
 ## Qué hacer ante cada aviso
 
 | Aviso | Primeros pasos |
