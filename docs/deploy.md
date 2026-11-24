@@ -87,6 +87,7 @@ Registra en `specs/012-deploy-produccion/quickstart.md` (puntos 2.14 y 2.15) la 
 | `STRIPE_WEBHOOK_SECRET` | Panel de Stripe → webhook → **Roll secret**; actualizar en Render | Hasta actualizarlo, los webhooks se rechazan con 400 |
 | `RESEND_API_KEY` | Resend → API Keys → crear nueva, actualizar en Render, borrar la anterior | |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 → Manage API tokens → crear nuevo, actualizar en Render, borrar el anterior | Las URLs firmadas ya emitidas dejan de funcionar |
+| `MERCADO_PAGO_CLIENT_SECRET` / `MERCADO_PAGO_WEBHOOK_SECRET` | Mercado Pago Developers → la aplicación → renovar; actualizar en Render y sincronizar el Blueprint | Solo con OAuth. Hasta actualizar la clave de avisos, los avisos se rechazan y los cobros se resuelven con el barrido |
 | Contraseña de `draxuvo-db` | Render → `draxuvo-db` → rotar credenciales; actualizar `DATABASE_URL` | |
 
 **Cambiar la contraseña del super admin** (el seed usa `find_or_create_by!`, no actualiza). Con la shell de Render
@@ -198,6 +199,63 @@ Cada mesa tiene un enlace público `https://draxuvo.com/m/<token>` que se imprim
 
 El enlace queda impreso: si cambia el dominio de `web`, el dominio viejo debe redirigir `/m/*` al nuevo o hay que
 reimprimir las tarjetas. Regenerar el enlace de una mesa (desde el panel) invalida solo las tarjetas de esa mesa.
+
+## Terminal integrada con Mercado Pago (spec 069)
+
+Un negocio con el módulo `terminals` liga su Mercado Pago Point a Draxuvo para que el cobro con tarjeta se registre solo al
+aprobarse en la terminal. Contratos: `specs/069-terminal-integrada/contracts/api.md` del workspace; guía de prueba:
+`quickstart.md` de la misma spec.
+
+**Credenciales propias (la forma usual, sin configurar nada en Render).** El dueño o administrador entra a Terminales →
+«Conectar con mis credenciales» y la pantalla lo guía:
+
+1. En [Mercado Pago Developers](https://www.mercadopago.com.mx/developers/panel/app) crea su aplicación (pagos presenciales,
+   Point) y copia el **Access Token de producción** (`APP_USR-…`). Draxuvo lo comprueba con `GET /users/me` y
+   `GET /terminals/v1/list` antes de guardarlo; si Mercado Pago lo rechaza o la aplicación no puede usar Point, no se guarda.
+2. En la aplicación → **Webhooks** pega la URL que le da Draxuvo,
+   `https://api.draxuvo.com/api/v1/webhooks/mercado_pago/<webhook_token>` (única por conexión; se conserva al desconectar y
+   volver a conectar), con el evento **Order (Mercado Pago)**, y pega en Draxuvo la **clave secreta** que muestra Mercado Pago.
+   Sin la clave los avisos se rechazan con 400, pero los cobros se resuelven igual con el barrido de cada minuto (más lento).
+
+Este token no se renueva: si el negocio lo cambia en Mercado Pago, la conexión pasa a «Con error» y hay que capturarlo de nuevo.
+
+**OAuth con la aplicación de Draxuvo (opcional).** Solo si la plataforma crea su propia aplicación en Mercado Pago; sin
+`MERCADO_PAGO_CLIENT_ID` el panel no ofrece «Conectar Mercado Pago» y todo lo demás funciona con credenciales propias.
+
+| Variable | Uso |
+|---|---|
+| `MERCADO_PAGO_CLIENT_ID` / `MERCADO_PAGO_CLIENT_SECRET` | Credenciales de la aplicación de Draxuvo (OAuth con PKCE y `offline_access`). Las usan la API y el worker (renovación): `render.yaml` las copia al worker con `fromService`, así que después de definirlas en la API sincroniza el Blueprint. |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Clave secreta de Webhooks de esa aplicación; firma de `POST /api/v1/webhooks/mercado_pago`. Solo la usa la API. |
+| `MERCADO_PAGO_PLATFORM_ID` / `MERCADO_PAGO_INTEGRATOR_ID` | Opcionales, los asigna Mercado Pago (`integration_data` de cada orden). Si se definen, agrégalas también al worker en `render.yaml`. |
+
+En la aplicación de Mercado Pago: URL de redireccionamiento `https://app.draxuvo.com/terminales/mercado-pago` (`FRONTEND_URL`
++ `/terminales/mercado-pago`) y Webhooks a `https://api.draxuvo.com/api/v1/webhooks/mercado_pago` con los eventos **Order
+(Mercado Pago)** y **Vinculación de aplicaciones** (desvincular la aplicación desde Mercado Pago desconecta la cuenta).
+
+**Trabajos** (`config/recurring.yml`, en `draxuvo-jobs`): `TerminalCharges::SweepJob` cada minuto (resuelve las solicitudes
+cuyo aviso no llegó, vence las que pasaron de `expires_at` y vigila las abandonadas por si se aprueban tarde) y
+`TerminalConnections::RefreshJob` a las 3 a. m. (renueva los tokens de OAuth a los que les quedan menos de 30 días; las
+credenciales propias se saltan). Un token rechazado deja la conexión en `error` y manda **un** correo a dueño y
+administradores (`ResendMailer.terminal_connection_problem`).
+
+**Secretos.** Los tokens y la clave de los avisos van cifrados con Active Record Encryption, con llaves derivadas de
+`SECRET_KEY_BASE` (`config/initializers/active_record_encryption.rb`). **Rotar `SECRET_KEY_BASE` deja ilegibles los tokens
+guardados**: cada conexión pasa a «Con error» en su siguiente uso y el negocio debe volver a conectar. Nunca salen en
+respuestas, registros ni en `terminal_events`.
+
+**Revisar un cobro** (solo lectura):
+
+```bash
+bin/withenv prod bin/rails console --sandbox
+TerminalCharge.where(company_id: 1).order(id: :desc).limit(10).pluck(:id, :status, :status_detail, :amount, :provider_reference, :created_at)
+TerminalEvent.where(company_id: 1).order(id: :desc).limit(20).pluck(:created_at, :kind, :data)
+```
+
+Si un pago se aprobó en la terminal pero el cobro ya se había registrado a mano, queda en «Pagos sin aplicar» (Terminales):
+desde ahí el dueño lo reembolsa o lo marca como atendido.
+
+**Sin probar con cuenta real.** Nada de esto se ha probado contra Mercado Pago real (tareas T080 y T081 de la spec): la firma
+de los avisos, los montos mínimo y máximo y los modelos de Point que se pueden ligar salen de la documentación pública.
 
 ## Trabajos en segundo plano (spec 064)
 
