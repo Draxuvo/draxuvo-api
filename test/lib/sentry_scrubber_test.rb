@@ -50,4 +50,11 @@ class SentryScrubberTest < ActiveSupport::TestCase
       assert_not_includes dumped, secret
     end
   end
+
+  test "hides the token of a terminal connection's webhook URL (spec 069)" do
+    event = Event.new(request: Request.new(url: "https://api.draxuvo.com/api/v1/webhooks/mercado_pago/Xy9_secret?data.id=1", headers: {}),
+                      user: nil)
+
+    assert_equal "https://api.draxuvo.com/api/v1/webhooks/mercado_pago/[FILTERED]", SentryScrubber.call(event).request.url
+  end
 end
