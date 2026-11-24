@@ -35,4 +35,16 @@ class RequestLogTest < ActiveSupport::TestCase
     assert_nil options[:company_id]
     assert_not options.key?(:exception)
   end
+
+  test "hides the token of a terminal connection's webhook URL (spec 069)" do
+    options = RequestLog.custom_options(Event.new(payload(path: "/api/v1/webhooks/mercado_pago/Xy9_secret-Token?data.id=1")))
+
+    assert_equal "/api/v1/webhooks/mercado_pago/[FILTERED]", options[:path]
+    assert_not_includes options.inspect, "Xy9_secret-Token"
+  end
+
+  test "leaves other paths to lograge" do
+    assert_not RequestLog.custom_options(Event.new(payload(path: "/api/v1/webhooks/mercado_pago?data.id=1"))).key?(:path)
+    assert_not RequestLog.custom_options(Event.new(payload)).key?(:path)
+  end
 end
