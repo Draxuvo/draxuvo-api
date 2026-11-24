@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_23_150000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_24_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -321,6 +321,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_150000) do
     t.datetime "updated_at", null: false
     t.index "company_id, lower((name)::text)", name: "index_label_formats_on_company_and_lower_name", unique: true
     t.index ["company_id"], name: "index_label_formats_on_company_id"
+  end
+
+  create_table "login_attempts", force: :cascade do |t|
+    t.string "result", null: false
+    t.string "email", limit: 254, null: false
+    t.bigint "user_id"
+    t.inet "ip"
+    t.string "user_agent", limit: 500
+    t.string "channel", null: false
+    t.string "client_version", limit: 50
+    t.boolean "demo", default: false, null: false
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_login_attempts_on_created_at"
+    t.index ["email", "created_at"], name: "index_login_attempts_on_email_and_created_at"
+    t.index ["ip", "created_at"], name: "index_login_attempts_on_ip_and_created_at"
+    t.index ["result", "created_at"], name: "index_login_attempts_on_result_and_created_at"
+    t.index ["user_id", "created_at"], name: "index_login_attempts_on_user_id_and_created_at"
   end
 
   create_table "module_changes", force: :cascade do |t|
@@ -1290,6 +1307,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_23_150000) do
   add_foreign_key "kitchen_orders", "companies"
   add_foreign_key "kitchen_orders", "users", column: "sent_by_id"
   add_foreign_key "label_formats", "companies"
+  add_foreign_key "login_attempts", "users", on_delete: :nullify
   add_foreign_key "module_changes", "companies"
   add_foreign_key "module_changes", "users", column: "actor_id"
   add_foreign_key "notification_preferences", "companies"
